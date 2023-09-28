@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!--This maintains the scale of the page based on the scale of the screen-->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!--Don't cache anything-->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+	
+    {{includefile '/bootstrap/css/page_common.css'}}
+    <title>Historical Records</title>
+	
+    <link href="/css/hs.css" rel="stylesheet">
+    <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
+    <link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css" />	
+</head>
+
+	{{
+	refId=queries['refId'] ?? ""
+	displayDeviceRefId=queries['displayDeviceRefId'] ?? ""
+	displaySelect=queries['displaySelect'] ?? ""
+	displayPeriod=queries['displayPeriod'] ?? ""
+	displayGroup=queries['displayGroup'] ?? ""
+	
+	if displayDeviceRefId != ""
+		finalRefId=displayDeviceRefId
+	else
+		finalRefId=refId
+	end		
+	
+	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
+		
+	if !deviceDisplayDetails
+		deviceDisplayDetails=[]
+	end
+	
+	if deviceDisplayDetails.empty? 
+		# there is no valid displays
+		displaySelect=""
+	else if !(deviceDisplayDetails | array.contains displaySelect)
+		# select default value if current value is not select
+		if array.contains deviceDisplayDetails "chart"
+			displaySelect="chart"
+		else
+			displaySelect="table"	
+		end	
+	end	
+	
+	if displaySelect != ""
+		rangeOptionsForTable=[ 
+						 ["Last 10 values", "10", "", "last10values"], 
+					 ]
+									 
+		rangeOptionsForOthers=[ 
+						 ["Last 6 hours", "", "21600", "6hr"],
+						 ["Last 24 hours", "", "86400", "1d"],
+						 ["Last 7 days", "", "604800", "7d"],
+						 ["Last 30 days", "", "2592000", "30d"],
+						 ["Last 90 days", "", "7776000", "90d"],
+						 ["Last 180 days", "", "15552000", "90d"],
+						 ["Last 365 days", "", "31536000", "365d"],
+					 ]
+									
+		if displaySelect=="table"
+			rangeOptions = rangeOptionsForTable | array.concat rangeOptionsForOthers
+		else
+			rangeOptions = rangeOptionsForOthers
+		end		
+		
+		rangeOptionFound = false
+		for rangeOption in rangeOptions
+			if rangeOption[3]==displayPeriod
+				rangeOptionFound=true
+				break
+			end
+		end
+
+		if !rangeOptionFound
+			displayPeriod = rangeOptions[0][3]
+		end	
+			
+		groupOptions=[ 
+			 ["Auto", "", ""],
+			 ["1 minute",  "00:01:00", "1m"],
+			 ["5 minute",  "00:05:00", "5m"],
+			 ["30 minute",  "00:20:00", "30m"],
+			 ["1 hour",  "01:00:00", "60m"],
+			 ["12 hours",  "12:00:00", "12hr"],
+			 ["1 day",  "1.00:00:00", "24hr"],
+			]				
+	end
+	}}	
+	
+<body class="body homeseer-skin ml-0 mr-0" style="min-height: 40rem" aria-busy="true">	
+ 
+<!-- refId={{refId}}<BR> -->
+<!-- finalRefId={{finalRefId}}<BR> -->
+<!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
+<!-- displaySelect={{displaySelect}}<BR> -->
+<!-- displayPeriod={{displayPeriod}}<BR> -->
+<!-- displayGroup={{displayGroup}}<BR> -->
+
+<header>
+	
+	<nav class="navbar">
+		<form class="form-inline my-0 mx-0" action="/HistoricalRecords/devicehistoricalrecords.html" method="GET" style="width:100%">	
+			<input type="hidden" id="refId" name="refId" value="{{refId}}"> 
+
+			{{device=plugin_function 'HistoricalRecords' 'GetDeviceAndFeaturesNames'[refId] }}
+			{{if device}}
+				<div class="md-form my-0 mr-3" style="width:100%">
+					<select id="displayDeviceRefId" class="mdb-select md-form  dropdown-primary colorful-select" name="displayDeviceRefId" >
+						{{for child in device}}
+							<option value="{{child.key}}" {{if child.key==finalRefId;}}selected{{end}} >{{child.value | html.escape}}</option>	
+						{{end}}			
+					</select> 
+					<label class="mdb-main-label" for="displayDeviceRefId">Feature</label>
+				</div>
+			{{else}}
+				{{refId}} Device not found {{device}}
+			{{end}}
+			
+			{{if displaySelect != ""}}
+				<div class="md-form my-0 mr-3">
+					<select id="displaySelect" class="mdb-select md-form colorful-select" name="displaySelect">
+						{{ for displayType in deviceDisplayDetails }}									
+							<option value="{{displayType | html.escape}}" {{if displayType==displaySelect;}}selected{{end}}>
+							{{
+							case displayType
+								when "table"
+									"Table"
+								when "chart"
+									"Chart"
+								when "averageStats"
+									"Average Stats"
+								when "histogram"
+									"Histogram"
+								else
+									"Unknown"
+							end														
+							}}</option>								
+						{{ end }}
+					</select> 
+					<label class="mdb-main-label" for="displaySelect">View Type</label>
+				</div>	
+				
+				<div class="md-form my-0 mr-3">
+					<select id="displayPeriod" class="mdb-select md-form colorful-select" name="displayPeriod">
+						{{for rangeOption in rangeOptions}}
+							<option value="{{rangeOption[3]}}" {{if rangeOption[3]==displayPeriod;}}selected{{end}}>{{rangeOption[0] | html.escape}}</option>	
+						{{end}}			
+					</select> 
+					<label class="mdb-main-label" for="displayPeriod">Period</label>
+				</div>
+
+				{{if displaySelect!="table" && displaySelect!="histogram"}}
+					<div class="md-form my-0 mr-3">
+						<select id="displayGroup" class="mdb-select md-form colorful-select" name="displayGroup">
+							{{for groupOption in groupOptions}}
+								<option value="{{groupOption[2]}}" {{if groupOption[2]==displayGroup;}}selected{{end}}>{{groupOption[0] | html.escape}}</option>	
+							{{end}}			
+						</select> 
+						<label class="mdb-main-label" for="displayGroup">Grouping</label>
+					</div>
+				{{end}}
+			{{end}}
+			{{if displaySelect != ""}}
+				<ul class="navbar-nav ml-auto nav-flex-icons nav-right"  >
+				  <li class="nav-item">	  
+					<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change persistence options for device"  href="/HistoricalRecords/addeditpersistence.html?devicerefid={{finalRefId}}">
+					  <i class="fa fa-edit"></i>
+					</a>
+				  </li>
+				</ul>
+			{{end}}		
+		</form>
+		
+
+	</nav>	
+</header>
+<div class="container-fluid custom-scrollbar"> 
+	<div class="hs_spinner" id="loading">
+		<div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
+			<div class="spinner-border" role="status">
+				<span class="sr-only">Loading...</span>
+			</div>
+		</div>
+	</div>	
+
+	{{if displaySelect != ""}}
+		{{			
+			recordLimit = ""
+			duration = ""
+			grouping = ""
+		
+			for rangeOption in rangeOptions
+				if rangeOption[3]==displayPeriod
+					recordLimit=rangeOption[1]
+					duration=rangeOption[2]
+					break
+				end
+			end
+			
+			for groupOption in groupOptions
+				if groupOption[2]==displayGroup
+					grouping=groupOption[1]
+					break
+				end
+			end
+		}}
+
+		{{needDataTables=false}}
+		{{if displaySelect=="table"}}
+			<table id="dt-persistence" class="table table-striped"  width="100%">	
+				<thead>
+					<tr>
+						<th>Time</th>
+						<th>Value</th>
+						<th>String</th>						 
+					</tr>
+				</thead>			
+			<table>	
+			{{needDataTables=true}}
+		{{else if displaySelect=="chart"}}
+		<div class="btn-group mt-2 mx-auto" role="group" aria-label="Graph options">
+		  <button type="button" class="btn btn-info"  onclick="chartFunction(0)">Reset Zoom</button>
+
+		  <div class="btn-group" role="group">
+			<button id="btnGroupDropCurve" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Curve</button>
+			<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+			  <a class="dropdown-item"  onclick="chartFunction(1)">Step</a>
+			  <a class="dropdown-item"  onclick="chartFunction(2)">Curve</a>
+			</div>
+		  </div>
+		  <div class="btn-group" role="group">
+			<button id="btnGroupDropPoint" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Point</button>
+			<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+			  <a class="dropdown-item" onclick="chartFunction(3)">None</a>
+			  <a class="dropdown-item" onclick="chartFunction(4)">Circle</a>
+			  <a class="dropdown-item" onclick="chartFunction(5)">Line</a>
+			</div>
+		  </div>
+		</div>
+			<canvas id="myLineChart" height="100rem"></canvas>
+		{{else if displaySelect=="averageStats"}}
+			<table id="dt-persistence" class="table table-sm mb-0"cellspacing="0" width="100%">
+				<thead>
+					<tr>
+						<th>Type</th> 
+						<th>Value</th> 
+					</tr>
+				</thead> 
+				{{plugin_function 'HistoricalRecords' 'BuildAverageStatsData' [finalRefId, duration, grouping] }}
+			<table>		
+			{{needDataTables=true}}	
+		{{else if displaySelect=="histogram"}}
+			<table id="dt-persistence" class="table table-sm mb-0"cellspacing="0" width="100%">	
+				<thead>
+					<tr>
+						<th>Value</th> 
+						<th>Total Time</th> 
+						<th>Percentage</th> 
+					</tr>
+				</thead> 
+				{{plugin_function 'HistoricalRecords' 'BuildHistogramData' [finalRefId, duration] }}
+			<table>		
+			{{needDataTables=true}}	
+		{{end}}		
+	{{else if device}}
+		<a class="btn btn-primary" role="button" href="/HistoricalRecords/addeditpersistence.html?devicerefid={{finalRefId}}">Store History</a>
+	{{end}}
+
+</div>
+ 
+{{includefile 'bootstrap/js/page_common.js'}}
+<script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
+
+{{if needDataTables}}
+<script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>
+{{end}}
+
+{{if displaySelect=="chart"}}
+<script type="text/javascript" src="/HistoricalRecords/chart.min.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/chartjs-adapter-moment.min.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/hammer.min.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/chartjs-plugin-zoom.min.js"></script>
+{{end}}
+
+<script>
+$(function() {
+    $('#displayDeviceRefId').change(function() {
+        this.form.submit();
+    });  
+
+	$('#displaySelect').change(function() {
+        this.form.submit();
+    });	
+	
+    $('#displayPeriod').change(function() {
+        this.form.submit();
+    });	
+    
+{{if displaySelect!="table" && displaySelect!="histogram"}}	
+	$('#displayGroup').change(function() {
+        this.form.submit();
+    });	
+{{end}}	
+});
+
+{{if needDataTables}}
+
+
+function humanizeTime(unix_timestamp) {
+	var date = new Date(unix_timestamp * 1000);
+	const nowDate = new Date(Date.now());
+	
+	var isSameDay = (date.getDate() === nowDate.getDate() 
+				 && date.getMonth() === nowDate.getMonth()
+				 && date.getFullYear() === nowDate.getFullYear())
+				 
+	if (isSameDay) {
+		return "Today, " + date.toLocaleTimeString();
+	}					
+	
+	return date.toLocaleString();
+}
+
+function setUpPersistanceTable() {
+  $('#dt-persistence').DataTable({
+	bLengthChange : true,
+    bFilter : false,
+	searching : false,
+	order: [[0, 'desc']],
+	paging: true,
+	processing: true,
+    serverSide: true,
+	  ajax: {
+        url: '../HistoricalRecords/historyrecords',
+        type: 'POST',
+		data: function (d) {
+            d.refId = {{finalRefId}};
+			d.duration = '{{duration}}';
+			d.recordLimit = '{{recordLimit}}';
+        }
+    },
+	columnDefs: [
+		{
+			targets: 0,
+			render: function (data, type, full, meta) {
+				return humanizeTime(data);
+			}
+		},
+	],
+	initComplete: function () {
+	},
+  });
+  
+  $(".dataTables_length").addClass("bs-select"); 
+}
+
+$(document).ready(function () {
+	setUpPersistanceTable();
+	$('#loading').hide();
+});	
+
+{{else if displaySelect=="chart"}}
+	var chart;
+	var endDate = Date.now();
+	var startDate = endDate - (parseInt({{duration}}) * 1000);
+	var colors = ['#007bff','#28a745','#333333','#c3e6cb','#dc3545','#6c757d'];
+	var defaultTension = 0.4;
+	
+	
+	function getRangeString(min, max)
+	{
+		var minDateString = (new Date(min)).toLocaleString();
+		var maxDateString = (new Date(max)).toLocaleString();
+		return minDateString + " - " + maxDateString;
+	}
+	
+	function startFetchWithMinMax(chart, min, max) {
+		var formObject = {
+		   refId : {{finalRefId}},
+		   min: min,
+		   max: max
+		};
+		var data = JSON.stringify(formObject);
+		$.ajax({
+			type: "POST",
+			async: "true",
+			url: '../HistoricalRecords/graphrecords',
+			cache: false,
+			data: data,
+			success: function (response) {
+				var result = JSON.parse(response);
+				var errorMessage = result.error;
+
+				if (errorMessage != null) {					
+					alert(errorMessage);
+				} else {
+					console.log('Fetched data between ' + min + ' and ' + max);
+					chart.data.datasets[0].data =  result.data;
+					chart.stop(); // make sure animations are not running
+					chart.options.plugins.subtitle.text = getRangeString(min, max);
+					chart.update('none');
+				}
+			},
+			error: function () {
+				alert("Error in operation");
+			}
+		});
+	}
+	
+	
+	function startFetch({chart}) {
+	  const {min, max} = chart.scales.x;
+	  startFetchWithMinMax(chart, min, max);
+	}
+		
+	const zoomOptions = {
+	  limits: {
+		x: {min: 'original', max: 'original', minRange: 60 * 1000},
+	  },
+	  pan: {
+		enabled: true,
+		mode: 'x',
+		modifierKey: 'ctrl',
+		onPanComplete: startFetch
+	  },
+	  zoom: {
+		wheel: {
+		  enabled: true,
+		},
+		drag: {
+		  enabled: true,
+		},
+		pinch: {
+		  enabled: true
+		},
+		mode: 'x',
+		onZoomComplete: startFetch
+	  }
+	};
+	
+	const scales = {
+	  x: {
+		position: 'bottom',
+		min: startDate,
+		max: endDate,
+		type: 'time',
+		ticks: {
+		  autoSkip: true,
+		  autoSkipPadding: 50,
+		  maxRotation: 0
+		},
+		time: {
+		  displayFormats: {
+			hour: 'HH:mm',
+			minute: 'HH:mm',
+			second: 'HH:mm:ss'
+		  }
+		}
+	  },
+	  y: {
+		type: 'linear',
+		position: 'left',
+	  },
+	};
+
+	function setUpChart() { 
+		Chart.defaults.font.family = "sans-serif";
+		Chart.defaults.font.size = 16;
+	
+		var ctx = document.getElementById("myLineChart").getContext('2d'); 
+		var myChart = new Chart(ctx, {
+		  type: "line",
+		  data: {
+				datasets: [{
+				  label: "Value",
+				  data: [],
+				  backgroundColor: 'transparent',
+				  borderColor: colors[0],
+				  borderWidth: 2,
+				  pointBackgroundColor: colors[0],
+				  stepped : false,
+				  tension : defaultTension,
+				  pointStyle : false,
+				}, 			 
+			]
+		  },
+		  options: {
+			scales: scales,
+			responsive: true,
+			plugins: {
+			    zoom: zoomOptions,
+				title: {
+					display: true,
+					position: 'top',
+					text: '{{device_name_full finalRefId | html.escape}}'
+				},
+				legend: {
+					display: false
+				},	
+			    subtitle: {
+					display: true,
+					text: '',
+				}				
+			},
+			transitions: {
+			  zoom: {
+				animation: {
+				  duration: 100
+				}
+			  }
+			}
+		  },  
+		});
+		
+		 
+		chart = myChart;
+		startFetchWithMinMax(myChart, startDate, endDate);
+	}
+	
+function chartFunction(reason) {
+	switch(reason)
+	{
+		case 0:
+		chart.resetZoom();
+		break;
+		case 1:
+		chart.data.datasets[0].stepped = 'after';
+		chart.data.datasets[0].tension = 0;
+		chart.update();
+		break;
+		case 2:
+		chart.data.datasets[0].stepped = false;
+		chart.data.datasets[0].tension = defaultTension;
+		chart.update();
+		break;	
+		case 3:
+		chart.data.datasets[0].pointStyle = false;
+		chart.update();
+		break;	
+		case 4:
+		chart.data.datasets[0].pointStyle = 'circle';
+		chart.update();	
+		break;	
+		case 5:
+		chart.data.datasets[0].pointStyle = 'line';
+		chart.update();
+		break;
+	}
+}
+
+$(document).ready(function () {
+	setUpChart();
+	$('#loading').hide();
+});
+
+{{else}}	
+$(document).ready(function () {
+	$('#loading').hide();
+});
+{{end}}
+
+</script>
+</body>
+</html>

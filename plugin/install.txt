@@ -1,0 +1,6 @@
+﻿HSPI_HistoricalRecords.exe,.,0
+HSPI_HistoricalRecords.exe.config,.,0
+.,[DELALL],.\bin\HistoricalRecords
+dlls.zip,[UNZIPOVER],.\bin\HistoricalRecords
+.,[DELALL],.\html\HistoricalRecords
+html.zip,[UNZIP],.\html\HistoricalRecords
