@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("HomeKit Controller Plugin for Homeseer 4")]
-[assembly: AssemblyDescription("HomeKit Controller Plugin for Homeseer 4")]
+[assembly: AssemblyTitle("Historical Records Plugin for Homeseer 4")]
+[assembly: AssemblyDescription("HHistorical Records Plugin for Homeseer 4")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyCopyright("Copyright ©  2022")]
+[assembly: AssemblyCopyright("Copyright ©  2023")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: InternalsVisibleTo("HSPI_HistoricalRecordsTest")]

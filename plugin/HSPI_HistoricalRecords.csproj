@@ -86,7 +86,8 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>asserts\logo.ico</ApplicationIcon>
+    <ApplicationIcon>
+    </ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
@@ -143,6 +144,11 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
+    <None Include=".github\dependabot.yml" />
+    <None Include=".github\gitversion.yml" />
+    <None Include=".github\ISSUE_TEMPLATE\bug_report.md" />
+    <None Include=".github\ISSUE_TEMPLATE\feature_request.md" />
+    <None Include=".github\workflows\buildrelease.yml" />
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
@@ -224,7 +230,6 @@
     <AdditionalFiles Include="install.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </AdditionalFiles>
-    <Content Include="asserts\logo.ico" />
     <Content Include="updater_override.tt" />
   </ItemGroup>
   <ItemGroup>
