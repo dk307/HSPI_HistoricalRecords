@@ -2,12 +2,12 @@ name: 'Build Release'
 
 on:  
   push:
-    branches: [ main ]
+    branches: [ master ]
     tags:
       - "v*.*.*"
     
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:  
   build:    
@@ -57,16 +57,16 @@ jobs:
         run: msbuild.exe HSPI_HistoricalRecords.sln /p:platform="Any CPU" /p:configuration="Release"
 
       - name: Upload Binaries
-        if: github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/master'
         uses: actions/upload-artifact@v2
         with:
           name: Binaries
           path: |
-            .\plugin\bin\Release\HSPI_HistoricalRecords_*.zip
-            .\plugin\bin\Release\updater_override.json
+            .\plugin\bin\x86\Release\HSPI_HistoricalRecords_*.zip
+            .\plugin\bin\x86\Release\updater_override.json
 
       - name: Release development build
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: "softprops/action-gh-release@v1"
         with:
           tag_name: "v${{ steps.gitversion.outputs.majorMinorPatch }}"
