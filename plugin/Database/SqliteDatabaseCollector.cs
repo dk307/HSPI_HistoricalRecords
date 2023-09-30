@@ -13,7 +13,6 @@ using static SQLitePCL.raw;
 #nullable enable
 
 namespace Hspi.Database
-
 {
     public record TimeAndValue(DateTimeOffset TimeStamp, double DeviceValue);
 
@@ -46,7 +45,7 @@ namespace Hspi.Database
             this.dbPath = dbPath;
             tokenSource = CancellationTokenSource.CreateLinkedTokenSource(shutdownToken);
 
-            const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_PRIVATECACHE | SQLITE_OPEN_EXCLUSIVE;
+            const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_PRIVATECACHE;
 
             sqliteConnection = ugly.open_v2(dbPath, OpenFlags, null);
 
@@ -57,15 +56,43 @@ namespace Hspi.Database
 
             Log.Information("System SQLite version: {version}", sqlite3_libversion().utf8_to_string());
             SetupDatabase();
+            insertCommand = CreateStatement(InsertSql);
             getHistoryCommand = CreateStatement(RecordsHistorySql);
             getRecordHistoryCountCommand = CreateStatement(RecordsHistoryCountSql);
             getTimeAndValueCommand = CreateStatement(GetTimeValueSql);
             Utils.TaskHelper.StartAsyncWithErrorChecking("DB Update Records", UpdateRecords, tokenSource.Token);
         }
 
-        public IList<RecordData> GetRecords(int refId, TimeSpan timeSpan,
-                                            int start, int length, ResultSortBy sortBy)
+        public async Task<IList<TimeAndValue>> GetGraphValues(int refId, DateTimeOffset min, DateTimeOffset max)
         {
+            using var dbLock = await connectionLock.LockAsync(tokenSource.Token).ConfigureAwait(false);
+
+            var stmt = getTimeAndValueCommand;
+            ugly.reset(stmt);
+            ugly.bind_int(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, min.ToUnixTimeSeconds());
+            ugly.bind_int64(stmt, 3, max.ToUnixTimeSeconds());
+
+            List<TimeAndValue> records = new();
+            while (ugly.step(stmt) != SQLITE_DONE)
+            {
+                // order: SELECT (time, value) FROM history
+                var record = new TimeAndValue(
+                        DateTimeOffset.FromUnixTimeSeconds(ugly.column_int64(stmt, 0)),
+                        ugly.column_double(stmt, 1)
+                    );
+
+                records.Add(record);
+            };
+
+            return records;
+        }
+
+        public async Task<IList<RecordData>> GetRecords(int refId, TimeSpan timeSpan,
+                                                    int start, int length, ResultSortBy sortBy)
+        {
+            using var dbLock = await connectionLock.LockAsync(tokenSource.Token).ConfigureAwait(false);
+
             var stmt = getHistoryCommand;
 
             var fromTime = DateTimeOffset.UtcNow.Subtract(timeSpan).ToUnixTimeSeconds();
@@ -95,8 +122,10 @@ namespace Hspi.Database
             return records;
         }
 
-        public long GetRecordsCount(int refId, TimeSpan timeSpan)
+        public async Task<long> GetRecordsCount(int refId, TimeSpan timeSpan)
         {
+            using var dbLock = await connectionLock.LockAsync(tokenSource.Token).ConfigureAwait(false);
+
             var stmt = getRecordHistoryCountCommand;
             var fromTime = DateTimeOffset.UtcNow.Subtract(timeSpan).ToUnixTimeSeconds();
 
@@ -108,53 +137,27 @@ namespace Hspi.Database
             return stmt.column<long>(0);
         }
 
-        public IList<TimeAndValue> GetGraphValues(int refId, DateTimeOffset min, DateTimeOffset max)
+        public async Task Record(RecordData recordData)
         {
-            var stmt = getTimeAndValueCommand;
-            ugly.reset(stmt);
-            ugly.bind_int(stmt, 1, refId);
-            ugly.bind_int64(stmt, 2, min.ToUnixTimeSeconds());
-            ugly.bind_int64(stmt, 3, max.ToUnixTimeSeconds());
-
-            List<TimeAndValue> records = new();
-            while (ugly.step(stmt) != SQLITE_DONE)
-            {
-                // order: SELECT (time, value) FROM history
-                var record = new TimeAndValue(
-                        DateTimeOffset.FromUnixTimeSeconds(ugly.column_int64(stmt, 0)),
-                        ugly.column_double(stmt, 1)
-                    );
-
-                records.Add(record);
-            };
-
-            return records;
-        }
-
-        public Task Record(RecordData recordData)
-        {
-            return RecordImpl(recordData);
-            async Task RecordImpl(RecordData recordData)
-            {
-                await queue.EnqueueAsync(recordData).ConfigureAwait(false);
-            }
-        }
-
-        private static void InsertRecord(sqlite3_stmt stmt, RecordData record)
-        {
-            // ugly.clear_bindings(stmt);
-            ugly.reset(stmt);
-            ugly.bind_int64(stmt, 1, record.TimeStamp.ToUnixTimeSeconds());
-            ugly.bind_int(stmt, 2, record.DeviceRefId);
-            ugly.bind_double(stmt, 3, record.DeviceValue);
-            ugly.bind_text(stmt, 4, record.DeviceString);
-            ugly.step_done(stmt);
+            await queue.EnqueueAsync(recordData).ConfigureAwait(false);
         }
 
         private sqlite3_stmt CreateStatement(string sql)
         {
             var command = ugly.prepare_v3(sqliteConnection, sql, SQLITE_PREPARE_PERSISTENT);
             return command;
+        }
+
+        private async Task InsertRecord(RecordData record)
+        {
+            sqlite3_stmt stmt = insertCommand;
+            using var dbLock = await connectionLock.LockAsync(tokenSource.Token).ConfigureAwait(false);
+            ugly.reset(stmt);
+            ugly.bind_int64(stmt, 1, record.TimeStamp.ToUnixTimeSeconds());
+            ugly.bind_int(stmt, 2, record.DeviceRefId);
+            ugly.bind_double(stmt, 3, record.DeviceValue);
+            ugly.bind_text(stmt, 4, record.DeviceString);
+            ugly.step_done(stmt);
         }
 
         private void SetupDatabase()
@@ -181,7 +184,6 @@ namespace Hspi.Database
 
         private async Task UpdateRecords()
         {
-            using sqlite3_stmt insertCommand = CreateStatement(InsertSql);
             CancellationToken token = tokenSource.Token;
             while (!token.IsCancellationRequested)
             {
@@ -189,7 +191,7 @@ namespace Hspi.Database
                 try
                 {
                     Log.Debug("Adding to database: {record}", record);
-                    InsertRecord(insertCommand, record);
+                    await InsertRecord(record).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -222,11 +224,12 @@ namespace Hspi.Database
                     CASE WHEN $order = 5 THEN string END ASC
                 LIMIT $limit OFFSET $offset";
 
+        private readonly AsyncLock connectionLock = new();
         private readonly string dbPath;
         private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
-        private readonly AsyncLock connectionLock = new();
+        private readonly sqlite3_stmt insertCommand;
         private readonly AsyncProducerConsumerQueue<RecordData> queue = new();
         private readonly sqlite3? sqliteConnection = null;
         private readonly CancellationTokenSource tokenSource;
