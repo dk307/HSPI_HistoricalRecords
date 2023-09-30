@@ -9,6 +9,7 @@ using System.Web;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
+using Hspi.Database;
 using Hspi.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -346,13 +347,19 @@ namespace Hspi
             try
             {
                 var collector = GetCollector();
-                var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
-                var refId = jsonData["refId"].Value<int>();
-                var min = jsonData["min"].Value<long>();
-                var max = jsonData["max"].Value<long>();
+                var refId = jsonData?["refId"]?.Value<int>();
+                var min = jsonData?["min"]?.Value<long>();
+                var max = jsonData?["max"]?.Value<long>();
+                if (refId == null || min == null || max == null)
+                {
+                    throw new ArgumentException("data is not correct");
+                }
 
-                var queryData = collector.GetGraphValues(refId, DateTimeOffset.FromUnixTimeMilliseconds(min), DateTimeOffset.FromUnixTimeMilliseconds(max));
+                var queryData = collector.GetGraphValues(refId.Value,
+                                                         DateTimeOffset.FromUnixTimeMilliseconds(min.Value),
+                                                         DateTimeOffset.FromUnixTimeMilliseconds(max.Value));
 
                 jsonWriter.WritePropertyName("data");
                 jsonWriter.WriteStartArray();
