@@ -5,10 +5,12 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Web;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
+using Hspi.Database;
 using Hspi.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -77,10 +79,10 @@ namespace Hspi
             switch (page)
             {
                 case "historyrecords":
-                    return HandleHistoryRecords(data);
+                    return HandleHistoryRecords(data).ResultForSync();
 
                 case "graphrecords":
-                    return HandleGraphRecords(data);
+                    return HandleGraphRecords(data).ResultForSync();
             }
 
             return base.PostBackProc(page, data, user, userRights);
@@ -244,7 +246,7 @@ namespace Hspi
             return "/" + Id + "/" + fileName;
         }
 
-        private string HandleHistoryRecords(string data)
+        private async Task<string> HandleHistoryRecords(string data)
         {
             StringBuilder stb = new();
             using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
@@ -275,13 +277,13 @@ namespace Hspi
                 if (!string.IsNullOrEmpty(parameters["duration"]))
                 {
                     queryDuration = ParseDuration(parameters["duration"]);
-                    totalResultsCount = collector.GetRecordsCount(refId, queryDuration.Value);
+                    totalResultsCount = await collector.GetRecordsCount(refId, queryDuration.Value).ConfigureAwait(false);
                 }
 
-                var queryData = collector.GetRecords(refId,
+                var queryData = await collector.GetRecords(refId,
                                                      queryDuration ?? TimeSpan.FromDays(365 * 10),
                                                      start, Math.Min(length, recordLimit ?? int.MaxValue),
-                                                     sortOrder);
+                                                     sortOrder).ConfigureAwait(false);
 
                 jsonWriter.WritePropertyName("draw");
                 jsonWriter.WriteValue(parameters["draw"]);
@@ -335,7 +337,7 @@ namespace Hspi
             }
         }
 
-        private string HandleGraphRecords(string data)
+        private async Task<string> HandleGraphRecords(string data)
         {
             StringBuilder stb = new();
             using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
@@ -346,13 +348,19 @@ namespace Hspi
             try
             {
                 var collector = GetCollector();
-                var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
-                var refId = jsonData["refId"].Value<int>();
-                var min = jsonData["min"].Value<long>();
-                var max = jsonData["max"].Value<long>();
+                var refId = jsonData?["refId"]?.Value<int>();
+                var min = jsonData?["min"]?.Value<long>();
+                var max = jsonData?["max"]?.Value<long>();
+                if (refId == null || min == null || max == null)
+                {
+                    throw new ArgumentException("data is not correct");
+                }
 
-                var queryData = collector.GetGraphValues(refId, DateTimeOffset.FromUnixTimeMilliseconds(min), DateTimeOffset.FromUnixTimeMilliseconds(max));
+                var queryData = await collector.GetGraphValues(refId.Value,
+                                                         DateTimeOffset.FromUnixTimeMilliseconds(min.Value),
+                                                         DateTimeOffset.FromUnixTimeMilliseconds(max.Value)).ConfigureAwait(false);
 
                 jsonWriter.WritePropertyName("data");
                 jsonWriter.WriteStartArray();

@@ -6,7 +6,7 @@
  "Version":"4.0.0.0",
  "Packages":[
   {
-    "PackageName": "HomeKit Controller Lite",
+    "PackageName": "Historical Records",
     "EXEFile": "HSPI_HistoricalRecords.exe",
     "ID": "HistoricalRecords",
     "Version": "<#=version#>",
@@ -14,9 +14,9 @@
     "ZipFile": "HSPI_HistoricalRecords_<#=version#>.zip",
     "Author": "dk307",
     "Price": "Free",
-    "ReleaseNotesURL": "https://github.com/dk307/HSPI_HomeKitController",
+    "ReleaseNotesURL": "https://github.com/dk307/HSPI_HistoricalRecords",
     "ShortDescription": "Displays Historical Records for device For Homeseer 4",
-    "SupportURL": "https://github.com/dk307/HSPI_HomeKitController/issues",
+    "SupportURL": "https://github.com/dk307/HSPI_HistoricalRecords/issues",
     "Tags": [
       "Free",
       "Beta"

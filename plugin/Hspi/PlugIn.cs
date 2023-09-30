@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
@@ -37,7 +37,10 @@ namespace Hspi
             return CreateDeviceConfigPage(device, device.Interface == Id ? "editimport.html" : "devicehistoricalrecords.html");
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
+
         public override void HsEvent(Constants.HSEvent eventType, object[] parameters)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             HSEventImpl(eventType, parameters).Wait(ShutdownCancellationToken);
         }
@@ -51,7 +54,7 @@ namespace Hspi
         {
             if (disposing)
             {
-                // deviceManager?.Dispose();
+                collector?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -67,8 +70,15 @@ namespace Hspi
                 monitoredDevicesConfig = new MonitoredDevicesConfig(HomeSeerSystem);
                 UpdateDebugLevel();
 
+                string dbPath = Path.Combine(HomeSeerSystem.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+
+                // string dbPath2 = Path.Combine(Path.GetTempPath(), "test2.db");
+                collector = new SqliteDatabaseCollector(dbPath, ShutdownCancellationToken);
+
+#pragma warning disable CS0618 // Type or member is obsolete
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 RestartProcessing();
 
@@ -110,15 +120,13 @@ namespace Hspi
             }
         }
 
-        private IDatabaseCollector GetCollector()
+        private SqliteDatabaseCollector GetCollector()
         {
-            if (collector == null)
-            {
-                collector = new SqliteDatabaseCollector(ShutdownCancellationToken);
-            }
-
+            CheckNotNull(collector);
             return collector;
         }
+
+#pragma warning disable CS0618 // Type or member is obsolete
 
         private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
         {
@@ -137,9 +145,11 @@ namespace Hspi
             }
             catch (Exception ex)
             {
-                Trace.TraceWarning("Failed to process HSEvent {eventType} with {error}", eventType, ex.GetFullMessage());
+                Log.Warning("Failed to process HSEvent {eventType} with {error}", eventType, ex.GetFullMessage());
             }
         }
+
+#pragma warning restore CS0618 // Type or member is obsolete
 
         private static bool IsMonitored(AbstractHsDevice feature)
         {
@@ -188,7 +198,7 @@ namespace Hspi
             }
         }
 
-        private static async Task RecordDeviceValue(IDatabaseCollector collector, HsFeature feature)
+        private static async Task RecordDeviceValue(SqliteDatabaseCollector collector, HsFeature feature)
         {
             ExtractValues(feature, out var deviceValue, out var lastChange, out var deviceString);
 
@@ -261,7 +271,7 @@ namespace Hspi
             Logger.ConfigureLogging(settingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
-        private IDatabaseCollector? collector;
+        private SqliteDatabaseCollector? collector;
         private MonitoredDevicesConfig? monitoredDevicesConfig;
         private SettingsPages? settingsPages;
     }

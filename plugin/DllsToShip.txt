@@ -1,6 +1,4 @@
 ﻿Destructurama.Attributed.dll
-EntityFramework.dll
-EntityFramework.SqlServer.dll
 Microsoft.Win32.Primitives.dll
 netstandard.dll
 Newtonsoft.Json.dll
@@ -11,6 +9,11 @@ Nito.Disposables.dll
 Serilog.dll
 Serilog.Sinks.Console.dll
 Serilog.Sinks.File.dll
+SQLitePCLRaw.batteries_v2.dll
+SQLitePCLRaw.core.dll
+SQLitePCLRaw.provider.dynamic_cdecl.dll
+SQLitePCLRaw.provider.sqlite3.dll
+SQLitePCLRaw.ugly.dll
 System.AppContext.dll
 System.Buffers.dll
 System.Collections.Concurrent.dll
@@ -24,9 +27,6 @@ System.ComponentModel.Primitives.dll
 System.ComponentModel.TypeConverter.dll
 System.Console.dll
 System.Data.Common.dll
-System.Data.SQLite.dll
-System.Data.SQLite.EF6.dll
-System.Data.SQLite.Linq.dll
 System.Diagnostics.Contracts.dll
 System.Diagnostics.Debug.dll
 System.Diagnostics.FileVersionInfo.dll
@@ -114,5 +114,3 @@ System.Xml.XmlDocument.dll
 System.Xml.XmlSerializer.dll
 System.Xml.XPath.dll
 System.Xml.XPath.XDocument.dll
-x64/SQLite.Interop.dll
-x86/SQLite.Interop.dll

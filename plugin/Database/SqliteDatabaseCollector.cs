@@ -1,54 +1,103 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SQLite;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Hspi.Utils;
 using Nito.AsyncEx;
 using Serilog;
+using SQLitePCL;
+using SQLitePCL.Ugly;
+using static SQLitePCL.raw;
 
 #nullable enable
 
 namespace Hspi.Database
 {
-    internal sealed class SqliteDatabaseCollector : IDatabaseCollector
+    public record TimeAndValue(DateTimeOffset TimeStamp, double DeviceValue);
+
+    public enum ResultSortBy
     {
-        public SqliteDatabaseCollector(CancellationToken shutdownToken)
+        TimeDesc = 0,
+        ValueDesc = 1,
+        StringDesc = 2,
+        TimeAsc = 3,
+        ValueAsc = 4,
+        StringAsc = 5,
+    }
+
+    internal sealed class SqliteDatabaseCollector : IDisposable
+    {
+        static SqliteDatabaseCollector()
         {
-            tokenSource = CancellationTokenSource.CreateLinkedTokenSource(shutdownToken);
-            dbPath = Path.Combine(Path.GetTempPath(), "test.db");
-            sqliteConnection = new SQLiteConnection($"Data Source='{dbPath}';PRAGMA journal_mode=WAL;");
-            SetupDatabase();
-            insertCommand = CreateInsertCommand();
-            getHistoryCommand = CreateHistoryCommand();
-            getTimeAndValueCommand = CreateTimeAndValueCommand();
-            getTimeAndValueCountCommand = CreateHistoryCountCommand();
-            Utils.TaskHelper.StartAsyncWithErrorChecking("DB Update Records", UpdateRecords, tokenSource.Token);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                SQLitePCL.Batteries_V2.Init();
+            }
+            else
+            {
+                SQLitePCL.raw.SetProvider(new SQLite3Provider_sqlite3());
+            }
         }
 
-        public IList<RecordData> GetRecords(int refId, TimeSpan timeSpan,
-                                            int start, int length, ResultSortBy sortBy)
+        public SqliteDatabaseCollector(string dbPath, CancellationToken shutdownToken)
         {
-            var fromTime = DateTimeOffset.UtcNow.Subtract(timeSpan).ToUnixTimeSeconds();
+            this.dbPath = dbPath;
+            this.shutdownToken = shutdownToken;
+            CreateDBDirectory(dbPath);
 
-            getHistoryCommand.Parameters["$refid"].Value = refId;
-            getHistoryCommand.Parameters["$time"].Value = fromTime;
-            getHistoryCommand.Parameters["$order"].Value = (int)sortBy;
-            getHistoryCommand.Parameters["$limit"].Value = length;
-            getHistoryCommand.Parameters["$offset"].Value = start;
+            const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_PRIVATECACHE;
 
-            List<RecordData> records = new();
-            using var reader = getHistoryCommand.ExecuteReader();
-            while (reader.Read())
+            sqliteConnection = ugly.open_v2(dbPath, OpenFlags, null);
+            Log.Information("System SQLite version: {version}", sqlite3_libversion().utf8_to_string());
+
+            ConfigureDatabase();
+            SetupDatabase();
+
+            insertCommand = CreateStatement(InsertSql);
+            getHistoryCommand = CreateStatement(RecordsHistorySql);
+            getRecordHistoryCountCommand = CreateStatement(RecordsHistoryCountSql);
+            getTimeAndValueCommand = CreateStatement(GetTimeValueSql);
+            Utils.TaskHelper.StartAsyncWithErrorChecking("DB Update Records", UpdateRecords, shutdownToken);
+
+            static void CreateDBDirectory(string dbPath)
             {
-                // order: SELECT (time, value, string) FROM history
-                var record = new RecordData(
-                        refId,
-                        reader.GetDouble(1),
-                        reader.GetString(2),
-                        DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(0))
+                string dirPath = Path.GetDirectoryName(dbPath);
+                if (!Directory.Exists(dirPath))
+                {
+                    Directory.CreateDirectory(dirPath);
+                }
+            }
+
+            void ConfigureDatabase()
+            {
+                if (sqlite3_threadsafe() == 0)
+                {
+                    throw new Exception("Sqlite is not thread safe");
+                }
+
+                sqlite3_extended_result_codes(sqliteConnection, 1);
+            }
+        }
+
+        public async Task<IList<TimeAndValue>> GetGraphValues(int refId, DateTimeOffset min, DateTimeOffset max)
+        {
+            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+
+            var stmt = getTimeAndValueCommand;
+            ugly.reset(stmt);
+            ugly.bind_int(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, min.ToUnixTimeSeconds());
+            ugly.bind_int64(stmt, 3, max.ToUnixTimeSeconds());
+
+            List<TimeAndValue> records = new();
+            while (ugly.step(stmt) != SQLITE_DONE)
+            {
+                // order: SELECT (time, value) FROM history
+                var record = new TimeAndValue(
+                        DateTimeOffset.FromUnixTimeSeconds(ugly.column_int64(stmt, 0)),
+                        ugly.column_double(stmt, 1)
                     );
 
                 records.Add(record);
@@ -57,116 +106,110 @@ namespace Hspi.Database
             return records;
         }
 
-        public long GetRecordsCount(int refId, TimeSpan timeSpan)
+        public async Task<IList<RecordData>> GetRecords(int refId, TimeSpan timeSpan,
+                                                    int start, int length, ResultSortBy sortBy)
         {
+            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+
+            var stmt = getHistoryCommand;
+
             var fromTime = DateTimeOffset.UtcNow.Subtract(timeSpan).ToUnixTimeSeconds();
 
-            getTimeAndValueCountCommand.Parameters[0].Value = refId;
-            getTimeAndValueCountCommand.Parameters[1].Value = fromTime;
-            return Convert.ToInt64(getTimeAndValueCountCommand.ExecuteScalar());
-        }
+            ugly.reset(stmt);
+            ugly.bind_int(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, fromTime);
+            ugly.bind_int(stmt, 3, (int)sortBy);
+            ugly.bind_int64(stmt, 4, length);
+            ugly.bind_int64(stmt, 5, start);
 
-        public Task Record(RecordData recordData)
-        {
-            return RecordImpl(recordData);
-            async Task RecordImpl(RecordData recordData)
+            List<RecordData> records = new();
+
+            while (ugly.step(stmt) != SQLITE_DONE)
             {
-                await queue.EnqueueAsync(recordData).ConfigureAwait(false);
-            }
+                // order: SELECT (time, value, string) FROM history
+                var record = new RecordData(
+                        refId,
+                        ugly.column_double(stmt, 1),
+                        ugly.column_text(stmt, 2),
+                        DateTimeOffset.FromUnixTimeSeconds(ugly.column_int64(stmt, 0))
+                    );
+
+                records.Add(record);
+            };
+
+            return records;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "<Pending>")]
-        private static void ExecQuery(string sql, SQLiteConnection connection)
+        public async Task<long> GetRecordsCount(int refId, TimeSpan timeSpan)
         {
-            using SQLiteCommand command = new(sql, connection);
-            command.ExecuteNonQueryAsync();
+            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+
+            var stmt = getRecordHistoryCountCommand;
+            var fromTime = DateTimeOffset.UtcNow.Subtract(timeSpan).ToUnixTimeSeconds();
+
+            ugly.reset(stmt);
+            ugly.bind_int(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, fromTime);
+            ugly.step(stmt);
+
+            return stmt.column<long>(0);
         }
 
-        private SQLiteCommand CreateHistoryCommand()
+        public async Task Record(RecordData recordData)
         {
-            SQLiteCommand command = new(@"
-                SELECT time, value, string FROM history
-                WHERE ref=$refid AND time>=$time
-                ORDER BY
-                    CASE WHEN $order = 0 THEN time END DESC,
-                    CASE WHEN $order = 1 THEN value END DESC,
-                    CASE WHEN $order = 2 THEN string END DESC,
-                    CASE WHEN $order = 3 THEN time END ASC,
-                    CASE WHEN $order = 4 THEN value END ASC,
-                    CASE WHEN $order = 5 THEN string END ASC
-                LIMIT $limit OFFSET $offset", sqliteConnection);
-            command.Parameters.Add(new SQLiteParameter("$refid", DbType.Int32));
-            command.Parameters.Add(new SQLiteParameter("$time", DbType.Int64));
-            command.Parameters.Add(new SQLiteParameter("$order", DbType.Int16));
-            command.Parameters.Add(new SQLiteParameter("$limit", DbType.Int64));
-            command.Parameters.Add(new SQLiteParameter("$offset", DbType.Int64));
-            command.Prepare();
+            await queue.EnqueueAsync(recordData).ConfigureAwait(false);
+        }
+
+        private sqlite3_stmt CreateStatement(string sql)
+        {
+            var command = ugly.prepare_v3(sqliteConnection, sql, SQLITE_PREPARE_PERSISTENT);
             return command;
         }
 
-        private SQLiteCommand CreateHistoryCountCommand()
+        private async Task InsertRecord(RecordData record)
         {
-            SQLiteCommand command = new("SELECT COUNT(*) FROM history WHERE ref=? AND time>=?", sqliteConnection);
-            command.Parameters.Add(new SQLiteParameter(DbType.Int32));
-            command.Parameters.Add(new SQLiteParameter(DbType.Int64));
-            command.Prepare();
-            return command;
-        }
-
-        private SQLiteCommand CreateTimeAndValueCommand()
-        {
-            SQLiteCommand command = new("SELECT [time], value FROM history WHERE ref=? AND time>=? AND time<=? ORDER BY [time] desc", sqliteConnection);
-            command.Parameters.Add(new SQLiteParameter(DbType.Int32));
-            command.Parameters.Add(new SQLiteParameter(DbType.Int64));
-            command.Parameters.Add(new SQLiteParameter(DbType.Int64));
-            command.Prepare();
-            return command;
-        }
-
-        private SQLiteCommand CreateInsertCommand()
-        {
-            SQLiteCommand command = new("INSERT OR REPLACE INTO history(time, ref, value, string) VALUES(?,?,?,?)", sqliteConnection);
-            command.Parameters.Add(new SQLiteParameter(DbType.Int64));
-            command.Parameters.Add(new SQLiteParameter(DbType.Int32));
-            command.Parameters.Add(new SQLiteParameter(DbType.Double));
-            command.Parameters.Add(new SQLiteParameter(DbType.String));
-            command.Prepare();
-            return command;
-        }
-
-        private void InsertRecord(RecordData record)
-        {
-            insertCommand.Parameters[0].Value = record.TimeStamp.ToUnixTimeSeconds();
-            insertCommand.Parameters[1].Value = record.DeviceRefId;
-            insertCommand.Parameters[2].Value = record.DeviceValue;
-            insertCommand.Parameters[3].Value = record.DeviceString;
-            insertCommand.ExecuteNonQuery();
+            sqlite3_stmt stmt = insertCommand;
+            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+            ugly.reset(stmt);
+            ugly.bind_int64(stmt, 1, record.TimeStamp.ToUnixTimeSeconds());
+            ugly.bind_int(stmt, 2, record.DeviceRefId);
+            ugly.bind_double(stmt, 3, record.DeviceValue);
+            ugly.bind_text(stmt, 4, record.DeviceString);
+            ugly.step_done(stmt);
         }
 
         private void SetupDatabase()
         {
             Log.Information("Connecting to database: {dbPath}", dbPath);
-            sqliteConnection.Open();
+            ugly.exec(sqliteConnection, "PRAGMA journal_mode=WAL");
 
-            using var tx = sqliteConnection.BeginTransaction();
-            ExecQuery("CREATE TABLE IF NOT EXISTS history(time NUMERIC NOT NULL, ref INT NOT NULL, value DOUBLE NOT NULL, string VARCHAR(1024), PRIMARY KEY(time,ref));", sqliteConnection);
-            ExecQuery("CREATE INDEX history_time_index ON history (time);", sqliteConnection);
-            ExecQuery("CREATE INDEX history_ref_index ON history (ref);", sqliteConnection);
-            ExecQuery("CREATE INDEX history_time_ref_index ON history (time, ref);", sqliteConnection);
-            tx.Commit();
+            ugly.exec(sqliteConnection, "BEGIN TRANSACTION");
+
+            try
+            {
+                ugly.exec(sqliteConnection, "CREATE TABLE IF NOT EXISTS history(ts NUMERIC NOT NULL, ref INT NOT NULL, value DOUBLE NOT NULL, str VARCHAR(1024), PRIMARY KEY(ts,ref));");
+                ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_index ON history (ts);");
+                ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_ref_index ON history (ref);");
+                ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_ref_index ON history (ts, ref);");
+                ugly.exec(sqliteConnection, "COMMIT");
+            }
+            catch (Exception)
+            {
+                ugly.exec(sqliteConnection, "ABORT");
+                throw;
+            }
         }
 
         private async Task UpdateRecords()
         {
-            CancellationToken token = tokenSource.Token;
+            CancellationToken token = shutdownToken;
             while (!token.IsCancellationRequested)
             {
                 var record = await queue.DequeueAsync(token).ConfigureAwait(false);
                 try
                 {
                     Log.Debug("Adding to database: {record}", record);
-
-                    InsertRecord(record);
+                    await InsertRecord(record).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -183,38 +226,39 @@ namespace Hspi.Database
             }
         }
 
-        public IList<TimeAndValue> GetGraphValues(int refId, DateTimeOffset min, DateTimeOffset max)
+        public void Dispose()
         {
-            getTimeAndValueCommand.Parameters[0].Value = refId;
-            getTimeAndValueCommand.Parameters[1].Value = min.ToUnixTimeSeconds();
-            getTimeAndValueCommand.Parameters[2].Value = max.ToUnixTimeSeconds();
-
-            List<TimeAndValue> records = new();
-            using var reader = getTimeAndValueCommand.ExecuteReader();
-            while (reader.Read())
-            {
-                // order: SELECT (time, value) FROM history
-                var record = new TimeAndValue(
-                        DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(0)),
-                        reader.GetDouble(1)
-                    );
-
-                records.Add(record);
-            };
-
-            return records;
+            getHistoryCommand.Dispose();
+            getRecordHistoryCountCommand.Dispose();
+            getTimeAndValueCommand.Dispose();
+            insertCommand.Dispose();
+            sqliteConnection.Dispose();
         }
 
+        private const string GetTimeValueSql = "SELECT ts, value FROM history WHERE ref=? AND ts>=? AND ts<=? ORDER BY [ts] desc";
+        private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
+        private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=?";
+
+        private const string RecordsHistorySql = @"
+                SELECT ts, value, str FROM history
+                WHERE ref=$refid AND ts>=$ts
+                ORDER BY
+                    CASE WHEN $order = 0 THEN ts END DESC,
+                    CASE WHEN $order = 1 THEN value END DESC,
+                    CASE WHEN $order = 2 THEN str END DESC,
+                    CASE WHEN $order = 3 THEN ts END ASC,
+                    CASE WHEN $order = 4 THEN value END ASC,
+                    CASE WHEN $order = 5 THEN str END ASC
+                LIMIT $limit OFFSET $offset";
+
+        private readonly AsyncLock connectionLock = new();
         private readonly string dbPath;
-
-        // private readonly SQLiteCommand getHistoryCountCommand;
-        private readonly SQLiteCommand getHistoryCommand;
-
-        private readonly SQLiteCommand getTimeAndValueCountCommand;
-        private readonly SQLiteCommand getTimeAndValueCommand;
-        private readonly SQLiteCommand insertCommand;
+        private readonly sqlite3_stmt getHistoryCommand;
+        private readonly sqlite3_stmt getRecordHistoryCountCommand;
+        private readonly sqlite3_stmt getTimeAndValueCommand;
+        private readonly sqlite3_stmt insertCommand;
         private readonly AsyncProducerConsumerQueue<RecordData> queue = new();
-        private readonly SQLiteConnection sqliteConnection;
-        private readonly CancellationTokenSource tokenSource;
+        private readonly sqlite3 sqliteConnection;
+        private readonly CancellationToken shutdownToken;
     }
 }
