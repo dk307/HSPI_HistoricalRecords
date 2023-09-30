@@ -62,8 +62,8 @@ jobs:
         with:
           name: Binaries
           path: |
-            .\plugin\bin\x86\Release\HSPI_HistoricalRecords_*.zip
-            .\plugin\bin\x86\Release\updater_override.json
+            .\plugin\bin\Release\HSPI_HistoricalRecords_*.zip
+            .\plugin\bin\Release\updater_override.json
 
       - name: Release development build
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
