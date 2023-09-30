@@ -54,7 +54,7 @@ namespace Hspi
         {
             if (disposing)
             {
-                // deviceManager?.Dispose();
+                collector?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -70,7 +70,9 @@ namespace Hspi
                 monitoredDevicesConfig = new MonitoredDevicesConfig(HomeSeerSystem);
                 UpdateDebugLevel();
 
-                string dbPath = Path.Combine(Path.GetTempPath(), "test.db");
+                string dbPath = Path.Combine(HomeSeerSystem.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+
+                // string dbPath2 = Path.Combine(Path.GetTempPath(), "test2.db");
                 collector = new SqliteDatabaseCollector(dbPath, ShutdownCancellationToken);
 
 #pragma warning disable CS0618 // Type or member is obsolete

@@ -25,7 +25,6 @@
 	displayDeviceRefId=queries['displayDeviceRefId'] ?? ""
 	displaySelect=queries['displaySelect'] ?? ""
 	displayPeriod=queries['displayPeriod'] ?? ""
-	displayGroup=queries['displayGroup'] ?? ""
 	
 	if displayDeviceRefId != ""
 		finalRefId=displayDeviceRefId
@@ -83,16 +82,7 @@
 		if !rangeOptionFound
 			displayPeriod = rangeOptions[0][3]
 		end	
-			
-		groupOptions=[ 
-			 ["Auto", "", ""],
-			 ["1 minute",  "00:01:00", "1m"],
-			 ["5 minute",  "00:05:00", "5m"],
-			 ["30 minute",  "00:20:00", "30m"],
-			 ["1 hour",  "01:00:00", "60m"],
-			 ["12 hours",  "12:00:00", "12hr"],
-			 ["1 day",  "1.00:00:00", "24hr"],
-			]				
+					
 	end
 	}}	
 	
@@ -103,7 +93,6 @@
 <!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
 <!-- displaySelect={{displaySelect}}<BR> -->
 <!-- displayPeriod={{displayPeriod}}<BR> -->
-<!-- displayGroup={{displayGroup}}<BR> -->
 
 <header>
 	
@@ -157,17 +146,6 @@
 					</select> 
 					<label class="mdb-main-label" for="displayPeriod">Period</label>
 				</div>
-
-				{{if displaySelect!="table" && displaySelect!="histogram"}}
-					<div class="md-form my-0 mr-3">
-						<select id="displayGroup" class="mdb-select md-form colorful-select" name="displayGroup">
-							{{for groupOption in groupOptions}}
-								<option value="{{groupOption[2]}}" {{if groupOption[2]==displayGroup;}}selected{{end}}>{{groupOption[0] | html.escape}}</option>	
-							{{end}}			
-						</select> 
-						<label class="mdb-main-label" for="displayGroup">Grouping</label>
-					</div>
-				{{end}}
 			{{end}}
 			{{if displaySelect != ""}}
 				<ul class="navbar-nav ml-auto nav-flex-icons nav-right"  >
@@ -179,8 +157,6 @@
 				</ul>
 			{{end}}		
 		</form>
-		
-
 	</nav>	
 </header>
 <div class="container-fluid custom-scrollbar"> 
@@ -272,7 +248,7 @@
 			{{needDataTables=true}}	
 		{{end}}		
 	{{else if device}}
-		<a class="btn btn-primary" role="button" href="/HistoricalRecords/addeditpersistence.html?devicerefid={{finalRefId}}">Store History</a>
+		Not Configured
 	{{end}}
 
 </div>

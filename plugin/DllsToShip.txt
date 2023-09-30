@@ -1,8 +1,4 @@
-﻿Apache.Arrow.dll
-Destructurama.Attributed.dll
-Microsoft.Data.Analysis.dll
-Microsoft.Data.Sqlite.dll
-Microsoft.ML.DataView.dll
+﻿Destructurama.Attributed.dll
 Microsoft.Win32.Primitives.dll
 netstandard.dll
 Newtonsoft.Json.dll
@@ -17,6 +13,7 @@ SQLitePCLRaw.batteries_v2.dll
 SQLitePCLRaw.core.dll
 SQLitePCLRaw.provider.dynamic_cdecl.dll
 SQLitePCLRaw.provider.sqlite3.dll
+SQLitePCLRaw.ugly.dll
 System.AppContext.dll
 System.Buffers.dll
 System.Collections.Concurrent.dll
@@ -32,7 +29,6 @@ System.Console.dll
 System.Data.Common.dll
 System.Diagnostics.Contracts.dll
 System.Diagnostics.Debug.dll
-System.Diagnostics.DiagnosticSource.dll
 System.Diagnostics.FileVersionInfo.dll
 System.Diagnostics.Process.dll
 System.Diagnostics.StackTrace.dll
