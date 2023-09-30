@@ -74,6 +74,6 @@ jobs:
           name: "Development Build"
           fail_on_unmatched_files: true
           files: |
-           ./plugin/bin/x86/Release/HSPI_HistoricalRecords_*.zip
-           ./plugin/bin/x86/Release/updater_override.json
+           ./plugin/bin/Release/HSPI_HistoricalRecords_*.zip
+           ./plugin/bin/Release/updater_override.json
  
