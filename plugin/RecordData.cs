@@ -6,7 +6,7 @@ namespace Hspi
 {
     internal record RecordData
     {
-        public RecordData(int deviceRefId, in double deviceValue, string? deviceString,
+        public RecordData(long deviceRefId, in double deviceValue, string? deviceString,
                             in DateTimeOffset timeStamp)
         {
             this.DeviceRefId = deviceRefId;
@@ -15,7 +15,7 @@ namespace Hspi
             this.TimeStamp = timeStamp;
         }
 
-        public int DeviceRefId { get; }
+        public long DeviceRefId { get; }
         public double DeviceValue { get; }
         public string? DeviceString { get; }
         public DateTimeOffset TimeStamp { get; }

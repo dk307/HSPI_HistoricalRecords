@@ -69,6 +69,13 @@ namespace Hspi
             }
         }
 
+        public long GetOldestRecordTimeDate(string refIdString)
+        {
+            int refId = ParseRefId(refIdString);
+            var oldest = GetCollector().GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();
+            return oldest.ToUnixTimeSeconds();
+        }
+
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
         {
             return base.HasJuiDeviceConfigPage(devOrFeatRef);
@@ -166,9 +173,9 @@ namespace Hspi
             return TimeSpan.FromSeconds(seconds);
         }
 
-        private static int ParseInt(string argumentName, string? refIdString)
+        private static long ParseInt(string argumentName, string? refIdString)
         {
-            if (int.TryParse(refIdString,
+            if (long.TryParse(refIdString,
                              System.Globalization.NumberStyles.Any,
                              CultureInfo.InvariantCulture, out var result))
             {
@@ -265,25 +272,35 @@ namespace Hspi
                 var sortOrder = CalculateSortOrder(parameters["order[0][column]"], parameters["order[0][dir]"]);
 
                 long totalResultsCount = 0;
-                TimeSpan? queryDuration = null;
-                int? recordLimit = null;
+                long recordLimit;
 
-                if (!string.IsNullOrEmpty(parameters["recordLimit"]))
+                DateTimeOffset min;
+                DateTimeOffset max;
+                if (!string.IsNullOrEmpty(parameters["min"]) && !string.IsNullOrEmpty(parameters["max"]))
                 {
-                    recordLimit = ParseParameterAsInt(parameters, "recordLimit");
-                    totalResultsCount = recordLimit.Value;
+                    min = DateTimeOffset.FromUnixTimeMilliseconds(ParseParameterAsInt(parameters, "min"));
+                    max = DateTimeOffset.FromUnixTimeMilliseconds(ParseParameterAsInt(parameters, "max"));
+                    totalResultsCount = await collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
+                    recordLimit = int.MaxValue;
                 }
-
-                if (!string.IsNullOrEmpty(parameters["duration"]))
+                else if (!string.IsNullOrEmpty(parameters["recordLimit"]))
                 {
-                    queryDuration = ParseDuration(parameters["duration"]);
-                    totalResultsCount = await collector.GetRecordsCount(refId, queryDuration.Value).ConfigureAwait(false);
+                    min = DateTimeOffset.FromUnixTimeSeconds(0);
+                    max = DateTimeOffset.Now.AddYears(100); //  a large future date
+                    recordLimit = ParseParameterAsInt(parameters, "recordLimit");
+                    totalResultsCount = recordLimit;
+                }
+                else
+                {
+                    throw new Exception("Niether min/max or recordCount specified");
                 }
 
                 var queryData = await collector.GetRecords(refId,
-                                                     queryDuration ?? TimeSpan.FromDays(365 * 10),
-                                                     start, Math.Min(length, recordLimit ?? int.MaxValue),
-                                                     sortOrder).ConfigureAwait(false);
+                                                           min,
+                                                           max,
+                                                           start,
+                                                           Math.Min(length, recordLimit),
+                                                           sortOrder).ConfigureAwait(false);
 
                 jsonWriter.WritePropertyName("draw");
                 jsonWriter.WriteValue(parameters["draw"]);
@@ -331,7 +348,7 @@ namespace Hspi
                 return ResultSortBy.TimeDesc;
             }
 
-            static int ParseParameterAsInt(NameValueCollection parameters, string name)
+            static long ParseParameterAsInt(NameValueCollection parameters, string name)
             {
                 return ParseInt(name, parameters[name]);
             }

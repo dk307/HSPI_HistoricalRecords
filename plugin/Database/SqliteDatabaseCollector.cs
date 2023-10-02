@@ -59,6 +59,7 @@ namespace Hspi.Database
             getHistoryCommand = CreateStatement(RecordsHistorySql);
             getRecordHistoryCountCommand = CreateStatement(RecordsHistoryCountSql);
             getTimeAndValueCommand = CreateStatement(GetTimeValueSql);
+            getOldestRecordCommand = CreateStatement(OldestRecordSql);
             Utils.TaskHelper.StartAsyncWithErrorChecking("DB Update Records", UpdateRecords, shutdownToken);
 
             static void CreateDBDirectory(string dbPath)
@@ -106,21 +107,20 @@ namespace Hspi.Database
             return records;
         }
 
-        public async Task<IList<RecordData>> GetRecords(int refId, TimeSpan timeSpan,
-                                                    int start, int length, ResultSortBy sortBy)
+        public async Task<IList<RecordData>> GetRecords(long refId, DateTimeOffset min, DateTimeOffset max,
+                                                    long start, long length, ResultSortBy sortBy)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
 
             var stmt = getHistoryCommand;
 
-            var fromTime = DateTimeOffset.UtcNow.Subtract(timeSpan).ToUnixTimeSeconds();
-
             ugly.reset(stmt);
-            ugly.bind_int(stmt, 1, refId);
-            ugly.bind_int64(stmt, 2, fromTime);
-            ugly.bind_int(stmt, 3, (int)sortBy);
-            ugly.bind_int64(stmt, 4, length);
-            ugly.bind_int64(stmt, 5, start);
+            ugly.bind_int64(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, min.ToUnixTimeSeconds());
+            ugly.bind_int64(stmt, 3, max.ToUnixTimeSeconds());
+            ugly.bind_int64(stmt, 4, (int)sortBy);
+            ugly.bind_int64(stmt, 5, length);
+            ugly.bind_int64(stmt, 6, start);
 
             List<RecordData> records = new();
 
@@ -140,16 +140,29 @@ namespace Hspi.Database
             return records;
         }
 
-        public async Task<long> GetRecordsCount(int refId, TimeSpan timeSpan)
+        public async Task<DateTimeOffset> GetOldestRecordTimeDate(int refId)
+        {
+            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+
+            var stmt = getOldestRecordCommand;
+
+            ugly.reset(stmt);
+            ugly.bind_int(stmt, 1, refId);
+            ugly.step(stmt);
+
+            return DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(0));
+        }
+
+        public async Task<long> GetRecordsCount(long refId, DateTimeOffset min, DateTimeOffset max)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
 
             var stmt = getRecordHistoryCountCommand;
-            var fromTime = DateTimeOffset.UtcNow.Subtract(timeSpan).ToUnixTimeSeconds();
 
             ugly.reset(stmt);
-            ugly.bind_int(stmt, 1, refId);
-            ugly.bind_int64(stmt, 2, fromTime);
+            ugly.bind_int64(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, min.ToUnixTimeSeconds());
+            ugly.bind_int64(stmt, 3, max.ToUnixTimeSeconds());
             ugly.step(stmt);
 
             return stmt.column<long>(0);
@@ -172,7 +185,7 @@ namespace Hspi.Database
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
             ugly.reset(stmt);
             ugly.bind_int64(stmt, 1, record.TimeStamp.ToUnixTimeSeconds());
-            ugly.bind_int(stmt, 2, record.DeviceRefId);
+            ugly.bind_int64(stmt, 2, record.DeviceRefId);
             ugly.bind_double(stmt, 3, record.DeviceValue);
             ugly.bind_text(stmt, 4, record.DeviceString);
             ugly.step_done(stmt);
@@ -229,6 +242,7 @@ namespace Hspi.Database
         public void Dispose()
         {
             getHistoryCommand.Dispose();
+            getOldestRecordCommand.Dispose();
             getRecordHistoryCountCommand.Dispose();
             getTimeAndValueCommand.Dispose();
             insertCommand.Dispose();
@@ -237,11 +251,12 @@ namespace Hspi.Database
 
         private const string GetTimeValueSql = "SELECT ts, value FROM history WHERE ref=? AND ts>=? AND ts<=? ORDER BY [ts] desc";
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
-        private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=?";
+        private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
+        private const string OldestRecordSql = "SELECT MIN(ts) FROM history WHERE ref=?";
 
         private const string RecordsHistorySql = @"
                 SELECT ts, value, str FROM history
-                WHERE ref=$refid AND ts>=$ts
+                WHERE ref=$refid AND ts>=$min AND ts<=$max
                 ORDER BY
                     CASE WHEN $order = 0 THEN ts END DESC,
                     CASE WHEN $order = 1 THEN value END DESC,
@@ -253,6 +268,7 @@ namespace Hspi.Database
 
         private readonly AsyncLock connectionLock = new();
         private readonly string dbPath;
+        private readonly sqlite3_stmt getOldestRecordCommand;
         private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;

@@ -117,7 +117,6 @@
   <ItemGroup>
     <Compile Include="Hspi\PlugIn2.cs" />
     <Compile Include="MonitoredDevice.cs" />
-    <Compile Include="Hspi\Exceptions\HsDeviceInvalidException.cs" />
     <Compile Include="Hspi\HSPI.cs" />
     <Compile Include="Hspi\Pages\SettingsPages.cs" />
     <Compile Include="Hspi\PlugIn.cs" />
@@ -148,7 +147,9 @@
     <None Include=".github\gitversion.yml" />
     <None Include=".github\ISSUE_TEMPLATE\bug_report.md" />
     <None Include=".github\ISSUE_TEMPLATE\feature_request.md" />
-    <None Include=".github\workflows\buildrelease.yml" />
+    <None Include="..\.github\workflows\buildrelease.yml">
+      <Link>.github\workflows\buildrelease.yml</Link>
+    </None>
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
@@ -243,6 +244,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Hspi\Exceptions\" />
     <Folder Include="Resources\" />
   </ItemGroup>
   <ItemGroup>
