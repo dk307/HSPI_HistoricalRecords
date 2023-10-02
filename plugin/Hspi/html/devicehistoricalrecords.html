@@ -3,8 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <!--This maintains the scale of the page based on the scale of the screen-->
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <!--Don't cache anything-->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
@@ -14,16 +13,31 @@
     {{includefile '/bootstrap/css/page_common.css'}}
     <title>Historical Records</title>
 	
+	<style>
+		canvas {
+			 width: 100%;  
+			 object-fit: contain; 
+		}
+
+		.chart-container {
+		  position: relative;
+		  margin: auto;	
+		  height: 60vh;
+		}
+	</style>
+	
     <link href="/css/hs.css" rel="stylesheet">
     <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
     <link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css" />	
 </head>
 
-	{{
+{{
 	refId=queries['refId'] ?? ""
 	displayDeviceRefId=queries['displayDeviceRefId'] ?? ""
 	displaySelect=queries['displaySelect'] ?? ""
+	displayMin=queries['displayMin'] ?? ""
+	displayMax=queries['displayMax'] ?? ""
 	displayPeriod=queries['displayPeriod'] ?? ""
 	
 	if displayDeviceRefId != ""
@@ -31,8 +45,9 @@
 	else
 		finalRefId=refId
 	end		
-	
+ 
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
+	oldestRecordDateTime=plugin_function 'HistoricalRecords' 'GetOldestRecordTimeDate'[finalRefId] 
 		
 	if !deviceDisplayDetails
 		deviceDisplayDetails=[]
@@ -42,13 +57,14 @@
 		# there is no valid displays
 		displaySelect=""
 	else if !(deviceDisplayDetails | array.contains displaySelect)
-		# select default value if current value is not select
+		# select default value to chart if current value is not select
 		if array.contains deviceDisplayDetails "chart"
 			displaySelect="chart"
 		else
 			displaySelect="table"	
 		end	
-	end	
+	end	 
+	
 	
 	if displaySelect != ""
 		rangeOptionsForTable=[ 
@@ -63,6 +79,7 @@
 						 ["Last 90 days", "", "7776000", "90d"],
 						 ["Last 180 days", "", "15552000", "90d"],
 						 ["Last 365 days", "", "31536000", "365d"],
+					  #  ["Custom Range", "", "", "customrange"],
 					 ]
 									
 		if displaySelect=="table"
@@ -82,23 +99,52 @@
 		if !rangeOptionFound
 			displayPeriod = rangeOptions[0][3]
 		end	
-					
+		
+		durationSeconds = ""
+		for rangeOption in rangeOptions
+			if  rangeOption[2] != "" && displayPeriod == rangeOption[3]
+				durationSeconds = rangeOption[2]
+				break
+			end
+		end				
+	 				
 	end
-	}}	
+}}	
+
+<script>
+{{ if durationSeconds }}
+const displayEndDate = 1000 * Math.round(Date.now() / 1000);
+const displayStartDate = displayEndDate - {{durationSeconds}} * 1000;
+{{else}}
+const displayEndDate = new Date({{displayMax}} * 1000).getTime();
+const displayStartDate = new Date({{displayMin}} * 1000).getTime();
+{{end}}	
+
+function getRangeString(min, max) {
+	const minDateString = (new Date(min)).toLocaleString();
+	const maxDateString = (new Date(max)).toLocaleString();
+	return minDateString + " - " + maxDateString;
+}
+</script>
 	
-<body class="body homeseer-skin ml-0 mr-0" style="min-height: 40rem" aria-busy="true">	
+<body class="body homeseer-skin ml-0 mr-0" style="min-height: 4rem" aria-busy="true">	
  
 <!-- refId={{refId}}<BR> -->
 <!-- finalRefId={{finalRefId}}<BR> -->
 <!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
 <!-- displaySelect={{displaySelect}}<BR> -->
+<!-- displayMin={{displayMin}}<BR> -->
+<!-- displayMax={{displayMax}}<BR> -->
 <!-- displayPeriod={{displayPeriod}}<BR> -->
+<!-- oldestRecordDateTime={{oldestRecordDateTime}}<BR> -->
 
 <header>
-	
 	<nav class="navbar">
-		<form class="form-inline my-0 mx-0" action="/HistoricalRecords/devicehistoricalrecords.html" method="GET" style="width:100%">	
+		<form class="form-inline my-0 mx-0" id="mainform" action="/HistoricalRecords/devicehistoricalrecords.html" method="GET" style="width:100%">	
 			<input type="hidden" id="refId" name="refId" value="{{refId}}"> 
+			<input type="hidden" id="displayMin" name="displayMin" value="{{displayMin}}"> 
+			<input type="hidden" id="displayMax" name="displayMax" value="{{displayMax}}"> 
+			<input type="hidden" id="displayLabel" name="displayLabel" value="{{displayLabel}}"> 
 
 			{{device=plugin_function 'HistoricalRecords' 'GetDeviceAndFeaturesNames'[refId] }}
 			{{if device}}
@@ -110,6 +156,7 @@
 					</select> 
 					<label class="mdb-main-label" for="displayDeviceRefId">Feature</label>
 				</div>
+				
 			{{else}}
 				{{refId}} Device not found {{device}}
 			{{end}}
@@ -138,6 +185,7 @@
 					<label class="mdb-main-label" for="displaySelect">View Type</label>
 				</div>	
 				
+
 				<div class="md-form my-0 mr-3">
 					<select id="displayPeriod" class="mdb-select md-form colorful-select" name="displayPeriod">
 						{{for rangeOption in rangeOptions}}
@@ -159,6 +207,7 @@
 		</form>
 	</nav>	
 </header>
+
 <div class="container-fluid custom-scrollbar"> 
 	<div class="hs_spinner" id="loading">
 		<div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
@@ -172,19 +221,11 @@
 		{{			
 			recordLimit = ""
 			duration = ""
-			grouping = ""
-		
+		 
 			for rangeOption in rangeOptions
 				if rangeOption[3]==displayPeriod
 					recordLimit=rangeOption[1]
 					duration=rangeOption[2]
-					break
-				end
-			end
-			
-			for groupOption in groupOptions
-				if groupOption[2]==displayGroup
-					grouping=groupOption[1]
 					break
 				end
 			end
@@ -203,26 +244,29 @@
 			<table>	
 			{{needDataTables=true}}
 		{{else if displaySelect=="chart"}}
-		<div class="btn-group mt-2 mx-auto" role="group" aria-label="Graph options">
-		  <button type="button" class="btn btn-info"  onclick="chartFunction(0)">Reset Zoom</button>
+			<div class="btn-group mt-2 mx-auto" role="group" aria-label="Graph options">
+			  <button type="button" class="btn btn-info"  onclick="chartFunction(0)">Reset Zoom</button>
 
-		  <div class="btn-group" role="group">
-			<button id="btnGroupDropCurve" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Curve</button>
-			<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-			  <a class="dropdown-item"  onclick="chartFunction(1)">Step</a>
-			  <a class="dropdown-item"  onclick="chartFunction(2)">Curve</a>
+			  <div class="btn-group" role="group">
+				<button id="btnGroupDropCurve" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Curve</button>
+				<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+				  <a class="dropdown-item"  onclick="chartFunction(1)">Step</a>
+				  <a class="dropdown-item"  onclick="chartFunction(2)">Curve</a>
+				</div>
+			  </div>
+			  <div class="btn-group" role="group">
+				<button id="btnGroupDropPoint" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Point</button>
+				<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+				  <a class="dropdown-item" onclick="chartFunction(3)">None</a>
+				  <a class="dropdown-item" onclick="chartFunction(4)">Circle</a>
+				  <a class="dropdown-item" onclick="chartFunction(5)">Line</a>
+				</div>
+			  </div>
 			</div>
-		  </div>
-		  <div class="btn-group" role="group">
-			<button id="btnGroupDropPoint" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Point</button>
-			<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-			  <a class="dropdown-item" onclick="chartFunction(3)">None</a>
-			  <a class="dropdown-item" onclick="chartFunction(4)">Circle</a>
-			  <a class="dropdown-item" onclick="chartFunction(5)">Line</a>
+			<div class="chart-container">
+				<canvas id="myLineChart"></canvas>
 			</div>
-		  </div>
-		</div>
-			<canvas id="myLineChart" height="100rem"></canvas>
+
 		{{else if displaySelect=="averageStats"}}
 			<table id="dt-persistence" class="table table-sm mb-0"cellspacing="0" width="100%">
 				<thead>
@@ -250,9 +294,8 @@
 	{{else if device}}
 		Not Configured
 	{{end}}
-
 </div>
- 
+
 {{includefile 'bootstrap/js/page_common.js'}}
 <script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
 
@@ -269,6 +312,10 @@
 {{end}}
 
 <script>
+const fmt = '{{system_date_format_date_picker "shortdatepattern"}}';
+const tfmt = '{{system_date_format "shorttimepattern"}}';
+const time12 = tfmt.includes('tt'); 
+
 $(function() {
     $('#displayDeviceRefId').change(function() {
         this.form.submit();
@@ -278,25 +325,28 @@ $(function() {
         this.form.submit();
     });	
 	
-    $('#displayPeriod').change(function() {
-        this.form.submit();
+	$('#displayPeriod').change(function() {
+		if ($('#displayPeriod').val() == "customrange") {
+			$('#modalRangeOptions').modal();
+		} else {
+			$('#displayMin').val('');
+			$('#displayMax').val('');	
+			this.form.submit();
+		}
     });	
-    
-{{if displaySelect!="table" && displaySelect!="histogram"}}	
-	$('#displayGroup').change(function() {
-        this.form.submit();
-    });	
-{{end}}	
 });
+
+
+function setupRangePicker() {
+}
 
 {{if needDataTables}}
 
-
 function humanizeTime(unix_timestamp) {
-	var date = new Date(unix_timestamp * 1000);
+	const date = new Date(unix_timestamp * 1000);
 	const nowDate = new Date(Date.now());
 	
-	var isSameDay = (date.getDate() === nowDate.getDate() 
+	const isSameDay = (date.getDate() === nowDate.getDate() 
 				 && date.getMonth() === nowDate.getMonth()
 				 && date.getFullYear() === nowDate.getFullYear())
 				 
@@ -321,8 +371,12 @@ function setUpPersistanceTable() {
         type: 'POST',
 		data: function (d) {
             d.refId = {{finalRefId}};
-			d.duration = '{{duration}}';
+			{{if recordLimit != ""}}
 			d.recordLimit = '{{recordLimit}}';
+			{{else}}
+			d.min = displayStartDate;
+			d.max = displayEndDate;
+			{{end}}
         }
     },
 	columnDefs: [
@@ -341,32 +395,24 @@ function setUpPersistanceTable() {
 }
 
 $(document).ready(function () {
+	setupRangePicker();
 	setUpPersistanceTable();
 	$('#loading').hide();
 });	
 
 {{else if displaySelect=="chart"}}
-	var chart;
-	var endDate = Date.now();
-	var startDate = endDate - (parseInt({{duration}}) * 1000);
-	var colors = ['#007bff','#28a745','#333333','#c3e6cb','#dc3545','#6c757d'];
-	var defaultTension = 0.4;
-	
-	
-	function getRangeString(min, max)
-	{
-		var minDateString = (new Date(min)).toLocaleString();
-		var maxDateString = (new Date(max)).toLocaleString();
-		return minDateString + " - " + maxDateString;
-	}
+	let chart;
+	const colors = ['#007bff','#28a745','#333333','#c3e6cb','#dc3545','#6c757d'];
+	const defaultTension = 0.25;
 	
 	function startFetchWithMinMax(chart, min, max) {
-		var formObject = {
+		console.log('Fetching data between ' + min + ' and ' + max);
+		const formObject = {
 		   refId : {{finalRefId}},
 		   min: min,
 		   max: max
 		};
-		var data = JSON.stringify(formObject);
+		const data = JSON.stringify(formObject);
 		$.ajax({
 			type: "POST",
 			async: "true",
@@ -374,8 +420,8 @@ $(document).ready(function () {
 			cache: false,
 			data: data,
 			success: function (response) {
-				var result = JSON.parse(response);
-				var errorMessage = result.error;
+				let result = JSON.parse(response);
+				let errorMessage = result.error;
 
 				if (errorMessage != null) {					
 					alert(errorMessage);
@@ -427,21 +473,14 @@ $(document).ready(function () {
 	const scales = {
 	  x: {
 		position: 'bottom',
-		min: startDate,
-		max: endDate,
+		min: displayStartDate,
+		max: displayEndDate,
 		type: 'time',
 		ticks: {
 		  autoSkip: true,
 		  autoSkipPadding: 50,
 		  maxRotation: 0
 		},
-		time: {
-		  displayFormats: {
-			hour: 'HH:mm',
-			minute: 'HH:mm',
-			second: 'HH:mm:ss'
-		  }
-		}
 	  },
 	  y: {
 		type: 'linear',
@@ -453,8 +492,8 @@ $(document).ready(function () {
 		Chart.defaults.font.family = "sans-serif";
 		Chart.defaults.font.size = 16;
 	
-		var ctx = document.getElementById("myLineChart").getContext('2d'); 
-		var myChart = new Chart(ctx, {
+		let ctx = document.getElementById("myLineChart").getContext('2d'); 
+		let myChart = new Chart(ctx, {
 		  type: "line",
 		  data: {
 				datasets: [{
@@ -473,6 +512,7 @@ $(document).ready(function () {
 		  options: {
 			scales: scales,
 			responsive: true,
+			maintainAspectRatio: false,
 			plugins: {
 			    zoom: zoomOptions,
 				title: {
@@ -497,10 +537,9 @@ $(document).ready(function () {
 			}
 		  },  
 		});
-		
 		 
 		chart = myChart;
-		startFetchWithMinMax(myChart, startDate, endDate);
+		startFetchWithMinMax(myChart, displayStartDate, displayEndDate);
 	}
 	
 function chartFunction(reason) {
@@ -535,6 +574,7 @@ function chartFunction(reason) {
 }
 
 $(document).ready(function () {
+    setupRangePicker();
 	setUpChart();
 	$('#loading').hide();
 });
