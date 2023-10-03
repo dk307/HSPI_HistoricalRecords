@@ -75,6 +75,23 @@ namespace Hspi.Database
             }
         }
 
+        public void Dispose()
+        {
+            getHistoryCommand.Dispose();
+            getOldestRecordCommand.Dispose();
+            getRecordHistoryCountCommand.Dispose();
+            getTimeAndValueCommand.Dispose();
+            insertCommand.Dispose();
+            sqliteConnection.Dispose();
+        }
+
+        /// <summary>
+        /// Returns the values between the range and one above and below the range
+        /// </summary>
+        /// <param name="refId"></param>
+        /// <param name="minUnixTimeSeconds"></param>
+        /// <param name="maxUnixTimeSeconds"></param>
+        /// <returns></returns>
         public async Task<IList<TimeAndValue>> GetGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
@@ -100,8 +117,21 @@ namespace Hspi.Database
             return records;
         }
 
+        public async Task<DateTimeOffset> GetOldestRecordTimeDate(int refId)
+        {
+            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+
+            var stmt = getOldestRecordCommand;
+
+            ugly.reset(stmt);
+            ugly.bind_int(stmt, 1, refId);
+            ugly.step(stmt);
+
+            return DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(0));
+        }
+
         public async Task<IList<RecordData>> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                                        long start, long length, ResultSortBy sortBy)
+                                                                long start, long length, ResultSortBy sortBy)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
 
@@ -131,19 +161,6 @@ namespace Hspi.Database
             };
 
             return records;
-        }
-
-        public async Task<DateTimeOffset> GetOldestRecordTimeDate(int refId)
-        {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-
-            var stmt = getOldestRecordCommand;
-
-            ugly.reset(stmt);
-            ugly.bind_int(stmt, 1, refId);
-            ugly.step(stmt);
-
-            return DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(0));
         }
 
         public async Task<long> GetRecordsCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
@@ -241,16 +258,6 @@ namespace Hspi.Database
             }
         }
 
-        public void Dispose()
-        {
-            getHistoryCommand.Dispose();
-            getOldestRecordCommand.Dispose();
-            getRecordHistoryCountCommand.Dispose();
-            getTimeAndValueCommand.Dispose();
-            insertCommand.Dispose();
-            sqliteConnection.Dispose();
-        }
-
         // 1 record before the time range and one after
         private const string GetTimeValueSql =
             @"SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts<=$min ORDER BY ts DESC LIMIT 1) UNION
@@ -258,8 +265,8 @@ namespace Hspi.Database
               SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
 
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
-        private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
         private const string OldestRecordSql = "SELECT MIN(ts) FROM history WHERE ref=?";
+        private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
 
         private const string RecordsHistorySql = @"
                 SELECT ts, value, str FROM history
@@ -275,13 +282,13 @@ namespace Hspi.Database
 
         private readonly AsyncLock connectionLock = new();
         private readonly string dbPath;
-        private readonly sqlite3_stmt getOldestRecordCommand;
         private readonly sqlite3_stmt getHistoryCommand;
+        private readonly sqlite3_stmt getOldestRecordCommand;
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;
         private readonly AsyncProducerConsumerQueue<RecordData> queue = new();
-        private readonly sqlite3 sqliteConnection;
         private readonly CancellationToken shutdownToken;
+        private readonly sqlite3 sqliteConnection;
     }
 }
