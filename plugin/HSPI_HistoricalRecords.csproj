@@ -143,13 +143,6 @@
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
     </None>
-    <None Include=".github\dependabot.yml" />
-    <None Include=".github\gitversion.yml" />
-    <None Include=".github\ISSUE_TEMPLATE\bug_report.md" />
-    <None Include=".github\ISSUE_TEMPLATE\feature_request.md" />
-    <None Include="..\.github\workflows\buildrelease.yml">
-      <Link>.github\workflows\buildrelease.yml</Link>
-    </None>
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
@@ -205,6 +198,9 @@
     <PackageReference Include="SQLitePCLRaw.core">
       <Version>2.1.6</Version>
     </PackageReference>
+    <PackageReference Include="SQLitePCLRaw.provider.e_sqlite3">
+      <Version>2.1.6</Version>
+    </PackageReference>
     <PackageReference Include="SQLitePCLRaw.provider.sqlite3">
       <Version>2.1.6</Version>
     </PackageReference>
@@ -245,6 +241,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Hspi\Exceptions\" />
+    <Folder Include="Hspi\Utils\" />
     <Folder Include="Resources\" />
   </ItemGroup>
   <ItemGroup>

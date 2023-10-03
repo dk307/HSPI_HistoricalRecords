@@ -274,19 +274,19 @@ namespace Hspi
                 long totalResultsCount = 0;
                 long recordLimit;
 
-                DateTimeOffset min;
-                DateTimeOffset max;
+                long min;
+                long max;
                 if (!string.IsNullOrEmpty(parameters["min"]) && !string.IsNullOrEmpty(parameters["max"]))
                 {
-                    min = DateTimeOffset.FromUnixTimeMilliseconds(ParseParameterAsInt(parameters, "min"));
-                    max = DateTimeOffset.FromUnixTimeMilliseconds(ParseParameterAsInt(parameters, "max"));
+                    min = ParseParameterAsInt(parameters, "min") / 1000;
+                    max = ParseParameterAsInt(parameters, "max") / 1000;
                     totalResultsCount = await collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
                     recordLimit = int.MaxValue;
                 }
                 else if (!string.IsNullOrEmpty(parameters["recordLimit"]))
                 {
-                    min = DateTimeOffset.FromUnixTimeSeconds(0);
-                    max = DateTimeOffset.Now.AddYears(100); //  a large future date
+                    min = 0;
+                    max = DateTimeOffset.Now.AddYears(100).ToUnixTimeSeconds(); //  a large future date
                     recordLimit = ParseParameterAsInt(parameters, "recordLimit");
                     totalResultsCount = recordLimit;
                 }
@@ -376,8 +376,8 @@ namespace Hspi
                 }
 
                 var queryData = await collector.GetGraphValues(refId.Value,
-                                                         DateTimeOffset.FromUnixTimeMilliseconds(min.Value),
-                                                         DateTimeOffset.FromUnixTimeMilliseconds(max.Value)).ConfigureAwait(false);
+                                                               min.Value / 1000,
+                                                               max.Value / 1000).ConfigureAwait(false);
 
                 jsonWriter.WritePropertyName("data");
                 jsonWriter.WriteStartArray();
