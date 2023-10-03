@@ -17,6 +17,7 @@ namespace Hspi.Database
 {
     public record TimeAndValue(long UnixTimeSeconds, double DeviceValue)
     {
+        public long UnixTimeMilliSeconds => UnixTimeSeconds * 1000;
         public DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);
     }
 
@@ -250,7 +251,12 @@ namespace Hspi.Database
             sqliteConnection.Dispose();
         }
 
-        private const string GetTimeValueSql = "SELECT ts, value FROM history WHERE ref=? AND ts>=? AND ts<=? ORDER BY [ts]";
+        // 1 record before the time range and one after
+        private const string GetTimeValueSql =
+            @"SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts<=$min ORDER BY ts DESC LIMIT 1) UNION
+              SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts>=$max ORDER BY ts LIMIT 1) UNION
+              SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
+
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
         private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
         private const string OldestRecordSql = "SELECT MIN(ts) FROM history WHERE ref=?";

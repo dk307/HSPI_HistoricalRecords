@@ -317,11 +317,9 @@ namespace Hspi
                 foreach (var row in queryData)
                 {
                     jsonWriter.WriteStartArray();
-
-                    jsonWriter.WriteValue(row.TimeStamp.ToUnixTimeSeconds());
+                    jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
                     jsonWriter.WriteValue(GetTableValue(CultureInfo.InvariantCulture, row.DeviceValue));
                     jsonWriter.WriteValue(GetTableValue(CultureInfo.InvariantCulture, row.DeviceString));
-
                     jsonWriter.WriteEndArray();
                 }
 
@@ -386,7 +384,7 @@ namespace Hspi
                 {
                     jsonWriter.WriteStartObject();
                     jsonWriter.WritePropertyName("x");
-                    jsonWriter.WriteValue(row.TimeStamp.ToUnixTimeMilliseconds());
+                    jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
                     jsonWriter.WritePropertyName("y");
                     jsonWriter.WriteValue(row.DeviceValue);
                     jsonWriter.WriteEndObject();

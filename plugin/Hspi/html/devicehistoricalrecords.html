@@ -343,7 +343,7 @@ function setupRangePicker() {
 {{if needDataTables}}
 
 function humanizeTime(unix_timestamp) {
-	const date = new Date(unix_timestamp * 1000);
+	const date = new Date(unix_timestamp);
 	const nowDate = new Date(Date.now());
 	
 	const isSameDay = (date.getDate() === nowDate.getDate() 

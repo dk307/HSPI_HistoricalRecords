@@ -30,6 +30,8 @@ namespace Hspi
 
         public long UnixTimeSeconds { get; }
 
+        public long UnixTimeMilliSeconds  => UnixTimeSeconds * 1000;
+
         public DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);
     }
 }
