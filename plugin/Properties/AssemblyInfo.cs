@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Historical Records Plugin for Homeseer 4")]
-[assembly: AssemblyDescription("HHistorical Records Plugin for Homeseer 4")]
+[assembly: AssemblyDescription("Historical Records Plugin for Homeseer 4")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyCopyright("Copyright ©  2023")]

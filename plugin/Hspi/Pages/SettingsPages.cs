@@ -41,9 +41,8 @@ namespace Hspi
             var settings = PageFactory.CreateSettingsPage(SettingPageId, "Settings");
 
             var logOptions = EnumHelper.GetValues<LogEventLevel>().Select(x => x.ToString()).ToList();
-            settings = settings.WithDropDownSelectList(LoggingLevelId, "Logging Level", logOptions, logOptions,(int)logEventLevel);
+            settings = settings.WithDropDownSelectList(LoggingLevelId, "Logging Level", logOptions, logOptions, (int)logEventLevel);
             settings = settings.WithToggle(LogToFileId, "Log to file", logToFileDefault);
-            settings = settings.WithLabel("icon_id", "<a class='float-right' href='https://icons8.com'>Icons from Icons8</a>");
             return settings.Page;
         }
 
@@ -52,7 +51,8 @@ namespace Hspi
             if (changedView.Id == LoggingLevelId)
             {
                 var value = ((SelectListView)changedView).GetSelectedOptionKey();
-                if (Enum.TryParse<LogEventLevel>(value, out LogEventLevel logEventLevel)) {
+                if (Enum.TryParse<LogEventLevel>(value, out LogEventLevel logEventLevel))
+                {
                     LogLevel = logEventLevel;
                     return true;
                 }

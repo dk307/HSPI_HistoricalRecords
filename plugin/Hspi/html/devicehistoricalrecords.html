@@ -72,21 +72,30 @@
 					 ]
 									 
 		rangeOptionsForOthers=[ 
-						 ["Last 6 hours", "", "21600", "6hr"],
-						 ["Last 24 hours", "", "86400", "1d"],
-						 ["Last 7 days", "", "604800", "7d"],
-						 ["Last 30 days", "", "2592000", "30d"],
-						 ["Last 90 days", "", "7776000", "90d"],
-						 ["Last 180 days", "", "15552000", "90d"],
-						 ["Last 365 days", "", "31536000", "365d"],
-					  #  ["Custom Range", "", "", "customrange"],
-					 ]
-									
+						 ["Last 6 hours", "", 21600, "6hr"],
+						 ["Last 24 hours", "", 86400, "1d"],
+						 ["Last 7 days", "", 604800, "7d"],
+						 ["Last 30 days", "", 2592000, "30d"],
+						 ["Last 90 days", "", 7776000, "90d"],
+						 ["Last 180 days", "", 15552000, "90d"],
+						 ["Last 365 days", "", 31536000, "365d"],
+					 ]		 
+					 			 
 		if displaySelect=="table"
-			rangeOptions = rangeOptionsForTable | array.concat rangeOptionsForOthers
+			rangeOptions = rangeOptionsForTable
 		else
-			rangeOptions = rangeOptionsForOthers
-		end		
+			rangeOptions=[]		
+		end
+
+		for rangeOption in rangeOptionsForOthers
+			if  rangeOption[2] <= oldestRecordDateTime
+				rangeOptions = rangeOptions | array.add rangeOption
+		 	else  
+				# add one more after the limit
+				rangeOptions = rangeOptions | array.add rangeOption
+				break
+			end
+		end	
 		
 		rangeOptionFound = false
 		for rangeOption in rangeOptions
@@ -254,14 +263,14 @@ function getRangeString(min, max) {
 				  <a class="dropdown-item"  onclick="chartFunction(2)">Curve</a>
 				</div>
 			  </div>
-			  <div class="btn-group" role="group">
-				<button id="btnGroupDropPoint" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Point</button>
-				<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-				  <a class="dropdown-item" onclick="chartFunction(3)">None</a>
-				  <a class="dropdown-item" onclick="chartFunction(4)">Circle</a>
-				  <a class="dropdown-item" onclick="chartFunction(5)">Line</a>
-				</div>
-			  </div>
+			  <!-- <div class="btn-group" role="group"> -->
+				<!-- <button id="btnGroupDropPoint" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Point</button> -->
+				<!-- <div class="dropdown-menu" aria-labelledby="btnGroupDrop1"> -->
+				  <!-- <a class="dropdown-item" onclick="chartFunction(3)">None</a> -->
+				  <!-- <a class="dropdown-item" onclick="chartFunction(4)">Circle</a> -->
+				  <!-- <a class="dropdown-item" onclick="chartFunction(5)">Line</a> -->
+				<!-- </div> -->
+			  <!-- </div> -->
 			</div>
 			<div class="chart-container">
 				<canvas id="myLineChart"></canvas>
@@ -312,10 +321,6 @@ function getRangeString(min, max) {
 {{end}}
 
 <script>
-const fmt = '{{system_date_format_date_picker "shortdatepattern"}}';
-const tfmt = '{{system_date_format "shorttimepattern"}}';
-const time12 = tfmt.includes('tt'); 
-
 $(function() {
     $('#displayDeviceRefId').change(function() {
         this.form.submit();
@@ -343,7 +348,7 @@ function setupRangePicker() {
 {{if needDataTables}}
 
 function humanizeTime(unix_timestamp) {
-	const date = new Date(unix_timestamp * 1000);
+	const date = new Date(unix_timestamp);
 	const nowDate = new Date(Date.now());
 	
 	const isSameDay = (date.getDate() === nowDate.getDate() 
@@ -402,8 +407,17 @@ $(document).ready(function () {
 
 {{else if displaySelect=="chart"}}
 	let chart;
-	const colors = ['#007bff','#28a745','#333333','#c3e6cb','#dc3545','#6c757d'];
-	const defaultTension = 0.25;
+ 
+	const colors = {
+	  blue: {
+		default: "#007bff",
+		half: "rgba(00, 123, 233, 0.5)",
+		quarter: "rgba(00, 123, 233, 0.25)",
+		zero: "rgba(00, 123, 233, 0)"
+	  }, 
+	};
+	
+	const defaultTension = 0.1;
 	
 	function startFetchWithMinMax(chart, min, max) {
 		console.log('Fetching data between ' + min + ' and ' + max);
@@ -430,6 +444,12 @@ $(document).ready(function () {
 					chart.data.datasets[0].data =  result.data;
 					chart.stop(); // make sure animations are not running
 					chart.options.plugins.subtitle.text = getRangeString(min, max);
+					
+					if ((max - min) > (1000 * 60 * 60 * 24 * 2)) {
+						chart.options.scales.x.time.displayFormats.hour = "MMM D";
+					} else {
+						chart.options.scales.x.time.displayFormats.hour = "hA";
+					}
 					chart.update('none');
 				}
 			},
@@ -475,12 +495,20 @@ $(document).ready(function () {
 		position: 'bottom',
 		min: displayStartDate,
 		max: displayEndDate,
+		time: {
+			// unit: 'day',
+			displayFormats: {
+			  hour: "hA"
+			},
+		},
 		type: 'time',
 		ticks: {
 		  autoSkip: true,
 		  autoSkipPadding: 50,
 		  maxRotation: 0
 		},
+		
+		
 	  },
 	  y: {
 		type: 'linear',
@@ -491,21 +519,30 @@ $(document).ready(function () {
 	function setUpChart() { 
 		Chart.defaults.font.family = "sans-serif";
 		Chart.defaults.font.size = 16;
-	
+		
 		let ctx = document.getElementById("myLineChart").getContext('2d'); 
+		
+		let gradient = ctx.createLinearGradient(0, 25, 0, 300);
+		gradient.addColorStop(0, colors.blue.half);
+		gradient.addColorStop(0.35, colors.blue.quarter);
+		gradient.addColorStop(1, colors.blue.zero);
+
+
 		let myChart = new Chart(ctx, {
 		  type: "line",
 		  data: {
 				datasets: [{
-				  label: "Value",
-				  data: [],
-				  backgroundColor: 'transparent',
-				  borderColor: colors[0],
-				  borderWidth: 2,
-				  pointBackgroundColor: colors[0],
-				  stepped : false,
-				  tension : defaultTension,
-				  pointStyle : false,
+					label: "Value",
+					data: [],			 
+					stepped : false,
+					tension : defaultTension,
+					pointStyle : false,
+					fill: true,
+					backgroundColor: gradient,
+					pointBackgroundColor: colors.blue.default,
+					borderColor: colors.blue.default,
+					borderWidth: 2,
+					pointRadius: 3
 				}, 			 
 			]
 		  },
@@ -549,7 +586,7 @@ function chartFunction(reason) {
 		chart.resetZoom();
 		break;
 		case 1:
-		chart.data.datasets[0].stepped = 'after';
+		chart.data.datasets[0].stepped = 'before';
 		chart.data.datasets[0].tension = 0;
 		chart.update();
 		break;

@@ -80,7 +80,7 @@
     <ManifestCertificateThumbprint>72662FD964D95BFE9FD27373AF263D1DCA0E25E2</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <SignManifests>true</SignManifests>
+    <SignManifests>false</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
@@ -115,7 +115,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Database\ResultSortBy.cs" />
+    <Compile Include="Database\TimeAndValue.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />
+    <Compile Include="Hspi\Utils\ITimeAndValueList.cs" />
+    <Compile Include="Hspi\Utils\TimeSeriesHelper.cs" />
     <Compile Include="MonitoredDevice.cs" />
     <Compile Include="Hspi\HSPI.cs" />
     <Compile Include="Hspi\Pages\SettingsPages.cs" />
@@ -142,13 +146,6 @@
   <ItemGroup>
     <None Include="..\.editorconfig">
       <Link>.editorconfig</Link>
-    </None>
-    <None Include=".github\dependabot.yml" />
-    <None Include=".github\gitversion.yml" />
-    <None Include=".github\ISSUE_TEMPLATE\bug_report.md" />
-    <None Include=".github\ISSUE_TEMPLATE\feature_request.md" />
-    <None Include="..\.github\workflows\buildrelease.yml">
-      <Link>.github\workflows\buildrelease.yml</Link>
     </None>
     <None Include="App.config">
       <SubType>Designer</SubType>
@@ -203,6 +200,9 @@
       <Version>2.1.6</Version>
     </PackageReference>
     <PackageReference Include="SQLitePCLRaw.core">
+      <Version>2.1.6</Version>
+    </PackageReference>
+    <PackageReference Include="SQLitePCLRaw.provider.e_sqlite3">
       <Version>2.1.6</Version>
     </PackageReference>
     <PackageReference Include="SQLitePCLRaw.provider.sqlite3">
