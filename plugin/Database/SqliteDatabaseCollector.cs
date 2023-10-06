@@ -15,21 +15,6 @@ using static SQLitePCL.raw;
 
 namespace Hspi.Database
 {
-    public record TimeAndValue(long UnixTimeSeconds, double DeviceValue)
-    {
-        public long UnixTimeMilliSeconds => UnixTimeSeconds * 1000;
-        public DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);
-    }
-
-    public enum ResultSortBy
-    {
-        TimeDesc = 0,
-        ValueDesc = 1,
-        StringDesc = 2,
-        TimeAsc = 3,
-        ValueAsc = 4,
-        StringAsc = 5,
-    }
 
     internal sealed class SqliteDatabaseCollector : IDisposable
     {
@@ -106,11 +91,7 @@ namespace Hspi.Database
             while (ugly.step(stmt) != SQLITE_DONE)
             {
                 // order: SELECT (time, value) FROM history
-                var record = new TimeAndValue(
-                        ugly.column_int64(stmt, 0),
-                        ugly.column_double(stmt, 1)
-                    );
-
+                var record = new TimeAndValue(ugly.column_int64(stmt, 0), ugly.column_double(stmt, 1));
                 records.Add(record);
             };
 
@@ -154,7 +135,7 @@ namespace Hspi.Database
                         refId,
                         ugly.column_double(stmt, 1),
                         ugly.column_text(stmt, 2),
-                        DateTimeOffset.FromUnixTimeSeconds(ugly.column_int64(stmt, 0))
+                        ugly.column_int64(stmt, 0)
                     );
 
                 records.Add(record);

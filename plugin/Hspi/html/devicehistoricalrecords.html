@@ -254,14 +254,14 @@ function getRangeString(min, max) {
 				  <a class="dropdown-item"  onclick="chartFunction(2)">Curve</a>
 				</div>
 			  </div>
-			  <div class="btn-group" role="group">
-				<button id="btnGroupDropPoint" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Point</button>
-				<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-				  <a class="dropdown-item" onclick="chartFunction(3)">None</a>
-				  <a class="dropdown-item" onclick="chartFunction(4)">Circle</a>
-				  <a class="dropdown-item" onclick="chartFunction(5)">Line</a>
-				</div>
-			  </div>
+			  <!-- <div class="btn-group" role="group"> -->
+				<!-- <button id="btnGroupDropPoint" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Point</button> -->
+				<!-- <div class="dropdown-menu" aria-labelledby="btnGroupDrop1"> -->
+				  <!-- <a class="dropdown-item" onclick="chartFunction(3)">None</a> -->
+				  <!-- <a class="dropdown-item" onclick="chartFunction(4)">Circle</a> -->
+				  <!-- <a class="dropdown-item" onclick="chartFunction(5)">Line</a> -->
+				<!-- </div> -->
+			  <!-- </div> -->
 			</div>
 			<div class="chart-container">
 				<canvas id="myLineChart"></canvas>
@@ -312,10 +312,6 @@ function getRangeString(min, max) {
 {{end}}
 
 <script>
-const fmt = '{{system_date_format_date_picker "shortdatepattern"}}';
-const tfmt = '{{system_date_format "shorttimepattern"}}';
-const time12 = tfmt.includes('tt'); 
-
 $(function() {
     $('#displayDeviceRefId').change(function() {
         this.form.submit();
@@ -402,8 +398,18 @@ $(document).ready(function () {
 
 {{else if displaySelect=="chart"}}
 	let chart;
-	const colors = ['#007bff','#28a745','#333333','#c3e6cb','#dc3545','#6c757d'];
-	const defaultTension = 0.25;
+ 
+	
+	const colors = {
+	  blue: {
+		default: "#007bff",
+		half: "rgba(00, 123, 233, 0.5)",
+		quarter: "rgba(00, 123, 233, 0.25)",
+		zero: "rgba(00, 123, 233, 0)"
+	  }, 
+	};
+	
+	const defaultTension = 0.1;
 	
 	function startFetchWithMinMax(chart, min, max) {
 		console.log('Fetching data between ' + min + ' and ' + max);
@@ -491,21 +497,33 @@ $(document).ready(function () {
 	function setUpChart() { 
 		Chart.defaults.font.family = "sans-serif";
 		Chart.defaults.font.size = 16;
+		
+		
 	
 		let ctx = document.getElementById("myLineChart").getContext('2d'); 
+		
+		
+		let gradient = ctx.createLinearGradient(0, 25, 0, 300);
+		gradient.addColorStop(0, colors.blue.half);
+		gradient.addColorStop(0.35, colors.blue.quarter);
+		gradient.addColorStop(1, colors.blue.zero);
+
+
 		let myChart = new Chart(ctx, {
 		  type: "line",
 		  data: {
 				datasets: [{
-				  label: "Value",
-				  data: [],
-				  backgroundColor: 'transparent',
-				  borderColor: colors[0],
-				  borderWidth: 2,
-				  pointBackgroundColor: colors[0],
-				  stepped : false,
-				  tension : defaultTension,
-				  pointStyle : false,
+					label: "Value",
+					data: [],			 
+					stepped : false,
+					tension : defaultTension,
+					pointStyle : false,
+					fill: true,
+					backgroundColor: gradient,
+					pointBackgroundColor: colors.blue.default,
+					borderColor: colors.blue.default,
+					borderWidth: 2,
+					pointRadius: 3
 				}, 			 
 			]
 		  },

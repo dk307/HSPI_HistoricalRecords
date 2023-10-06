@@ -253,6 +253,79 @@ namespace Hspi
             return "/" + Id + "/" + fileName;
         }
 
+        private static TimeSpan GetDefaultGroupInterval(TimeSpan duration)
+        {
+            // aim for 256 points on graph
+            return TimeSpan.FromSeconds(duration.TotalSeconds / 256);
+        }
+
+        private async Task<string> HandleGraphRecords(string data)
+        {
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
+
+            try
+            {
+                var collector = GetCollector();
+                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+
+                var refId = jsonData?["refId"]?.Value<int>();
+                var min = jsonData?["min"]?.Value<long>();
+                var max = jsonData?["max"]?.Value<long>();
+                if (refId == null || min == null || max == null)
+                {
+                    throw new ArgumentException("data is not correct");
+                }
+
+                long groupBySeconds = (long)GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max.Value - min.Value)).TotalSeconds;
+                bool shouldGroup = groupBySeconds >= 5;
+
+                var queryData = await collector.GetGraphValues(refId.Value,
+                                                               min.Value / 1000,
+                                                               max.Value / 1000).ConfigureAwait(false);
+
+                var queryDataGrouped = shouldGroup ?
+                                            GroupValues(min.Value / 1000, max.Value / 1000, groupBySeconds, queryData) :
+                                            queryData;
+
+                jsonWriter.WritePropertyName("groupedbyseconds");
+                jsonWriter.WriteValue(shouldGroup ? groupBySeconds : 0);
+
+                jsonWriter.WritePropertyName("data");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in queryDataGrouped)
+                {
+                    jsonWriter.WriteStartObject();
+                    jsonWriter.WritePropertyName("x");
+                    jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
+                    jsonWriter.WritePropertyName("y");
+                    jsonWriter.WriteValue(row.DeviceValue);
+                    jsonWriter.WriteEndObject();
+                }
+
+                jsonWriter.WriteEndArray();
+            }
+            catch (Exception ex)
+            {
+                jsonWriter.WritePropertyName("error");
+                jsonWriter.WriteValue(ex.GetFullMessage());
+            }
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+
+            return stb.ToString();
+
+            static IEnumerable<TimeAndValue> GroupValues(long min, long max, long groupBySeconds, IList<TimeAndValue> data)
+            {
+                TimeSeriesHelper helper = new(min, max, groupBySeconds, data);
+                return helper.ReduceSeriesWithAverageAndPreviousFill();
+            }
+        }
+
         private async Task<string> HandleHistoryRecords(string data)
         {
             StringBuilder stb = new();
@@ -350,57 +423,6 @@ namespace Hspi
             {
                 return ParseInt(name, parameters[name]);
             }
-        }
-
-        private async Task<string> HandleGraphRecords(string data)
-        {
-            StringBuilder stb = new();
-            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-            using var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
-
-            try
-            {
-                var collector = GetCollector();
-                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
-
-                var refId = jsonData?["refId"]?.Value<int>();
-                var min = jsonData?["min"]?.Value<long>();
-                var max = jsonData?["max"]?.Value<long>();
-                if (refId == null || min == null || max == null)
-                {
-                    throw new ArgumentException("data is not correct");
-                }
-
-                var queryData = await collector.GetGraphValues(refId.Value,
-                                                               min.Value / 1000,
-                                                               max.Value / 1000).ConfigureAwait(false);
-
-                jsonWriter.WritePropertyName("data");
-                jsonWriter.WriteStartArray();
-
-                foreach (var row in queryData)
-                {
-                    jsonWriter.WriteStartObject();
-                    jsonWriter.WritePropertyName("x");
-                    jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
-                    jsonWriter.WritePropertyName("y");
-                    jsonWriter.WriteValue(row.DeviceValue);
-                    jsonWriter.WriteEndObject();
-                }
-
-                jsonWriter.WriteEndArray();
-            }
-            catch (Exception ex)
-            {
-                jsonWriter.WritePropertyName("error");
-                jsonWriter.WriteValue(ex.GetFullMessage());
-            }
-            jsonWriter.WriteEndObject();
-            jsonWriter.Close();
-
-            return stb.ToString();
         }
     }
 }

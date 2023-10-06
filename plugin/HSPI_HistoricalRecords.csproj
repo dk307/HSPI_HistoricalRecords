@@ -80,7 +80,7 @@
     <ManifestCertificateThumbprint>72662FD964D95BFE9FD27373AF263D1DCA0E25E2</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <SignManifests>true</SignManifests>
+    <SignManifests>false</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
@@ -115,7 +115,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Database\ResultSortBy.cs" />
+    <Compile Include="Database\TimeAndValue.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />
+    <Compile Include="Hspi\Utils\TimeSeriesHelper.cs" />
     <Compile Include="MonitoredDevice.cs" />
     <Compile Include="Hspi\HSPI.cs" />
     <Compile Include="Hspi\Pages\SettingsPages.cs" />
@@ -241,7 +244,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Hspi\Exceptions\" />
-    <Folder Include="Hspi\Utils\" />
     <Folder Include="Resources\" />
   </ItemGroup>
   <ItemGroup>
