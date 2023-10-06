@@ -73,7 +73,7 @@ namespace Hspi
         {
             int refId = ParseRefId(refIdString);
             var oldest = GetCollector().GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();
-            return oldest.ToUnixTimeSeconds();
+            return (long)Math.Round((DateTimeOffset.Now - oldest).TotalSeconds);
         }
 
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
