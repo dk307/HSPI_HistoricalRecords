@@ -68,6 +68,8 @@
     <Compile Include="..\plugin\shared\tests\ExceptionHelperTest.cs">
       <Link>shared\ExceptionHelperTest.cs</Link>
     </Compile>
+    <Compile Include="Hspi\SettingsPagesTest.cs" />
+    <Compile Include="TestHelper.cs" />
     <Compile Include="Hspi\Utils\TestSeriesHelper.cs" />
     <Compile Include="Utils\Initialize.cs" />
     <Compile Include="ShippedDllsTest.cs" />
@@ -79,6 +81,9 @@
   <ItemGroup>
     <PackageReference Include="HomeSeer-PluginSDK">
       <Version>1.4.4</Version>
+    </PackageReference>
+    <PackageReference Include="HtmlAgilityPack">
+      <Version>1.11.54</Version>
     </PackageReference>
     <PackageReference Include="MSTest.TestAdapter">
       <Version>3.1.1</Version>
