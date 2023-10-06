@@ -321,7 +321,8 @@ namespace Hspi
 
             static IEnumerable<TimeAndValue> GroupValues(long min, long max, long groupBySeconds, IList<TimeAndValue> data)
             {
-                TimeSeriesHelper helper = new(min, max, groupBySeconds, data);
+                var list = new TimeAndValueList(data);
+                TimeSeriesHelper helper = new(min, max, groupBySeconds, list);
                 return helper.ReduceSeriesWithAverageAndPreviousFill();
             }
         }

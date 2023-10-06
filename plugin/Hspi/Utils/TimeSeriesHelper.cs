@@ -8,10 +8,33 @@ using Hspi.Database;
 
 namespace Hspi
 {
+    internal class TimeAndValueList : ITimeAndValueList
+    {
+        public TimeAndValueList(IList<TimeAndValue> list)
+        {
+            this.list = list;
+        }
+
+        public TimeAndValue this[int index] => list[index];
+
+        public bool IsValidIndex(int index)
+        {
+            return index >= 0 && index < list.Count;
+        }
+
+        private readonly IList<TimeAndValue> list;
+    }
+
     internal class TimeSeriesHelper
     {
         public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                long intervalUnixTimeSeconds, IList<TimeAndValue> list)
+                                long intervalUnixTimeSeconds, IList<TimeAndValue> list) :
+            this(minUnixTimeSeconds, maxUnixTimeSeconds, intervalUnixTimeSeconds, new TimeAndValueList(list))
+        {
+        }
+
+        public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
+                                long intervalUnixTimeSeconds, ITimeAndValueList list)
         {
             if (intervalUnixTimeSeconds <= 0)
             {
@@ -35,7 +58,7 @@ namespace Hspi
             int? previousValidMarker = null;
             for (var index = minUnixTimeSeconds; index < maxUnixTimeSeconds; index += intervalUnixTimeSeconds)
             {
-                if (IsValidListMarker(listMarker) && (list[listMarker].UnixTimeSeconds > index) &&
+                if (list.IsValidIndex(listMarker) && (list[listMarker].UnixTimeSeconds > index) &&
                                                      (list[listMarker].UnixTimeSeconds >= index + intervalUnixTimeSeconds))
                 {
                     AddPreviousMarkerValues(result, previousValidMarker, index);
@@ -45,7 +68,7 @@ namespace Hspi
                 // consume all the points inside the interval
                 // all points which start before the end of current index
                 bool anyAdded = false;
-                while (IsValidListMarker(listMarker) &&
+                while (list.IsValidIndex(listMarker) &&
                        (list[listMarker].UnixTimeSeconds < Math.Min(maxUnixTimeSeconds, index + intervalUnixTimeSeconds)))
                 {
                     // duration is time of listMarker item between current index and its end
@@ -65,18 +88,13 @@ namespace Hspi
                     }
                 }
 
-                if (!anyAdded && !IsValidListMarker(listMarker))
+                if (!anyAdded && !list.IsValidIndex(listMarker))
                 {
                     AddPreviousMarkerValues(result, previousValidMarker, index);
                 }
             }
 
             return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds));
-
-            bool IsValidListMarker(int marker)
-            {
-                return marker <= list.Count - 1;
-            }
 
             long GetDurationInIndex(int marker, long indexV)
             {
@@ -110,7 +128,7 @@ namespace Hspi
 
         private long GetFinishTimeForTimePoint(int index)
         {
-            if (index <= list.Count - 2)
+            if (list.IsValidIndex(index + 1))
             {
                 return Math.Min(list[index + 1].UnixTimeSeconds, maxUnixTimeSeconds);
             }
@@ -134,7 +152,7 @@ namespace Hspi
         }
 
         private readonly long intervalUnixTimeSeconds;
-        private readonly IList<TimeAndValue> list;
+        private readonly ITimeAndValueList list;
         private readonly long maxUnixTimeSeconds;
         private readonly long minUnixTimeSeconds;
     }
