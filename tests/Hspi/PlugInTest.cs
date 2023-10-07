@@ -4,6 +4,7 @@ using System.IO;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Devices.Controls;
 using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -139,14 +140,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            if (eventType == Constants.HSEvent.VALUE_CHANGE)
-            {
-                plugin.Object.HsEvent(Constants.HSEvent.VALUE_CHANGE, new object[] { null, null, null, null, feature.Ref });
-            }
-            else
-            {
-                plugin.Object.HsEvent(Constants.HSEvent.STRING_CHANGE, new object[] { null, null, null, feature.Ref });
-            }
+            RaiseHSEvent(eventType, plugin, feature);
 
             RecordData recordData = new RecordData(feature.Ref, feature.Value,
                                                    expectedString,
@@ -155,6 +149,97 @@ namespace HSPI_HistoricalRecordsTest
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
+        }
+
+        [DataTestMethod]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE)]
+        [DataRow(Constants.HSEvent.STRING_CHANGE)]
+        [TestMethod]
+        public void HS3DeviceValueUpdateIsRecordedFromStatusGraphic(Constants.HSEvent eventType)
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            HsFeature feature;
+
+            feature = SetupHsFeature(mockHsController,
+                                     35673,
+                                     100,
+                                     displayString: null,
+                                     statusString: null,
+                                     lastChange: DateTime.Now - TimeSpan.FromDays(36),
+                                     apiType: (int)EApiType.NotSpecified);
+
+            var controls = new StatusGraphicCollection();
+            controls.Add(new StatusGraphic("path", 0, "Off"));
+            controls.Add(new StatusGraphic("path", 100, "On"));
+
+            Assert.IsTrue(controls.ContainsValue(feature.Value));
+
+            feature.Changes.Add(EProperty.StatusGraphics, controls);
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            RaiseHSEvent(eventType, plugin, feature);
+
+            RecordData recordData = new RecordData(feature.Ref, feature.Value,
+                                                   "On",
+                                                   ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+            CheckRecordedValue(plugin, feature.Ref, recordData, 100, 1);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [DataTestMethod]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE)]
+        [DataRow(Constants.HSEvent.STRING_CHANGE)]
+        [TestMethod]
+        public void HS3DeviceValueUpdateIsRecordedFromGraphicControls(Constants.HSEvent eventType)
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            HsFeature feature;
+
+            feature = SetupHsFeature(mockHsController,
+                                     35673,
+                                     100,
+                                     displayString: null,
+                                     statusString: null,
+                                     lastChange: DateTime.Now - TimeSpan.FromDays(36),
+                                     apiType: (int)EApiType.NotSpecified);
+
+            var controls = new StatusControlCollection();
+            controls.Add(new StatusControl(EControlType.ValueRangeSlider) { IsRange = true, TargetRange = new ValueRange(0, 1000) });
+
+            Assert.IsTrue(controls.ContainsValue(feature.Value));
+
+            feature.Changes.Add(EProperty.StatusControls, controls);
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            RaiseHSEvent(eventType, plugin, feature);
+
+            RecordData recordData = new RecordData(feature.Ref, feature.Value,
+                                                   "100",
+                                                   ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+            CheckRecordedValue(plugin, feature.Ref, recordData, 100, 1);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        private static void RaiseHSEvent(Constants.HSEvent eventType, Mock<PlugIn> plugin, HsFeature feature)
+        {
+            if (eventType == Constants.HSEvent.VALUE_CHANGE)
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.VALUE_CHANGE, new object[] { null, null, null, null, feature.Ref });
+            }
+            else
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.STRING_CHANGE, new object[] { null, null, null, feature.Ref });
+            }
         }
 
         [TestMethod]
