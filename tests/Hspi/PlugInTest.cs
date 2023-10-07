@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
@@ -8,6 +9,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog.Events;
+using Serilog;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -20,7 +23,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
-            List<int> allDeviceRefs = new List<int> { 1000, 1001 };
+            List<int> allDeviceRefs = new() { 1000, 1001 };
             mockHsController.Setup(x => x.GetAllRefs()).Returns(allDeviceRefs);
             var feature1 = SetupHsFeature(mockHsController, allDeviceRefs[0], 1.1, DateTime.Now - TimeSpan.FromDays(6));
             var feature2 = SetupHsFeature(mockHsController, allDeviceRefs[1], 2221.1, DateTime.Now - TimeSpan.FromDays(24));
@@ -28,11 +31,46 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(plugin.Object.InitIO());
 
             //wait till task finishes
-            CheckRecordedValue(plugin, allDeviceRefs[0], feature1);
-            CheckRecordedValue(plugin, allDeviceRefs[1], feature2);
+            CheckRecordedValue(plugin, allDeviceRefs[0], feature1, 100, 1);
+            CheckRecordedValue(plugin, allDeviceRefs[1], feature2, 100, 1);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
+        }
+
+        [DataTestMethod]
+        [DataRow(LogEventLevel.Information, false)]
+        [DataRow(LogEventLevel.Warning, false)]
+        [DataRow(LogEventLevel.Fatal, false)]
+        [DataRow(LogEventLevel.Information, true)]
+        [DataRow(LogEventLevel.Verbose, false)]
+        [DataRow(LogEventLevel.Debug, true)]
+        public void CheckLogLevelSettingChange(LogEventLevel logEventLevel, bool logToFile)
+        {
+            var settingsFromIni = new Dictionary<string, string>
+            {
+                { "LogLevelId", (logEventLevel == LogEventLevel.Verbose ? LogEventLevel.Fatal : LogEventLevel.Verbose).ToString() },
+                { "LogToFileId", logToFile.ToString() }
+            };
+
+            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController(settingsFromIni);
+
+            PlugIn plugIn = plugInMock.Object;
+
+            var settingsCollection = new SettingsCollection
+            {
+                SettingsPages.CreateDefault(logEventLevel, logToFile)
+            };
+
+            Assert.IsTrue(plugIn.SaveJuiSettingsPages(settingsCollection.ToJsonString()));
+
+            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Fatal), logEventLevel <= LogEventLevel.Fatal);
+            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Error), logEventLevel <= LogEventLevel.Error);
+            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Warning), logEventLevel <= LogEventLevel.Warning);
+            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Information), logEventLevel <= LogEventLevel.Information);
+            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Debug), logEventLevel <= LogEventLevel.Debug);
+            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Verbose), logEventLevel <= LogEventLevel.Verbose);
+            plugInMock.Verify();
         }
 
         [TestMethod]
@@ -67,18 +105,28 @@ namespace HSPI_HistoricalRecordsTest
             Assert.AreEqual(PlugInData.PlugInName, plugin.Name);
         }
 
-        private static void CheckRecordedValue(Mock<PlugIn> plugin, int deviceRefId, HsFeature feature)
+        [TestMethod]
+        public void VerifySupportsConfigDeviceAll()
+        {
+            var plugin = new PlugIn();
+            Assert.IsTrue(plugin.SupportsConfigDeviceAll);
+            Assert.IsTrue(plugin.SupportsConfigFeature);
+        }
+
+        private static void CheckRecordedValue(Mock<PlugIn> plugin, int deviceRefId, HsFeature feature,
+                                               int askForRecordCount, int expectedRecordCount)
         {
             Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
             {
-                var records = GetRecords(plugin, deviceRefId);
+                var records = GetHistoryRecords(plugin, deviceRefId, askForRecordCount);
                 Assert.IsNotNull(records);
                 if (records.Count == 0)
                 {
                     return false;
                 }
 
-                Assert.AreEqual(records.Count, 1);
+                Assert.AreEqual(records.Count, expectedRecordCount);
+                Assert.IsTrue(records.Count >= 1);
                 Assert.AreEqual(records[0].DeviceValue, feature.Value);
                 Assert.AreEqual(records[0].UnixTimeSeconds, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
                 Assert.AreEqual(records[0].DeviceString, feature.StatusString);
@@ -87,7 +135,7 @@ namespace HSPI_HistoricalRecordsTest
             }));
         }
 
-        private static IList<RecordData> GetRecords(Mock<PlugIn> plugin, int refId, int recordLimit = 10)
+        private static IList<RecordData> GetHistoryRecords(Mock<PlugIn> plugin, int refId, int recordLimit = 10)
         {
             List<RecordData> result = new();
             string data = plugin.Object.PostBackProc("historyrecords", $"refId={refId}&recordLimit={recordLimit}&start=0&length={recordLimit}", string.Empty, 0);

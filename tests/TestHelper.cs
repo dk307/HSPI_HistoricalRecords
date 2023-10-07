@@ -15,29 +15,19 @@ namespace HSPI_HistoricalRecordsTest
 {
     internal class TestHelper
     {
-        public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)
+        public static (Mock<PlugIn> mockPlugin, Mock<IHsController> mockHsController)
+         CreateMockPluginAndHsController(Dictionary<string, string> settingsFromIni)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            bool result = func();
-            while (!result && stopwatch.Elapsed < wait)
+            var mockPlugin = new Mock<PlugIn>(MockBehavior.Loose)
             {
-                Thread.Sleep(100);
-                result = func();
-            }
-            return result;
-        }
+                CallBase = true,
+            };
 
-        public static bool TimedWaitTillTrue(Func<bool> func)
-        {
-            return TimedWaitTillTrue(func, TimeSpan.FromSeconds(30));
-        }
+            var mockHsController = SetupHsControllerAndSettings(mockPlugin, settingsFromIni);
 
-        public static void VerifyHtmlValid(string html)
-        {
-            HtmlAgilityPack.HtmlDocument htmlDocument = new();
-            htmlDocument.LoadHtml(html);
-            Assert.AreEqual(0, htmlDocument.ParseErrors.Count());
+            mockPlugin.Object.InitIO();
+
+            return (mockPlugin, mockHsController);
         }
 
         public static Mock<PlugIn> CreatePlugInMock()
@@ -67,8 +57,34 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.RegisterFeaturePage(PlugInData.PlugInId, It.IsAny<string>(), It.IsAny<string>()));
             mockHsController.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, true)).Returns(new List<int>());
             mockHsController.Setup(x => x.GetNameByRef(It.IsAny<int>())).Returns("Test");
+            mockHsController.Setup(x => x.GetAllRefs()).Returns(new List<int>());
             mockHsController.Setup(x => x.RegisterEventCB(It.IsAny<Constants.HSEvent>(), PlugInData.PlugInId));
             return mockHsController;
+        }
+
+        public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            bool result = func();
+            while (!result && stopwatch.Elapsed < wait)
+            {
+                Thread.Sleep(100);
+                result = func();
+            }
+            return result;
+        }
+
+        public static bool TimedWaitTillTrue(Func<bool> func)
+        {
+            return TimedWaitTillTrue(func, TimeSpan.FromSeconds(30));
+        }
+
+        public static void VerifyHtmlValid(string html)
+        {
+            HtmlAgilityPack.HtmlDocument htmlDocument = new();
+            htmlDocument.LoadHtml(html);
+            Assert.AreEqual(0, htmlDocument.ParseErrors.Count());
         }
     }
 }
