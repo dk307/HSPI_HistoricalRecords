@@ -109,6 +109,31 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void MinStartsAfterLaterInSeries()
+        {
+            List<TimeAndValue> dbValues = new()
+            {
+                new TimeAndValue(1, 200),
+                new TimeAndValue(10, 300),
+                new TimeAndValue(20, 400),
+                new TimeAndValue(50, 500),
+            };
+
+            TimeSeriesHelper timeSeriesHelper = new(15, 49, 10, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverageAndPreviousFill().ToArray();
+
+            List<TimeAndValue> expected = new()
+            {
+                new TimeAndValue(15, ((5 * 300) + (5* 400)) / 10),
+                new TimeAndValue(25, 400),
+                new TimeAndValue(35, 400),
+                new TimeAndValue(45, 400),
+            };
+
+            CollectionAssert.AreEqual(result, expected);
+        }
+
+        [TestMethod]
         public void LargeMiddleValuesAreMissing()
         {
             List<TimeAndValue> dbValues = new()
@@ -141,17 +166,20 @@ namespace HSPI_HistoricalRecordsTest
             List<TimeAndValue> dbValues = new()
             {
                 new TimeAndValue(1, 100),
-                new TimeAndValue(21, 300),
+                new TimeAndValue(41, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 30, 10, dbValues);
+            TimeSeriesHelper timeSeriesHelper = new(1, 60, 10, dbValues);
             var result = timeSeriesHelper.ReduceSeriesWithAverageAndPreviousFill().ToArray();
 
             List<TimeAndValue> expected = new()
             {
                 new TimeAndValue(1, 100),
                 new TimeAndValue(11, 100),
-                new TimeAndValue(21, 300),
+                new TimeAndValue(21, 100),
+                new TimeAndValue(31, 100),
+                new TimeAndValue(41, 300),
+                new TimeAndValue(51, 300),
             };
 
             CollectionAssert.AreEqual(result, expected);

@@ -55,27 +55,25 @@ namespace Hspi
             var result = new SortedDictionary<long, ResultType>();
 
             int listMarker = 0;
-            int? previousValidMarker = null;
             for (var index = minUnixTimeSeconds; index < maxUnixTimeSeconds; index += intervalUnixTimeSeconds)
             {
                 if (list.IsValidIndex(listMarker) && (list[listMarker].UnixTimeSeconds > index) &&
                                                      (list[listMarker].UnixTimeSeconds >= index + intervalUnixTimeSeconds))
                 {
-                    AddPreviousMarkerValues(result, previousValidMarker, index);
                     continue;
                 }
 
                 // consume all the points inside the interval
                 // all points which start before the end of current index
-                bool anyAdded = false;
                 while (list.IsValidIndex(listMarker) &&
                        (list[listMarker].UnixTimeSeconds < Math.Min(maxUnixTimeSeconds, index + intervalUnixTimeSeconds)))
                 {
-                    // duration is time of listMarker item between current index and its end
-                    var duration = GetDurationInIndex(listMarker, index);
-                    GetOrCreate(result, index).Add(list[listMarker].DeviceValue, duration);
-                    previousValidMarker = listMarker;
-                    anyAdded = true;
+                    if (GetFinishTimeForTimePoint(listMarker) >= index)
+                    {
+                        // duration is time of listMarker item between current index and its end
+                        var duration = GetDurationInIndex(listMarker, index);
+                        GetOrCreate(result, index).Add(list[listMarker].DeviceValue, duration);
+                    }
 
                     // if current timepoint goes beyond current index, move to next index
                     if (GetFinishTimeForTimePoint(listMarker) < index + intervalUnixTimeSeconds)
@@ -87,11 +85,6 @@ namespace Hspi
                         break;
                     }
                 }
-
-                if (!anyAdded && !list.IsValidIndex(listMarker))
-                {
-                    AddPreviousMarkerValues(result, previousValidMarker, index);
-                }
             }
 
             return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds));
@@ -101,16 +94,6 @@ namespace Hspi
                 var duration = Math.Min(GetFinishTimeForTimePoint(marker), indexV + intervalUnixTimeSeconds)
                                  - Math.Max(indexV, list[marker].UnixTimeSeconds);
                 return duration;
-            }
-
-            void AddPreviousMarkerValues(IDictionary<long, ResultType> result,
-                                         int? previousValidMarkerV, long indexV)
-            {
-                if (previousValidMarkerV != null)
-                {
-                    var duration = GetDurationInIndex(previousValidMarkerV.Value, indexV);
-                    GetOrCreate(result, indexV).Add(list[previousValidMarkerV.Value].DeviceValue, duration);
-                }
             }
         }
 
