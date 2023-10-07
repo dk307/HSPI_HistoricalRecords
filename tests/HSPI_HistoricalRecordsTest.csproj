@@ -68,6 +68,7 @@
     <Compile Include="..\plugin\shared\tests\ExceptionHelperTest.cs">
       <Link>shared\ExceptionHelperTest.cs</Link>
     </Compile>
+    <Compile Include="Hspi\DeviceChangedinHSTest.cs" />
     <Compile Include="Hspi\PlugInTest.cs" />
     <Compile Include="Hspi\SettingsPagesTest.cs" />
     <Compile Include="TestHelper.cs" />
