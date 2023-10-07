@@ -5,6 +5,8 @@ using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
 
@@ -139,6 +141,56 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = new PlugIn();
             Assert.IsTrue(plugin.SupportsConfigDeviceAll);
             Assert.IsTrue(plugin.SupportsConfigFeature);
+        }
+
+        [TestMethod]
+        public void GetJuiDeviceConfigPage()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            int devOrFeatRef = 10;
+
+            var feature = TestHelper.SetupHsFeature(mockHsController, devOrFeatRef, 100);
+
+            string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
+
+            var data = (JObject)JsonConvert.DeserializeObject(pageJson);
+            Assert.IsNotNull(data);
+            Assert.AreEqual(data["id"].Value<string>(), PlugInData.PlugInId);
+            Assert.AreEqual(data["name"].Value<string>(), "Device");
+            Assert.AreEqual(data["type"].Value<int>(), 5);
+
+            string labelHtml = data["views"][0]["name"].Value<string>();
+
+            TestHelper.VerifyHtmlValid(labelHtml);
+            StringAssert.Contains(labelHtml, "iframe");
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void GetJuiDeviceConfigPageErrored()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            int deviceRefId = 10;
+
+            string errorMessage = "sdfsd dfgdfg erter";
+            mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Throws(new Exception(errorMessage));
+
+            string pageJson = plugin.Object.GetJuiDeviceConfigPage(deviceRefId);
+
+            var result = (JObject)JsonConvert.DeserializeObject(pageJson);
+
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result["views"][0]["value"], errorMessage);
         }
     }
 }
