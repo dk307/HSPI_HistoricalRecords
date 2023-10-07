@@ -6,7 +6,7 @@ using Hspi.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Serilog.Events;
 
-namespace HSPI_HomeKitControllerTest
+namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
     public class SettingsPagesTest

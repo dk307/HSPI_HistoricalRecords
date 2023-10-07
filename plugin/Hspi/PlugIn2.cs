@@ -83,16 +83,12 @@ namespace Hspi
 
         public override string PostBackProc(string page, string data, string user, int userRights)
         {
-            switch (page)
+            return page switch
             {
-                case "historyrecords":
-                    return HandleHistoryRecords(data).ResultForSync();
-
-                case "graphrecords":
-                    return HandleGraphRecords(data).ResultForSync();
-            }
-
-            return base.PostBackProc(page, data, user, userRights);
+                "historyrecords" => HandleHistoryRecords(data).ResultForSync(),
+                "graphrecords" => HandleGraphRecords(data).ResultForSync(),
+                _ => base.PostBackProc(page, data, user, userRights),
+            };
         }
 
         private static string? GetTableValue(CultureInfo culture, object? column)
@@ -165,12 +161,6 @@ namespace Hspi
             {
                 return Math.Round(floatValue, 3, MidpointRounding.AwayFromZero).ToString("G", culture);
             }
-        }
-
-        private static TimeSpan ParseDuration(string duration)
-        {
-            var seconds = ParseInt("duration", duration);
-            return TimeSpan.FromSeconds(seconds);
         }
 
         private static long ParseInt(string argumentName, string? refIdString)
@@ -362,11 +352,12 @@ namespace Hspi
                     min = 0;
                     max = DateTimeOffset.Now.AddYears(100).ToUnixTimeSeconds(); //  a large future date
                     recordLimit = ParseParameterAsInt(parameters, "recordLimit");
-                    totalResultsCount = recordLimit;
+                    totalResultsCount = Math.Min(recordLimit,
+                                                 await collector.GetRecordsCount(refId, min, max).ConfigureAwait(false));
                 }
                 else
                 {
-                    throw new Exception("Niether min/max or recordCount specified");
+                    throw new Exception("Neither min/max or recordCount specified");
                 }
 
                 var queryData = await collector.GetRecords(refId,
@@ -411,13 +402,13 @@ namespace Hspi
 
             static ResultSortBy CalculateSortOrder(string? sortBy, string? sortDir)
             {
-                switch (sortBy)
+                return sortBy switch
                 {
-                    case "0": return sortDir == "desc" ? ResultSortBy.TimeDesc : ResultSortBy.TimeAsc;
-                    case "1": return sortDir == "desc" ? ResultSortBy.ValueDesc : ResultSortBy.ValueAsc;
-                    case "2": return sortDir == "desc" ? ResultSortBy.StringDesc : ResultSortBy.StringAsc;
-                }
-                return ResultSortBy.TimeDesc;
+                    "0" => sortDir == "desc" ? ResultSortBy.TimeDesc : ResultSortBy.TimeAsc,
+                    "1" => sortDir == "desc" ? ResultSortBy.ValueDesc : ResultSortBy.ValueAsc,
+                    "2" => sortDir == "desc" ? ResultSortBy.StringDesc : ResultSortBy.StringAsc,
+                    _ => ResultSortBy.TimeDesc,
+                };
             }
 
             static long ParseParameterAsInt(NameValueCollection parameters, string name)
