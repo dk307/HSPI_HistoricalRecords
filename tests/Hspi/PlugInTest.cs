@@ -4,13 +4,14 @@ using System.IO;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Serilog.Events;
 using Serilog;
+using Serilog.Events;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -25,14 +26,13 @@ namespace HSPI_HistoricalRecordsTest
 
             List<int> allDeviceRefs = new() { 1000, 1001 };
             mockHsController.Setup(x => x.GetAllRefs()).Returns(allDeviceRefs);
-            var feature1 = SetupHsFeature(mockHsController, allDeviceRefs[0], 1.1, DateTime.Now - TimeSpan.FromDays(6));
-            var feature2 = SetupHsFeature(mockHsController, allDeviceRefs[1], 2221.1, DateTime.Now - TimeSpan.FromDays(24));
+            var feature1 = SetupHsFeature(mockHsController, allDeviceRefs[0], 1.1, "abcd", lastChange: DateTime.Now - TimeSpan.FromDays(6));
+            var feature2 = SetupHsFeature(mockHsController, allDeviceRefs[1], 2221.1, "rteyee", lastChange: DateTime.Now - TimeSpan.FromDays(24));
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            //wait till task finishes
-            CheckRecordedValue(plugin, allDeviceRefs[0], feature1, 100, 1);
-            CheckRecordedValue(plugin, allDeviceRefs[1], feature2, 100, 1);
+            CheckRecordedValueForFeatureType(plugin, feature1, 100, 1);
+            CheckRecordedValueForFeatureType(plugin, feature2, 100, 1);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -106,6 +106,57 @@ namespace HSPI_HistoricalRecordsTest
             Assert.AreEqual(settings[SettingsPages.LogToFileId], true.ToString());
         }
 
+        [DataTestMethod]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE, EApiType.Feature, "abcd", null, "abcd")]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE, EApiType.Feature, null, "1abcde", "1abcde")]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE, EApiType.Feature, null, null, null)]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE, EApiType.Device, "abcd", null, "abcd")]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE, EApiType.Device, "", "abcd", "abcd")]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE, EApiType.NotSpecified, "", "1235", "1235")]
+        [DataRow(Constants.HSEvent.VALUE_CHANGE, 34, "", "12353", "12353")]
+        [DataRow(Constants.HSEvent.STRING_CHANGE, EApiType.Feature, "abcd", null, "abcd")]
+        [DataRow(Constants.HSEvent.STRING_CHANGE, EApiType.Feature, null, "1abcde", "1abcde")]
+        [DataRow(Constants.HSEvent.STRING_CHANGE, EApiType.Feature, null, null, null)]
+        [DataRow(Constants.HSEvent.STRING_CHANGE, EApiType.Device, "1abcd", null, "1abcd")]
+        [DataRow(Constants.HSEvent.STRING_CHANGE, EApiType.Device, "", "abcd", "abcd")]
+        [DataRow(Constants.HSEvent.STRING_CHANGE, EApiType.NotSpecified, "", "1235", "1235")]
+        [DataRow(Constants.HSEvent.STRING_CHANGE, 34, "", "1235", "1235")]
+        [TestMethod]
+        public void DeviceValueUpdateIsRecorded(Constants.HSEvent eventType, int apiType, string displayStatus, string statusStatus, string expectedString)
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            HsFeature feature;
+
+            feature = SetupHsFeature(mockHsController,
+                                     35673,
+                                     1.132,
+                                     displayString: displayStatus,
+                                     statusString: statusStatus,
+                                     lastChange: DateTime.Now - TimeSpan.FromDays(6),
+                                     apiType: apiType);
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            if (eventType == Constants.HSEvent.VALUE_CHANGE)
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.VALUE_CHANGE, new object[] { null, null, null, null, feature.Ref });
+            }
+            else
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.STRING_CHANGE, new object[] { null, null, null, feature.Ref });
+            }
+
+            RecordData recordData = new RecordData(feature.Ref, feature.Value,
+                                                   expectedString,
+                                                   ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+            CheckRecordedValue(plugin, feature.Ref, recordData, 100, 1);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
         [TestMethod]
         public void InitFirstTime()
         {
@@ -146,12 +197,12 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(plugin.SupportsConfigFeature);
         }
 
-        private static void CheckRecordedValue(Mock<PlugIn> plugin, int deviceRefId, HsFeature feature,
+        private static void CheckRecordedValue(Mock<PlugIn> plugin, int refId, RecordData recordData,
                                                int askForRecordCount, int expectedRecordCount)
         {
             Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
             {
-                var records = GetHistoryRecords(plugin, deviceRefId, askForRecordCount);
+                var records = GetHistoryRecords(plugin, refId, askForRecordCount);
                 Assert.IsNotNull(records);
                 if (records.Count == 0)
                 {
@@ -160,12 +211,19 @@ namespace HSPI_HistoricalRecordsTest
 
                 Assert.AreEqual(records.Count, expectedRecordCount);
                 Assert.IsTrue(records.Count >= 1);
-                Assert.AreEqual(records[0].DeviceValue, feature.Value);
-                Assert.AreEqual(records[0].UnixTimeSeconds, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
-                Assert.AreEqual(records[0].DeviceString, feature.StatusString);
-
+                Assert.AreEqual(recordData.DeviceRefId, records[0].DeviceRefId);
+                Assert.AreEqual(recordData.DeviceValue, records[0].DeviceValue);
+                Assert.AreEqual(recordData.DeviceString, records[0].DeviceString);
+                Assert.AreEqual(recordData.UnixTimeSeconds, records[0].UnixTimeSeconds);
                 return true;
             }));
+        }
+
+        private static void CheckRecordedValueForFeatureType(Mock<PlugIn> plugin, HsFeature feature,
+                                                       int askForRecordCount, int expectedRecordCount)
+        {
+            RecordData recordData = new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+            CheckRecordedValue(plugin, feature.Ref, recordData, askForRecordCount, expectedRecordCount);
         }
 
         private static IList<RecordData> GetHistoryRecords(Mock<PlugIn> plugin, int refId, int recordLimit = 10)
@@ -193,7 +251,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         private static HsFeature SetupHsFeature(Mock<IHsController> mockHsController, int deviceRefId,
-                                                                            IDictionary<EProperty, object> changes)
+                                                IDictionary<EProperty, object> changes)
         {
             HsFeature feature = new HsFeature(deviceRefId);
             foreach (var change in changes)
@@ -208,15 +266,19 @@ namespace HSPI_HistoricalRecordsTest
         private static HsFeature SetupHsFeature(Mock<IHsController> mockHsController,
                                     int deviceRefId,
                                     double value,
+                                    string displayString = null,
+                                    string statusString = null,
                                     DateTime? lastChange = null,
                                     string featureInterface = null,
-                                    int deviceType = (int)HomeSeer.PluginSdk.Devices.Identification.EApiType.Device)
+                                    int apiType = (int)HomeSeer.PluginSdk.Devices.Identification.EApiType.Device)
         {
             return SetupHsFeature(mockHsController, deviceRefId, new Dictionary<EProperty, object>() {
                     { EProperty.Interface, featureInterface },
                     { EProperty.Value, value },
+                    { EProperty.DisplayedStatus, displayString },
+                    { EProperty.StatusString, statusString },
                     { EProperty.LastChange, lastChange ?? DateTime.Now },
-                    { EProperty.DeviceType, new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { Type =  deviceType} },
+                    { EProperty.DeviceType, new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType =  (EApiType) apiType} },
                 });
         }
     }

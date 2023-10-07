@@ -101,48 +101,6 @@ namespace Hspi
                 case float floatValue:
                     return RoundDoubleValue(culture, floatValue);
 
-                case TimeSpan span:
-                    {
-                        StringBuilder stringBuilder = new();
-
-                        int days = span.Days;
-                        if (days > 0)
-                        {
-                            stringBuilder.AppendFormat(culture, "{0} {1}", days, (days > 1 ? "days" : "day"));
-                        }
-
-                        int hours = span.Hours;
-                        if (hours > 0)
-                        {
-                            if (stringBuilder.Length > 1)
-                            {
-                                stringBuilder.Append(' ');
-                            }
-                            stringBuilder.AppendFormat(culture, "{0} {1}", hours, (hours > 1 ? "hours" : "hour"));
-                        }
-                        int minutes = span.Minutes;
-                        if (minutes > 0)
-                        {
-                            if (stringBuilder.Length > 1)
-                            {
-                                stringBuilder.Append(' ');
-                            }
-                            stringBuilder.AppendFormat(culture, "{0} {1}", minutes, (minutes > 1 ? "minutes" : "minute"));
-                        }
-
-                        int seconds = span.Seconds;
-                        if (seconds > 0)
-                        {
-                            if (stringBuilder.Length > 1)
-                            {
-                                stringBuilder.Append(' ');
-                            }
-                            stringBuilder.AppendFormat(culture, "{0} {1}", seconds, (seconds > 1 ? "seconds" : "second"));
-                        }
-
-                        return stringBuilder.ToString();
-                    }
-
                 case null:
                     return null;
 
