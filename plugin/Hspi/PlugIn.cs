@@ -27,8 +27,21 @@ namespace Hspi
 
         public override string GetJuiDeviceConfigPage(int deviceRef)
         {
-            var device = HomeSeerSystem.GetDeviceByRef(deviceRef);
-            return CreateDeviceConfigPage(device, "devicehistoricalrecords.html");
+            try
+            {
+                var device = HomeSeerSystem.GetFeatureByRef(deviceRef);
+                return CreateDeviceConfigPage(device, "devicehistoricalrecords.html");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to create page for {deviceRef} with error:{error}", deviceRef, ex.GetFullMessage());
+                var page = PageFactory.CreateDeviceConfigPage(PlugInData.PlugInId, PlugInData.PlugInName);
+                page = page.WithView(new LabelView("exception", string.Empty, ex.GetFullMessage())
+                {
+                    LabelType = HomeSeer.Jui.Types.ELabelType.Preformatted
+                });
+                return page.Page.ToJsonString();
+            }
         }
 
         public override void HsEvent(Constants.HSEvent eventType, object[] parameters)

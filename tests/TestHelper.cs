@@ -6,17 +6,50 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using HomeSeer.PluginSdk;
+using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Devices.Identification;
 using HomeSeer.PluginSdk.Logging;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    internal class TestHelper
+    internal static class TestHelper
     {
+        public static void CheckRecordedValue(Mock<PlugIn> plugin, int refId, RecordData recordData,
+                                               int askForRecordCount, int expectedRecordCount)
+        {
+            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            {
+                var records = GetHistoryRecords(plugin, refId, askForRecordCount);
+                Assert.IsNotNull(records);
+                if (records.Count == 0)
+                {
+                    return false;
+                }
+
+                Assert.AreEqual(records.Count, expectedRecordCount);
+                Assert.IsTrue(records.Count >= 1);
+                Assert.AreEqual(recordData.DeviceRefId, records[0].DeviceRefId);
+                Assert.AreEqual(recordData.DeviceValue, records[0].DeviceValue);
+                Assert.AreEqual(recordData.DeviceString, records[0].DeviceString);
+                Assert.AreEqual(recordData.UnixTimeSeconds, records[0].UnixTimeSeconds);
+                return true;
+            }));
+        }
+
+        public static void CheckRecordedValueForFeatureType(Mock<PlugIn> plugin, HsFeature feature,
+                                                       int askForRecordCount, int expectedRecordCount)
+        {
+            RecordData recordData = new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+            CheckRecordedValue(plugin, feature.Ref, recordData, askForRecordCount, expectedRecordCount);
+        }
+
         public static (Mock<PlugIn> mockPlugin, Mock<IHsController> mockHsController)
-         CreateMockPluginAndHsController(Dictionary<string, string> settingsFromIni)
+                         CreateMockPluginAndHsController(Dictionary<string, string> settingsFromIni)
         {
             var mockPlugin = new Mock<PlugIn>(MockBehavior.Loose)
             {
@@ -38,8 +71,32 @@ namespace HSPI_HistoricalRecordsTest
             };
         }
 
+        public static List<RecordData> GetHistoryRecords(Mock<PlugIn> plugin, int refId, int recordLimit = 10)
+        {
+            List<RecordData> result = new();
+            string data = plugin.Object.PostBackProc("historyrecords", $"refId={refId}&recordLimit={recordLimit}&start=0&length={recordLimit}", string.Empty, 0);
+            if (!string.IsNullOrEmpty(data))
+            {
+                var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+                Assert.IsNotNull(jsonData);
+                var records = (JArray)jsonData["data"];
+                Assert.IsNotNull(records);
+
+                foreach (var record in records)
+                {
+                    var recordArray = (JArray)record;
+                    result.Add(new RecordData(refId,
+                                              recordArray[1].Value<double>(),
+                                              recordArray[2].Value<string>(),
+                                              recordArray[0].Value<long>() / 1000));
+                }
+            }
+
+            return result;
+        }
+
         public static Mock<IHsController> SetupHsControllerAndSettings(Mock<PlugIn> mockPlugin,
-                                                               Dictionary<string, string> settingsFromIni)
+                                                                       Dictionary<string, string> settingsFromIni)
         {
             var mockHsController = new Mock<IHsController>(MockBehavior.Strict);
 
@@ -60,6 +117,38 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.GetAllRefs()).Returns(new List<int>());
             mockHsController.Setup(x => x.RegisterEventCB(It.IsAny<Constants.HSEvent>(), PlugInData.PlugInId));
             return mockHsController;
+        }
+
+        public static HsFeature SetupHsFeature(Mock<IHsController> mockHsController, int deviceRefId,
+                                                IDictionary<EProperty, object> changes)
+        {
+            HsFeature feature = new HsFeature(deviceRefId);
+            foreach (var change in changes)
+            {
+                feature.Changes.Add(change.Key, change.Value);
+            }
+
+            mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Returns(feature);
+            return feature;
+        }
+
+        public static HsFeature SetupHsFeature(Mock<IHsController> mockHsController,
+                                    int deviceRefId,
+                                    double value,
+                                    string displayString = null,
+                                    string statusString = null,
+                                    DateTime? lastChange = null,
+                                    string featureInterface = null,
+                                    int apiType = (int)HomeSeer.PluginSdk.Devices.Identification.EApiType.Device)
+        {
+            return SetupHsFeature(mockHsController, deviceRefId, new Dictionary<EProperty, object>() {
+                    { EProperty.Interface, featureInterface },
+                    { EProperty.Value, value },
+                    { EProperty.DisplayedStatus, displayString },
+                    { EProperty.StatusString, statusString },
+                    { EProperty.LastChange, lastChange ?? DateTime.Now },
+                    { EProperty.DeviceType, new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType =  (EApiType) apiType} },
+                });
         }
 
         public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)
@@ -85,6 +174,14 @@ namespace HSPI_HistoricalRecordsTest
             HtmlAgilityPack.HtmlDocument htmlDocument = new();
             htmlDocument.LoadHtml(html);
             Assert.AreEqual(0, htmlDocument.ParseErrors.Count());
+        }
+
+        public static bool WaitTillTotalRecords(Mock<PlugIn> plugin, int refId, long count)
+        {
+            return (TestHelper.TimedWaitTillTrue(() =>
+            {
+                return plugin.Object.GetTotalRecords(refId) == count;
+            }));
         }
     }
 }

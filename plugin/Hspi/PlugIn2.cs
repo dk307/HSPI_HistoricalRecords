@@ -76,6 +76,12 @@ namespace Hspi
             return (long)Math.Round((DateTimeOffset.Now - oldest).TotalSeconds);
         }
 
+        public long GetTotalRecords(long refId)
+        {
+            var count = GetCollector().GetRecordsCount(refId, 0, long.MaxValue).ResultForSync<long>();
+            return count;
+        }
+
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
         {
             return base.HasJuiDeviceConfigPage(devOrFeatRef);
