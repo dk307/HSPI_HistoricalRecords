@@ -74,6 +74,39 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void CheckPlugInStatus()
+        {
+            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController(new Dictionary<string, string>());
+
+            PlugIn plugIn = plugInMock.Object;
+            Assert.AreEqual(plugIn.OnStatusCheck().Status, PluginStatus.Ok().Status);
+        }
+
+        [TestMethod]
+        public void CheckSettingsWithIniFilledDuringInitialize()
+        {
+            var settingsFromIni = new Dictionary<string, string>()
+            {
+                { SettingsPages.LoggingLevelId, ((int)LogEventLevel.Information).ToString()},
+                { SettingsPages.LogToFileId, true.ToString()},
+            };
+
+            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController(settingsFromIni);
+
+            PlugIn plugIn = plugInMock.Object;
+
+            Assert.IsTrue(plugIn.HasSettings);
+
+            var settingPages = SettingsCollection.FromJsonString(plugIn.GetJuiSettingsPages());
+            Assert.IsNotNull(settingPages);
+
+            var settings = settingPages[SettingsPages.SettingPageId].ToValueMap();
+
+            Assert.AreEqual(settings[SettingsPages.LoggingLevelId], ((int)LogEventLevel.Information).ToString());
+            Assert.AreEqual(settings[SettingsPages.LogToFileId], true.ToString());
+        }
+
+        [TestMethod]
         public void InitFirstTime()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -159,7 +192,7 @@ namespace HSPI_HistoricalRecordsTest
             return result;
         }
 
-        private HsFeature SetupHsFeature(Mock<IHsController> mockHsController, int deviceRefId,
+        private static HsFeature SetupHsFeature(Mock<IHsController> mockHsController, int deviceRefId,
                                                                             IDictionary<EProperty, object> changes)
         {
             HsFeature feature = new HsFeature(deviceRefId);
@@ -172,7 +205,7 @@ namespace HSPI_HistoricalRecordsTest
             return feature;
         }
 
-        private HsFeature SetupHsFeature(Mock<IHsController> mockHsController,
+        private static HsFeature SetupHsFeature(Mock<IHsController> mockHsController,
                                     int deviceRefId,
                                     double value,
                                     DateTime? lastChange = null,
