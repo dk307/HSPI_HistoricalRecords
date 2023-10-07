@@ -22,25 +22,16 @@ namespace Hspi
         {
         }
 
-        private enum ChangeType
-        {
-            Value,
-            String
-        };
-
         public override bool SupportsConfigDeviceAll => true;
         public override bool SupportsConfigFeature => true;
 
         public override string GetJuiDeviceConfigPage(int deviceRef)
         {
             var device = HomeSeerSystem.GetDeviceByRef(deviceRef);
-            return CreateDeviceConfigPage(device, device.Interface == Id ? "editimport.html" : "devicehistoricalrecords.html");
+            return CreateDeviceConfigPage(device, "devicehistoricalrecords.html");
         }
 
-#pragma warning disable CS0618 // Type or member is obsolete
-
         public override void HsEvent(Constants.HSEvent eventType, object[] parameters)
-#pragma warning restore CS0618 // Type or member is obsolete
         {
             HSEventImpl(eventType, parameters).Wait(ShutdownCancellationToken);
         }
@@ -67,7 +58,7 @@ namespace Hspi
                 Settings.Add(SettingsPages.CreateDefault());
                 LoadSettingsFromIni();
                 settingsPages = new SettingsPages(Settings);
-                monitoredDevicesConfig = new MonitoredDevicesConfig(HomeSeerSystem);
+                // monitoredDevicesConfig = new MonitoredDevicesConfig(HomeSeerSystem);
                 UpdateDebugLevel();
 
                 string dbPath = Path.Combine(HomeSeerSystem.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
@@ -75,10 +66,8 @@ namespace Hspi
                 // string dbPath2 = Path.Combine(Path.GetTempPath(), "test2.db");
                 collector = new SqliteDatabaseCollector(dbPath, ShutdownCancellationToken);
 
-#pragma warning disable CS0618 // Type or member is obsolete
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
-#pragma warning restore CS0618 // Type or member is obsolete
 
                 RestartProcessing();
 
@@ -126,8 +115,6 @@ namespace Hspi
             return collector;
         }
 
-#pragma warning disable CS0618 // Type or member is obsolete
-
         private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
         {
             try
@@ -135,12 +122,12 @@ namespace Hspi
                 if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
                 {
                     int deviceRefId = Convert.ToInt32(parameters[4], CultureInfo.InvariantCulture);
-                    await RecordDeviceValue(deviceRefId, ChangeType.Value).ConfigureAwait(false);
+                    await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
                 }
                 else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
                 {
                     int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
-                    await RecordDeviceValue(deviceRefId, ChangeType.String).ConfigureAwait(false);
+                    await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
@@ -148,8 +135,6 @@ namespace Hspi
                 Log.Warning("Failed to process HSEvent {eventType} with {error}", eventType, ex.GetFullMessage());
             }
         }
-
-#pragma warning restore CS0618 // Type or member is obsolete
 
         private static bool IsMonitored(AbstractHsDevice feature)
         {
@@ -180,26 +165,27 @@ namespace Hspi
             var deviceEnumerator = HomeSeerSystem.GetAllRefs();
             foreach (var refId in deviceEnumerator)
             {
-                await RecordDeviceValue(refId, ChangeType.Value).ConfigureAwait(false);
+                await RecordDeviceValue(refId).ConfigureAwait(false);
                 ShutdownCancellationToken.ThrowIfCancellationRequested();
             }
         }
 
-        private async Task RecordDeviceValue(int deviceRefId, ChangeType trackedType)
+        private async Task RecordDeviceValue(int deviceRefId)
         {
             var feature = HomeSeerSystem.GetFeatureByRef(deviceRefId);
             if (feature != null)
             {
                 if (IsMonitored(feature))
                 {
-                    var collector = GetCollector();
-                    await RecordDeviceValue(collector, feature).ConfigureAwait(false);
+                    await RecordDeviceValue(feature).ConfigureAwait(false);
                 }
             }
         }
 
-        private static async Task RecordDeviceValue(SqliteDatabaseCollector collector, HsFeature feature)
+        private async Task RecordDeviceValue(HsFeature feature)
         {
+            CheckNotNull(collector);
+
             ExtractValues(feature, out var deviceValue, out var lastChange, out var deviceString);
 
             RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
@@ -258,7 +244,9 @@ namespace Hspi
 
         private void RestartProcessing()
         {
-            Utils.TaskHelper.StartAsyncWithErrorChecking("All device collection", RecordAllDevices, ShutdownCancellationToken);
+            Utils.TaskHelper.StartAsyncWithErrorChecking("All device values collection",
+                                                         RecordAllDevices,
+                                                         ShutdownCancellationToken);
         }
 
         private void UpdateDebugLevel()

@@ -4,7 +4,7 @@ using Hspi;
 using Hspi.Database;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace HSPI_HistoricalRecordsTest.Hspi.Utils
+namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
     public class TestSeriesHelper
