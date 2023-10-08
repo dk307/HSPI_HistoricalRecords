@@ -73,8 +73,11 @@ namespace Hspi
         {
             int refId = ParseRefId(refIdString);
             var oldest = GetCollector().GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();
-            return (long)Math.Round((DateTimeOffset.Now - oldest).TotalSeconds);
+            return (long)Math.Round((TimeNow - oldest).TotalSeconds);
         }
+
+        //used in tests for mocks
+        protected virtual DateTimeOffset TimeNow => DateTimeOffset.Now;
 
         public long GetTotalRecords(long refId)
         {
@@ -314,14 +317,14 @@ namespace Hspi
                 else if (!string.IsNullOrEmpty(parameters["recordLimit"]))
                 {
                     min = 0;
-                    max = DateTimeOffset.Now.AddYears(100).ToUnixTimeSeconds(); //  a large future date
+                    max = long.MaxValue;
                     recordLimit = ParseParameterAsInt(parameters, "recordLimit");
                     totalResultsCount = Math.Min(recordLimit,
                                                  await collector.GetRecordsCount(refId, min, max).ConfigureAwait(false));
                 }
                 else
                 {
-                    throw new Exception("Neither min/max or recordCount specified");
+                    throw new ArgumentException("Neither min/max or recordCount specified");
                 }
 
                 var queryData = await collector.GetRecords(refId,

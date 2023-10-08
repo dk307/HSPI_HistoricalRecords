@@ -15,7 +15,6 @@ using static SQLitePCL.raw;
 
 namespace Hspi.Database
 {
-
     internal sealed class SqliteDatabaseCollector : IDisposable
     {
         static SqliteDatabaseCollector()
@@ -101,7 +100,6 @@ namespace Hspi.Database
         public async Task<DateTimeOffset> GetOldestRecordTimeDate(int refId)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-
             var stmt = getOldestRecordCommand;
 
             ugly.reset(stmt);
@@ -115,7 +113,6 @@ namespace Hspi.Database
                                                                 long start, long length, ResultSortBy sortBy)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-
             var stmt = getHistoryCommand;
 
             ugly.reset(stmt);

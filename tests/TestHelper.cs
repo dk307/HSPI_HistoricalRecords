@@ -22,7 +22,7 @@ namespace HSPI_HistoricalRecordsTest
         public static void CheckRecordedValue(Mock<PlugIn> plugin, int refId, RecordData recordData,
                                                int askForRecordCount, int expectedRecordCount)
         {
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.IsTrue(TimedWaitTillTrue(() =>
             {
                 var records = GetHistoryRecords(plugin, refId, askForRecordCount);
                 Assert.IsNotNull(records);
@@ -93,6 +93,27 @@ namespace HSPI_HistoricalRecordsTest
             }
 
             return result;
+        }
+
+        public static void RaiseHSEvent(Mock<PlugIn> plugin, Constants.HSEvent eventType, HsFeature feature, double value, string status, DateTime lastChange)
+        {
+            feature.Changes[EProperty.Value] = value;
+            feature.Changes[EProperty.DisplayedStatus] = status;
+            feature.Changes[EProperty.LastChange] = lastChange;
+
+            RaiseHSEvent(eventType, plugin, feature);
+        }
+
+        public static void RaiseHSEvent(Constants.HSEvent eventType, Mock<PlugIn> plugin, HsFeature feature)
+        {
+            if (eventType == Constants.HSEvent.VALUE_CHANGE)
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.VALUE_CHANGE, new object[] { null, null, null, null, feature.Ref });
+            }
+            else
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.STRING_CHANGE, new object[] { null, null, null, feature.Ref });
+            }
         }
 
         public static Mock<IHsController> SetupHsControllerAndSettings(Mock<PlugIn> mockPlugin,
@@ -178,7 +199,7 @@ namespace HSPI_HistoricalRecordsTest
 
         public static bool WaitTillTotalRecords(Mock<PlugIn> plugin, int refId, long count)
         {
-            return (TestHelper.TimedWaitTillTrue(() =>
+            return (TimedWaitTillTrue(() =>
             {
                 return plugin.Object.GetTotalRecords(refId) == count;
             }));
