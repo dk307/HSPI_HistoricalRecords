@@ -17,12 +17,20 @@ using Newtonsoft.Json.Linq;
 
 namespace HSPI_HistoricalRecordsTest
 {
+    internal static class Extensions
+    {
+        public static List<RecordData> Clone(this List<RecordData> listToClone)
+        {
+            return listToClone.Select(item => item with { }).ToList();
+        }
+    }
+
     internal static class TestHelper
     {
         public static void CheckRecordedValue(Mock<PlugIn> plugin, int refId, RecordData recordData,
                                                int askForRecordCount, int expectedRecordCount)
         {
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.IsTrue(TimedWaitTillTrue(() =>
             {
                 var records = GetHistoryRecords(plugin, refId, askForRecordCount);
                 Assert.IsNotNull(records);
@@ -44,7 +52,7 @@ namespace HSPI_HistoricalRecordsTest
         public static void CheckRecordedValueForFeatureType(Mock<PlugIn> plugin, HsFeature feature,
                                                        int askForRecordCount, int expectedRecordCount)
         {
-            RecordData recordData = new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+            RecordData recordData = new(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
             CheckRecordedValue(plugin, feature.Ref, recordData, askForRecordCount, expectedRecordCount);
         }
 
@@ -73,8 +81,14 @@ namespace HSPI_HistoricalRecordsTest
 
         public static List<RecordData> GetHistoryRecords(Mock<PlugIn> plugin, int refId, int recordLimit = 10)
         {
+            string paramsForRecord = $"refId={refId}&recordLimit={recordLimit}&start=0&length={recordLimit}";
+            return GetHistoryRecords(plugin, refId, paramsForRecord);
+        }
+
+        public static List<RecordData> GetHistoryRecords(Mock<PlugIn> plugin, int refId, string paramsForRecord)
+        {
             List<RecordData> result = new();
-            string data = plugin.Object.PostBackProc("historyrecords", $"refId={refId}&recordLimit={recordLimit}&start=0&length={recordLimit}", string.Empty, 0);
+            string data = plugin.Object.PostBackProc("historyrecords", paramsForRecord, string.Empty, 0);
             if (!string.IsNullOrEmpty(data))
             {
                 var jsonData = (JObject)JsonConvert.DeserializeObject(data);
@@ -93,6 +107,41 @@ namespace HSPI_HistoricalRecordsTest
             }
 
             return result;
+        }
+
+        public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
+                                                    Constants.HSEvent eventType,
+                                                    HsFeature feature,
+                                                    double value,
+                                                    string status,
+                                                    DateTime lastChange,
+
+                                               int expectedCount)
+        {
+            RaiseHSEvent(plugin, eventType, feature, value, status, lastChange);
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, expectedCount));
+            return new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+        }
+
+        public static void RaiseHSEvent(Mock<PlugIn> plugin, Constants.HSEvent eventType, HsFeature feature, double value, string status, DateTime lastChange)
+        {
+            feature.Changes[EProperty.Value] = value;
+            feature.Changes[EProperty.DisplayedStatus] = status;
+            feature.Changes[EProperty.LastChange] = lastChange;
+
+            RaiseHSEvent(eventType, plugin, feature);
+        }
+
+        public static void RaiseHSEvent(Constants.HSEvent eventType, Mock<PlugIn> plugin, HsFeature feature)
+        {
+            if (eventType == Constants.HSEvent.VALUE_CHANGE)
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.VALUE_CHANGE, new object[] { null, null, null, null, feature.Ref });
+            }
+            else
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.STRING_CHANGE, new object[] { null, null, null, feature.Ref });
+            }
         }
 
         public static Mock<IHsController> SetupHsControllerAndSettings(Mock<PlugIn> mockPlugin,
@@ -122,7 +171,7 @@ namespace HSPI_HistoricalRecordsTest
         public static HsFeature SetupHsFeature(Mock<IHsController> mockHsController, int deviceRefId,
                                                 IDictionary<EProperty, object> changes)
         {
-            HsFeature feature = new HsFeature(deviceRefId);
+            HsFeature feature = new(deviceRefId);
             foreach (var change in changes)
             {
                 feature.Changes.Add(change.Key, change.Value);
@@ -158,7 +207,7 @@ namespace HSPI_HistoricalRecordsTest
             bool result = func();
             while (!result && stopwatch.Elapsed < wait)
             {
-                Thread.Sleep(100);
+                Thread.Yield();
                 result = func();
             }
             return result;
@@ -178,7 +227,7 @@ namespace HSPI_HistoricalRecordsTest
 
         public static bool WaitTillTotalRecords(Mock<PlugIn> plugin, int refId, long count)
         {
-            return (TestHelper.TimedWaitTillTrue(() =>
+            return (TimedWaitTillTrue(() =>
             {
                 return plugin.Object.GetTotalRecords(refId) == count;
             }));

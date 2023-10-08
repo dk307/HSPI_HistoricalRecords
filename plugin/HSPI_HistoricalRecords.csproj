@@ -119,6 +119,7 @@
     <Compile Include="Database\TimeAndValue.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />
     <Compile Include="Hspi\Utils\ITimeAndValueList.cs" />
+    <Compile Include="Hspi\Utils\TimeAndValueList.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesHelper.cs" />
     <Compile Include="MonitoredDevice.cs" />
     <Compile Include="Hspi\HSPI.cs" />

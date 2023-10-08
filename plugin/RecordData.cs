@@ -4,7 +4,7 @@
 
 namespace Hspi
 {
-    internal record RecordData
+    public record RecordData
     {
         public RecordData(long deviceRefId, in double deviceValue, string? deviceString,
                             in long unixTimeSeconds)
@@ -30,7 +30,7 @@ namespace Hspi
 
         public long UnixTimeSeconds { get; }
 
-        public long UnixTimeMilliSeconds  => UnixTimeSeconds * 1000;
+        public long UnixTimeMilliSeconds => UnixTimeSeconds * 1000;
 
         public DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);
     }

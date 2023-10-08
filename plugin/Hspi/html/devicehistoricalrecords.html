@@ -47,7 +47,7 @@
 	end		
  
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
-	oldestRecordDateTime=plugin_function 'HistoricalRecords' 'GetOldestRecordTimeDate'[finalRefId] 
+	oldestRecordTimeSpan=plugin_function 'HistoricalRecords' 'GetOldestRecordTimeSpan'[finalRefId] 
 		
 	if !deviceDisplayDetails
 		deviceDisplayDetails=[]
@@ -88,7 +88,7 @@
 		end
 
 		for rangeOption in rangeOptionsForOthers
-			if  rangeOption[2] <= oldestRecordDateTime
+			if  rangeOption[2] <= oldestRecordTimeSpan
 				rangeOptions = rangeOptions | array.add rangeOption
 		 	else  
 				# add one more after the limit
@@ -145,7 +145,7 @@ function getRangeString(min, max) {
 <!-- displayMin={{displayMin}}<BR> -->
 <!-- displayMax={{displayMax}}<BR> -->
 <!-- displayPeriod={{displayPeriod}}<BR> -->
-<!-- oldestRecordDateTime={{oldestRecordDateTime}}<BR> -->
+<!-- oldestRecordTimeSpan={{oldestRecordTimeSpan}}<BR> -->
 
 <header>
 	<nav class="navbar">
@@ -450,6 +450,13 @@ $(document).ready(function () {
 					} else {
 						chart.options.scales.x.time.displayFormats.hour = "hA";
 					}
+					
+					if (result.groupedbyseconds == 0) {
+						chartFunction(4);
+					} else {
+						chartFunction(3);
+					}
+					
 					chart.update('none');
 				}
 			},
