@@ -10,7 +10,7 @@ namespace HSPI_HistoricalRecordsTest
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext context)
         {
-            Logger.ConfigureLogging(Serilog.Events.LogEventLevel.Warning, false);
+            Logger.ConfigureLogging(Serilog.Events.LogEventLevel.Debug, false);
             Log.Information("Starting Tests");
         }
 

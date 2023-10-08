@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
@@ -49,7 +48,7 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.RaiseHSEvent(eventType, plugin, feature);
 
-            RecordData recordData = new RecordData(feature.Ref, feature.Value,
+            RecordData recordData = new(feature.Ref, feature.Value,
                                                    expectedString,
                                                    ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
             TestHelper.CheckRecordedValue(plugin, feature.Ref, recordData, 100, 1);
@@ -88,7 +87,7 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.RaiseHSEvent(eventType, plugin, feature);
 
-            RecordData recordData = new RecordData(feature.Ref, feature.Value,
+            RecordData recordData = new(feature.Ref, feature.Value,
                                                    "100",
                                                    ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
             TestHelper.CheckRecordedValue(plugin, feature.Ref, recordData, 100, 1);
@@ -128,7 +127,7 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.RaiseHSEvent(eventType, plugin, feature);
 
-            RecordData recordData = new RecordData(feature.Ref, feature.Value,
+            RecordData recordData = new(feature.Ref, feature.Value,
                                                    "On",
                                                    ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
             TestHelper.CheckRecordedValue(plugin, feature.Ref, recordData, 100, 1);
@@ -180,18 +179,18 @@ namespace HSPI_HistoricalRecordsTest
                                      apiType: (int)EApiType.Feature);
 
             Assert.IsTrue(plugin.Object.InitIO());
-            List<RecordData> expected = new List<RecordData>();
+            List<RecordData> expected = new();
 
             TestHelper.RaiseHSEvent(Constants.HSEvent.VALUE_CHANGE, plugin, feature);
             expected.Add(new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds()));
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
 
-            AddNewChange(plugin, feature, expected, 1.2, "1.2", time.AddSeconds(1));
-            AddNewChange(plugin, feature, expected, 1.3, "1.3", time.AddSeconds(2));
-            AddNewChange(plugin, feature, expected, 1.3, "1.3", time.AddSeconds(3));
-            AddNewChange(plugin, feature, expected, 1.8, "1.8", time.AddSeconds(4));
-            AddNewChange(plugin, feature, expected, 11.8, "11.8", time.AddSeconds(5));
+            AddNewChange(plugin, feature, expected, 1.2, time.AddSeconds(1));
+            AddNewChange(plugin, feature, expected, 1.3, time.AddSeconds(2));
+            AddNewChange(plugin, feature, expected, 1.3, time.AddSeconds(3));
+            AddNewChange(plugin, feature, expected, 1.8, time.AddSeconds(4));
+            AddNewChange(plugin, feature, expected, 11.8, time.AddSeconds(5));
 
             var records = TestHelper.GetHistoryRecords(plugin, feature.Ref, 100);
             records.Reverse();
@@ -204,12 +203,10 @@ namespace HSPI_HistoricalRecordsTest
                                      HsFeature feature,
                                      IList<RecordData> expected,
                                      double value,
-                                     string status,
                                      DateTime lastChange)
             {
-                TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.VALUE_CHANGE, feature, value, status, lastChange);
-                expected.Add(new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds()));
-                Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, expected.Count));
+                var added = TestHelper.RaiseHSEventAndWait(plugin, Constants.HSEvent.VALUE_CHANGE, feature, value, value.ToString(), lastChange, expected.Count + 1);
+                expected.Add(added);
             }
         }
 
@@ -230,7 +227,7 @@ namespace HSPI_HistoricalRecordsTest
                                      apiType: (int)EApiType.Feature);
 
             Assert.IsTrue(plugin.Object.InitIO());
-            List<RecordData> expected = new List<RecordData>();
+            List<RecordData> expected = new();
 
             TestHelper.RaiseHSEvent(Constants.HSEvent.VALUE_CHANGE, plugin, feature);
 

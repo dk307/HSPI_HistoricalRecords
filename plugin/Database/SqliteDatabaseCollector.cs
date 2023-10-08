@@ -110,7 +110,7 @@ namespace Hspi.Database
         }
 
         public async Task<IList<RecordData>> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                                                long start, long length, ResultSortBy sortBy)
+                                                        long start, long length, ResultSortBy sortBy)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
             var stmt = getHistoryCommand;
@@ -238,8 +238,8 @@ namespace Hspi.Database
 
         // 1 record before the time range and one after
         private const string GetTimeValueSql =
-            @"SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts<=$min ORDER BY ts DESC LIMIT 1) UNION
-              SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts>=$max ORDER BY ts LIMIT 1) UNION
+            @"SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts<$min ORDER BY ts DESC LIMIT 1) UNION
+              SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts>$max ORDER BY ts LIMIT 1) UNION
               SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
 
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
@@ -248,7 +248,7 @@ namespace Hspi.Database
 
         private const string RecordsHistorySql = @"
                 SELECT ts, value, str FROM history
-                WHERE ref=$refid AND ts>=$min AND ts<=$max
+                WHERE ref=$refid AND ts>=$minV AND ts<=$maxV
                 ORDER BY
                     CASE WHEN $order = 0 THEN ts END DESC,
                     CASE WHEN $order = 1 THEN value END DESC,

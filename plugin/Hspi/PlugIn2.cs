@@ -14,6 +14,7 @@ using Hspi.Database;
 using Hspi.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 using static System.FormattableString;
 
 #nullable enable
@@ -22,6 +23,9 @@ namespace Hspi
 {
     internal partial class PlugIn : HspiBase
     {
+        //used in tests for mocks
+        protected virtual DateTimeOffset TimeNow => DateTimeOffset.Now;
+
         public IList<string> GetAllowedDisplays(string? refIdString)
         {
             var displays = new List<string>();
@@ -76,18 +80,10 @@ namespace Hspi
             return (long)Math.Round((TimeNow - oldest).TotalSeconds);
         }
 
-        //used in tests for mocks
-        protected virtual DateTimeOffset TimeNow => DateTimeOffset.Now;
-
         public long GetTotalRecords(long refId)
         {
             var count = GetCollector().GetRecordsCount(refId, 0, long.MaxValue).ResultForSync<long>();
             return count;
-        }
-
-        public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
-        {
-            return base.HasJuiDeviceConfigPage(devOrFeatRef);
         }
 
         public override string PostBackProc(string page, string data, string user, int userRights)
@@ -98,6 +94,12 @@ namespace Hspi
                 "graphrecords" => HandleGraphRecords(data).ResultForSync(),
                 _ => base.PostBackProc(page, data, user, userRights),
             };
+        }
+
+        private static TimeSpan GetDefaultGroupInterval(TimeSpan duration)
+        {
+            // aim for 256 points on graph
+            return TimeSpan.FromSeconds(duration.TotalSeconds / 256);
         }
 
         private static string? GetTableValue(CultureInfo culture, object? column)
@@ -203,17 +205,11 @@ namespace Hspi
             var page = PageFactory.CreateDeviceConfigPage(Id, "Device").WithLabel("id", stb.ToString());
 
             return page.Page.ToJsonString();
-        }
 
-        private string CreatePlugInUrl(string fileName)
-        {
-            return "/" + Id + "/" + fileName;
-        }
-
-        private static TimeSpan GetDefaultGroupInterval(TimeSpan duration)
-        {
-            // aim for 256 points on graph
-            return TimeSpan.FromSeconds(duration.TotalSeconds / 256);
+            string CreatePlugInUrl(string fileName)
+            {
+                return "/" + Id + "/" + fileName;
+            }
         }
 
         private async Task<string> HandleGraphRecords(string data)
@@ -286,6 +282,8 @@ namespace Hspi
 
         private async Task<string> HandleHistoryRecords(string data)
         {
+            Log.Debug("HandleHistoryRecords {data}", data);
+
             StringBuilder stb = new();
             using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
             using var jsonWriter = new JsonTextWriter(stringWriter);
@@ -311,6 +309,12 @@ namespace Hspi
                 {
                     min = ParseParameterAsInt(parameters, "min") / 1000;
                     max = ParseParameterAsInt(parameters, "max") / 1000;
+
+                    if (max < min)
+                    {
+                        throw new ArgumentException("max < min");
+                    }
+
                     totalResultsCount = await collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
                     recordLimit = int.MaxValue;
                 }
@@ -359,6 +363,7 @@ namespace Hspi
             }
             catch (Exception ex)
             {
+                Log.Error("Getting Records failed for {param} with {error}", data, ex.GetFullMessage());
                 jsonWriter.WritePropertyName("error");
                 jsonWriter.WriteValue(ex.GetFullMessage());
             }
