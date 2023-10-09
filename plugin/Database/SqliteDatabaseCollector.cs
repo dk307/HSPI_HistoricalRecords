@@ -29,9 +29,10 @@ namespace Hspi.Database
             }
         }
 
-        public SqliteDatabaseCollector(IDBSettings settings, CancellationToken shutdownToken)
+        public SqliteDatabaseCollector(IDBSettings settings, ISystemClock systemClock, CancellationToken shutdownToken)
         {
             this.settings = settings;
+            this.systemClock = systemClock;
             this.shutdownToken = shutdownToken;
             CreateDBDirectory(settings.DBPath);
 
@@ -207,7 +208,7 @@ namespace Hspi.Database
 
                     allRefOldestRecordsCommand.reset();
 
-                    DateTimeOffset now = TimeNow;
+                    DateTimeOffset now = systemClock.Now;
                     while (ugly.step(allRefOldestRecordsCommand) != SQLITE_DONE)
                     {
                         // order: SELECT time, MIN(TS) FROM history
@@ -347,6 +348,7 @@ namespace Hspi.Database
         private readonly AsyncAutoResetEvent pruneNowEvent = new(false);
         private readonly AsyncProducerConsumerQueue<RecordData> queue = new();
         private readonly IDBSettings settings;
+        private readonly ISystemClock systemClock;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;
     }

@@ -13,6 +13,7 @@ using Constants = HomeSeer.PluginSdk.Constants;
 #nullable enable
 
 namespace Hspi
+
 {
     internal partial class PlugIn : HspiBase
     {
@@ -85,7 +86,7 @@ namespace Hspi
                 UpdateDebugLevel();
 
                 CheckNotNull(settingsPages);
-                collector = new SqliteDatabaseCollector(settingsPages, ShutdownCancellationToken);
+                collector = new SqliteDatabaseCollector(settingsPages, CreateClock(), ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
@@ -100,6 +101,7 @@ namespace Hspi
                 throw;
             }
         }
+
         protected override bool OnSettingChange(string pageId, AbstractView currentView, AbstractView changedView)
         {
             Log.Information("Page:{pageId} has changed value of id:{id} to {value}", pageId, changedView.Id, changedView.GetStringValue());
@@ -128,6 +130,7 @@ namespace Hspi
                 throw new InvalidOperationException("Plugin Not Initialized");
             }
         }
+
         private static bool IsMonitored(AbstractHsDevice feature)
         {
             if (IsTimer(feature))  //ignore timer changes
@@ -172,6 +175,7 @@ namespace Hspi
                 Log.Warning("Failed to process HSEvent {eventType} with {error}", eventType, ex.GetFullMessage());
             }
         }
+
         private async Task RecordAllDevices()
         {
             var deviceEnumerator = HomeSeerSystem.GetAllRefs();
@@ -271,6 +275,7 @@ namespace Hspi
             Logger.ConfigureLogging(settingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
+        
         private SqliteDatabaseCollector? collector;
         private SettingsPages? settingsPages;
     }

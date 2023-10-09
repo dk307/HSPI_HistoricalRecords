@@ -38,7 +38,9 @@ namespace Hspi
         public bool LogtoFileEnabled { get; private set; }
         public bool LogValueChangeEnabled { get; private set; }
 
-        public long MinRecordsToKeep => 100;
+        public const int MinRecordsToKeepDefault = 100;
+
+        public long MinRecordsToKeep => MinRecordsToKeepDefault;
 
         public static Page CreateDefault(LogEventLevel logEventLevel = LogEventLevel.Information,
                                          bool logToFileDefault = false,

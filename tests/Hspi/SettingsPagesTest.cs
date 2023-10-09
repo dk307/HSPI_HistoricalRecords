@@ -77,8 +77,10 @@ namespace HSPI_HistoricalRecordsTest
             var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
 
             var logOptions = EnumHelper.GetValues<LogEventLevel>().Select(x => x.ToString()).ToList();
-            TimeSpanView changedView = new(SettingsPages.GlobalRetentionPeriodId, "name");
-            changedView.Value = TimeSpan.FromSeconds(seconds);
+            TimeSpanView changedView = new(SettingsPages.GlobalRetentionPeriodId, "name")
+            {
+                Value = TimeSpan.FromSeconds(seconds)
+            };
 
             Assert.IsTrue(settingPages.OnSettingChange(changedView));
             Assert.AreEqual(settingPages.GlobalRetentionPeriod, TimeSpan.FromSeconds(seconds));
