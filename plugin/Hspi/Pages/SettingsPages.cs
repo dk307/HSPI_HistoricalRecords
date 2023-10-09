@@ -1,20 +1,21 @@
 ﻿using System;
-using HomeSeer.Jui.Views;
-using Hspi.Utils;
-using Serilog.Core;
-using Serilog.Events;
+using System.IO;
 using System.Linq;
-using System.Buffers;
-using System.Globalization;
+using HomeSeer.Jui.Views;
+using HomeSeer.PluginSdk;
+using Hspi.Utils;
+using Serilog.Events;
 
 #nullable enable
 
 namespace Hspi
 {
-    internal sealed class SettingsPages
+    internal sealed class SettingsPages : Database.IDBSettings
     {
-        public SettingsPages(SettingsCollection collection)
+        public SettingsPages(IHsController hs, SettingsCollection collection)
         {
+            this.dbPath = Path.Combine(hs.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+
             if (!Enum.TryParse<LogEventLevel>(collection[SettingPageId].GetViewById<SelectListView>(LoggingLevelId).GetSelectedOptionKey(), out LogEventLevel logEventLevel))
             {
                 LogLevel = LogEventLevel.Information;
@@ -23,27 +24,47 @@ namespace Hspi
             {
                 LogLevel = logEventLevel;
             }
+
             LogtoFileEnabled = collection[SettingPageId].GetViewById<ToggleView>(LogToFileId).IsEnabled;
+            GlobalRetentionPeriod = collection[SettingPageId].GetViewById<TimeSpanView>(GlobalRetentionPeriodId).Value;
         }
 
-        public LogEventLevel LogLevel { get; private set; }
+        public static TimeSpan DefaultGlobalRetentionPeriod => TimeSpan.FromDays(30);
 
+        public string DBPath => dbPath;
         public bool DebugLoggingEnabled => LogLevel <= LogEventLevel.Debug;
-
+        public TimeSpan GlobalRetentionPeriod { get; private set; }
+        public LogEventLevel LogLevel { get; private set; }
         public bool LogtoFileEnabled { get; private set; }
-
         public bool LogValueChangeEnabled { get; private set; }
+
+        public long MinRecordsToKeep => 100;
 
         public static Page CreateDefault(LogEventLevel logEventLevel = LogEventLevel.Information,
                                          bool logToFileDefault = false,
-                                         bool logValueChangeDefault = false)
+                                         TimeSpan? globalDefaultRetention = null)
         {
             var settings = PageFactory.CreateSettingsPage(SettingPageId, "Settings");
 
+            var spanView = new TimeSpanView(GlobalRetentionPeriodId, "Records retention period")
+            {
+                ShowDays = true,
+                ShowSeconds = false,
+                Value = globalDefaultRetention ?? DefaultGlobalRetentionPeriod
+            };
+
+            settings.Page.AddView(spanView);
+
             var logOptions = EnumHelper.GetValues<LogEventLevel>().Select(x => x.ToString()).ToList();
             settings = settings.WithDropDownSelectList(LoggingLevelId, "Logging Level", logOptions, logOptions, (int)logEventLevel);
+
             settings = settings.WithToggle(LogToFileId, "Log to file", logToFileDefault);
             return settings.Page;
+        }
+
+        public TimeSpan GetDeviceRetentionPeriod(long deviceRefId)
+        {
+            return GlobalRetentionPeriod;
         }
 
         public bool OnSettingChange(AbstractView changedView)
@@ -65,11 +86,25 @@ namespace Hspi
                 return true;
             }
 
+            if (changedView.Id == GlobalRetentionPeriodId)
+            {
+                var value = ((TimeSpanView)changedView).Value;
+                if (value > TimeSpan.Zero)
+                {
+                    GlobalRetentionPeriod = value;
+                    return true;
+                }
+
+                return false;
+            }
+
             return false;
         }
 
+        internal const string GlobalRetentionPeriodId = "GlobalRetentionPeriod";
         internal const string LoggingLevelId = "LogLevel";
         internal const string LogToFileId = "LogToFile";
-        internal const string SettingPageId = "setting_page_id";
+        internal const string SettingPageId = "SettingPage";
+        private readonly string dbPath;
     }
 }

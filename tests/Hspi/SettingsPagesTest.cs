@@ -1,9 +1,13 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using HomeSeer.Jui.Types;
 using HomeSeer.Jui.Views;
+using HomeSeer.PluginSdk;
 using Hspi;
 using Hspi.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Serilog.Events;
 
 namespace HSPI_HistoricalRecordsTest
@@ -11,6 +15,12 @@ namespace HSPI_HistoricalRecordsTest
     [TestClass]
     public class SettingsPagesTest
     {
+        public SettingsPagesTest()
+        {
+            this.plugin = TestHelper.CreatePlugInMock();
+            this.mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+        }
+
         [TestMethod]
         public void CreateDefault()
         {
@@ -30,37 +40,48 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [DataTestMethod]
-        [DataRow(LogEventLevel.Information, false)]
-        [DataRow(LogEventLevel.Warning, false)]
-        [DataRow(LogEventLevel.Fatal, false)]
-        [DataRow(LogEventLevel.Information, true)]
-        [DataRow(LogEventLevel.Verbose, false)]
-        [DataRow(LogEventLevel.Debug, true)]
+        [DataRow(LogEventLevel.Information, false, 35)]
+        [DataRow(LogEventLevel.Warning, false, 45677)]
+        [DataRow(LogEventLevel.Fatal, false, 99999)]
+        [DataRow(LogEventLevel.Information, true, 10000)]
+        [DataRow(LogEventLevel.Verbose, false, 100000)]
+        [DataRow(LogEventLevel.Debug, true, 60 * 24 * 30)]
         public void DefaultValues(LogEventLevel logEventLevel,
-                                  bool logToFileEnable)
+                                  bool logToFileEnable,
+                                  long globalRetentionPeriodSeconds)
         {
             var settingsCollection = new SettingsCollection
             {
-                SettingsPages.CreateDefault(logEventLevel, logToFileEnable)
+                SettingsPages.CreateDefault(logEventLevel, logToFileEnable, TimeSpan.FromSeconds(globalRetentionPeriodSeconds))
             };
 
-            var settingPages = new SettingsPages(settingsCollection);
+            var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
 
             Assert.AreEqual(settingPages.LogLevel, logEventLevel);
             Assert.AreEqual(settingPages.DebugLoggingEnabled, logEventLevel <= LogEventLevel.Debug);
             Assert.AreEqual(settingPages.LogtoFileEnabled, logToFileEnable);
+            Assert.AreEqual(settingPages.GlobalRetentionPeriod, TimeSpan.FromSeconds(globalRetentionPeriodSeconds));
         }
 
-        [TestMethod]
-        public void OnSettingChangeWithNoChange()
+        [DataTestMethod]
+        [DataRow(60)]
+        [DataRow(60 * 24)]
+        [DataRow(60 * 24 * 7)]
+        [DataRow(60 * 24 * 365)]
+        public void OnSettingChangeWithGlobalRetentionPeriod(long seconds)
         {
             var settingsCollection = new SettingsCollection
             {
-                SettingsPages.CreateDefault()
+                SettingsPages.CreateDefault(globalDefaultRetention: SettingsPages.DefaultGlobalRetentionPeriod)
             };
-            var settingPages = new SettingsPages(settingsCollection);
+            var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
 
-            Assert.IsFalse(settingPages.OnSettingChange(new ToggleView("id", "name")));
+            var logOptions = EnumHelper.GetValues<LogEventLevel>().Select(x => x.ToString()).ToList();
+            TimeSpanView changedView = new(SettingsPages.GlobalRetentionPeriodId, "name");
+            changedView.Value = TimeSpan.FromSeconds(seconds);
+
+            Assert.IsTrue(settingPages.OnSettingChange(changedView));
+            Assert.AreEqual(settingPages.GlobalRetentionPeriod, TimeSpan.FromSeconds(seconds));
         }
 
         [DataTestMethod]
@@ -76,7 +97,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 SettingsPages.CreateDefault(logEventLevel: (logEventLevel == LogEventLevel.Verbose ? LogEventLevel.Fatal : LogEventLevel.Verbose))
             };
-            var settingPages = new SettingsPages(settingsCollection);
+            var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
 
             var logOptions = EnumHelper.GetValues<LogEventLevel>().Select(x => x.ToString()).ToList();
             SelectListView changedView = new(SettingsPages.LoggingLevelId, "name", logOptions, logOptions, ESelectListType.DropDown,
@@ -94,11 +115,25 @@ namespace HSPI_HistoricalRecordsTest
             {
                 SettingsPages.CreateDefault(logToFileDefault: initialValue)
             };
-            var settingPages = new SettingsPages(settingsCollection);
+            var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
 
             ToggleView changedView = new(SettingsPages.LogToFileId, "name", !initialValue);
             Assert.IsTrue(settingPages.OnSettingChange(changedView));
             Assert.AreEqual(settingPages.LogtoFileEnabled, !initialValue);
         }
+
+        [TestMethod]
+        public void OnSettingChangeWithNoChange()
+        {
+            var settingsCollection = new SettingsCollection
+            {
+                SettingsPages.CreateDefault()
+            };
+            var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
+
+            Assert.IsFalse(settingPages.OnSettingChange(new ToggleView("id", "name")));
+        }
+        private readonly Mock<IHsController> mockHsController;
+        private readonly Mock<PlugIn> plugin;
     }
 }

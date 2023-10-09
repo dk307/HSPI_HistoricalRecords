@@ -115,6 +115,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Database\IDBSettings.cs" />
     <Compile Include="Database\ResultSortBy.cs" />
     <Compile Include="Database\TimeAndValue.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />

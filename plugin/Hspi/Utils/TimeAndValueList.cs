@@ -5,7 +5,7 @@ using Hspi.Database;
 
 namespace Hspi
 {
-    internal class TimeAndValueList : ITimeAndValueList
+    internal sealed class TimeAndValueList : ITimeAndValueList
     {
         public TimeAndValueList(IList<TimeAndValue> list)
         {

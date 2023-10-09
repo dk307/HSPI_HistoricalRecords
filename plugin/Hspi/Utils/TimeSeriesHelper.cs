@@ -9,7 +9,7 @@ using Hspi.Database;
 namespace Hspi
 {
 
-    internal class TimeSeriesHelper
+    internal sealed class TimeSeriesHelper
     {
         public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
                                 long intervalUnixTimeSeconds, IList<TimeAndValue> list) :

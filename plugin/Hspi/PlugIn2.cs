@@ -24,7 +24,7 @@ namespace Hspi
     internal partial class PlugIn : HspiBase
     {
         //used in tests for mocks
-        protected virtual DateTimeOffset TimeNow => DateTimeOffset.Now;
+        protected virtual DateTimeOffset TimeNow => DateTimeOffset.UtcNow;
 
         public IList<string> GetAllowedDisplays(string? refIdString)
         {

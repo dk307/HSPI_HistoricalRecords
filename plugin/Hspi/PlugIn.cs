@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
@@ -24,6 +23,15 @@ namespace Hspi
 
         public override bool SupportsConfigDeviceAll => true;
         public override bool SupportsConfigFeature => true;
+
+        private SqliteDatabaseCollector Collector
+        {
+            get
+            {
+                CheckNotNull(collector);
+                return collector;
+            }
+        }
 
         public override string GetJuiDeviceConfigPage(int deviceRef)
         {
@@ -49,6 +57,8 @@ namespace Hspi
             HSEventImpl(eventType, parameters).Wait(ShutdownCancellationToken);
         }
 
+        public void PruneDatabase() => Collector.PruneNow();
+
         protected override void BeforeReturnStatus()
         {
             this.Status = PluginStatus.Ok();
@@ -70,14 +80,12 @@ namespace Hspi
                 Log.Information("Plugin Starting");
                 Settings.Add(SettingsPages.CreateDefault());
                 LoadSettingsFromIni();
-                settingsPages = new SettingsPages(Settings);
+                settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 // monitoredDevicesConfig = new MonitoredDevicesConfig(HomeSeerSystem);
                 UpdateDebugLevel();
 
-                string dbPath = Path.Combine(HomeSeerSystem.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
-
-                // string dbPath2 = Path.Combine(Path.GetTempPath(), "test2.db");
-                collector = new SqliteDatabaseCollector(dbPath, ShutdownCancellationToken);
+                CheckNotNull(settingsPages);
+                collector = new SqliteDatabaseCollector(settingsPages, ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
@@ -92,7 +100,6 @@ namespace Hspi
                 throw;
             }
         }
-
         protected override bool OnSettingChange(string pageId, AbstractView currentView, AbstractView changedView)
         {
             Log.Information("Page:{pageId} has changed value of id:{id} to {value}", pageId, changedView.Id, changedView.GetStringValue());
@@ -121,37 +128,6 @@ namespace Hspi
                 throw new InvalidOperationException("Plugin Not Initialized");
             }
         }
-
-        private SqliteDatabaseCollector Collector
-        {
-            get
-            {
-                CheckNotNull(collector);
-                return collector;
-            }
-        }
-
-        private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
-        {
-            try
-            {
-                if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
-                {
-                    int deviceRefId = Convert.ToInt32(parameters[4], CultureInfo.InvariantCulture);
-                    await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
-                }
-                else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
-                {
-                    int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
-                    await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("Failed to process HSEvent {eventType} with {error}", eventType, ex.GetFullMessage());
-            }
-        }
-
         private static bool IsMonitored(AbstractHsDevice feature)
         {
             if (IsTimer(feature))  //ignore timer changes
@@ -176,6 +152,26 @@ namespace Hspi
             }
         }
 
+        private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
+        {
+            try
+            {
+                if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
+                {
+                    int deviceRefId = Convert.ToInt32(parameters[4], CultureInfo.InvariantCulture);
+                    await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
+                }
+                else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
+                {
+                    int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
+                    await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Failed to process HSEvent {eventType} with {error}", eventType, ex.GetFullMessage());
+            }
+        }
         private async Task RecordAllDevices()
         {
             var deviceEnumerator = HomeSeerSystem.GetAllRefs();
@@ -276,7 +272,6 @@ namespace Hspi
         }
 
         private SqliteDatabaseCollector? collector;
-        private MonitoredDevicesConfig? monitoredDevicesConfig;
         private SettingsPages? settingsPages;
     }
 }
