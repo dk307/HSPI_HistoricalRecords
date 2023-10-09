@@ -136,6 +136,30 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void DatatableCallbackError()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            int devRefId = 1938;
+            string paramsForRecord = $"refId={devRefId}&min={1001}&max={99}&start=10&length=100&order[0][column]=1&order[0][dir]=desc";
+
+            string data = plugin.Object.PostBackProc("historyrecords", paramsForRecord, string.Empty, 0);
+            Assert.IsNotNull(data);
+
+            var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+            Assert.IsNotNull(jsonData);
+
+            var errorMessage = jsonData["error"].Value<string>();
+            Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
         [DynamicData(nameof(GetDatatableCallbackTotalData), DynamicDataSourceType.Method)]
         public void DatatableCallbackTotal(Func<HsFeature, List<RecordData>, string> createString, int addedRecordCount, int total)
         {
