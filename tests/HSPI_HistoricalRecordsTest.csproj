@@ -73,7 +73,7 @@
     <Compile Include="Hspi\PlugInTest.cs" />
     <Compile Include="Hspi\SettingsPagesTest.cs" />
     <Compile Include="TestHelper.cs" />
-    <Compile Include="Hspi\Utils\TestSeriesHelper.cs" />
+    <Compile Include="Hspi\Utils\TimeSeriesHelperTest.cs" />
     <Compile Include="Utils\Initialize.cs" />
     <Compile Include="ShippedDllsTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -122,10 +122,13 @@ namespace Hspi
             }
         }
 
-        private SqliteDatabaseCollector GetCollector()
+        private SqliteDatabaseCollector Collector
         {
-            CheckNotNull(collector);
-            return collector;
+            get
+            {
+                CheckNotNull(collector);
+                return collector;
+            }
         }
 
         private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
