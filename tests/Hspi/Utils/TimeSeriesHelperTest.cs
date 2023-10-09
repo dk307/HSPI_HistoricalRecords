@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Hspi;
 using Hspi.Database;
@@ -7,8 +8,40 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
-    public class TestSeriesHelper
+    public class TimeSeriesHelperTest
     {
+        [TestMethod]
+        public void ConstructorThrowsExceptionWhenIntervalIsZero()
+        {
+            // Arrange
+            long minUnixTimeSeconds = 0;
+            long maxUnixTimeSeconds = 100;
+            long intervalUnixTimeSeconds = 0;
+            IList<TimeAndValue> list = new List<TimeAndValue>();
+
+            // Act & Assert
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            {
+                new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, intervalUnixTimeSeconds, list);
+            });
+        }
+
+        [TestMethod]
+        public void ConstructorThrowsExceptionWhenMinIsGreaterThanMax()
+        {
+            // Arrange
+            long minUnixTimeSeconds = 100;
+            long maxUnixTimeSeconds = 0;
+            long intervalUnixTimeSeconds = 10;
+            IList<TimeAndValue> list = new List<TimeAndValue>();
+
+            // Act & Assert
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            {
+                new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, intervalUnixTimeSeconds, list);
+            });
+        }
+
         [TestMethod]
         public void AlreadyCorrectGrouping()
         {

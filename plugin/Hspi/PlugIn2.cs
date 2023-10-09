@@ -76,13 +76,13 @@ namespace Hspi
         public long GetOldestRecordTimeDate(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-            var oldest = GetCollector().GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();
+            var oldest = Collector.GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();
             return (long)Math.Round((TimeNow - oldest).TotalSeconds);
         }
 
         public long GetTotalRecords(long refId)
         {
-            var count = GetCollector().GetRecordsCount(refId, 0, long.MaxValue).ResultForSync<long>();
+            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).ResultForSync<long>();
             return count;
         }
 
@@ -222,7 +222,7 @@ namespace Hspi
 
             try
             {
-                var collector = GetCollector();
+                var collector = Collector;
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
                 var refId = jsonData?["refId"]?.Value<int>();
@@ -292,7 +292,7 @@ namespace Hspi
 
             try
             {
-                var collector = GetCollector();
+                var collector = Collector;
                 var parameters = HttpUtility.ParseQueryString(data);
 
                 var refId = ParseParameterAsInt(parameters, "refId");
@@ -383,10 +383,7 @@ namespace Hspi
                 };
             }
 
-            static long ParseParameterAsInt(NameValueCollection parameters, string name)
-            {
-                return ParseInt(name, parameters[name]);
-            }
+            static long ParseParameterAsInt(NameValueCollection parameters, string name) => ParseInt(name, parameters[name]);
         }
     }
 }

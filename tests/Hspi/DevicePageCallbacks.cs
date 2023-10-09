@@ -136,7 +136,11 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void DatatableCallbackError()
+        [DataTestMethod]
+        [DataRow("refId={0}&min=1001&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "max < min")]
+        [DataRow("refId={0}&min=abc&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "Parameter name: min")]
+        [DataRow("refId={0}&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "Neither min/max or recordCount specified")]
+        public void DatatableCallbackMinMoreThanMax(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -144,7 +148,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(plugin.Object.InitIO());
 
             int devRefId = 1938;
-            string paramsForRecord = $"refId={devRefId}&min={1001}&max={99}&start=10&length=100&order[0][column]=1&order[0][dir]=desc";
+            string paramsForRecord = String.Format(format, devRefId);
 
             string data = plugin.Object.PostBackProc("historyrecords", paramsForRecord, string.Empty, 0);
             Assert.IsNotNull(data);
@@ -154,6 +158,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var errorMessage = jsonData["error"].Value<string>();
             Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
+            StringAssert.Contains(errorMessage, exception);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
