@@ -263,7 +263,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 2));
 
-            long oldestRecord = plugin.Object.GetOldestRecordTimeDate(feature.Ref.ToString());
+            long oldestRecord = plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString());
             Assert.AreEqual(1000, oldestRecord);
 
             plugin.Object.ShutdownIO();

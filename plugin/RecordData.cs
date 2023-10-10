@@ -1,4 +1,5 @@
 ﻿using System;
+using Destructurama.Attributed;
 
 #nullable enable
 
@@ -28,8 +29,10 @@ namespace Hspi
         public double DeviceValue { get; }
         public string? DeviceString { get; }
 
+        [NotLogged]
         public long UnixTimeSeconds { get; }
 
+        [NotLogged]
         public long UnixTimeMilliSeconds => UnixTimeSeconds * 1000;
 
         public DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);

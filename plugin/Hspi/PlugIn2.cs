@@ -72,7 +72,7 @@ namespace Hspi
             }
         }
 
-        public long GetOldestRecordTimeDate(string refIdString)
+        public long GetOldestRecordTotalSeconds(string refIdString)
         {
             int refId = ParseRefId(refIdString);
             var oldest = Collector.GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();

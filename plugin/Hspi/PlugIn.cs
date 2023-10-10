@@ -205,7 +205,7 @@ namespace Hspi
             ExtractValues(feature, out var deviceValue, out var lastChange, out var deviceString);
 
             RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-            Log.Debug("Recording {record}", recordData);
+            Log.Debug("Recording {@record}", recordData);
 
             await collector.Record(recordData).ConfigureAwait(false);
 
