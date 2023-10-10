@@ -115,19 +115,19 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Database\IDBSettings.cs" />
     <Compile Include="Database\ResultSortBy.cs" />
     <Compile Include="Database\TimeAndValue.cs" />
+    <Compile Include="Hspi\SystemClock.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />
     <Compile Include="Hspi\Utils\ITimeAndValueList.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueList.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesHelper.cs" />
-    <Compile Include="MonitoredDevice.cs" />
     <Compile Include="Hspi\HSPI.cs" />
     <Compile Include="Hspi\Pages\SettingsPages.cs" />
     <Compile Include="Hspi\PlugIn.cs" />
     <Compile Include="Hspi\PlugInData.cs" />
     <Compile Include="Hspi\Program.cs" />
-    <Compile Include="MonitoredDevicesConfig.cs" />
     <Compile Include="RecordData.cs" />
     <Compile Include="Database\SqliteDatabaseCollector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

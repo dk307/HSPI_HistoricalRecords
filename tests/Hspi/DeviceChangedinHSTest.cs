@@ -34,9 +34,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
-            HsFeature feature;
-
-            feature = TestHelper.SetupHsFeature(mockHsController,
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                      35673,
                                      1.132,
                                      displayString: displayStatus,
@@ -66,9 +64,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
-            HsFeature feature;
-
-            feature = TestHelper.SetupHsFeature(mockHsController,
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                      35673,
                                      100,
                                      displayString: null,
@@ -105,9 +101,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
-            HsFeature feature;
-
-            feature = TestHelper.SetupHsFeature(mockHsController,
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                      35673,
                                      100,
                                      displayString: null,
@@ -168,10 +162,9 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
-            HsFeature feature;
             DateTime time = DateTime.Now;
 
-            feature = TestHelper.SetupHsFeature(mockHsController,
+            var feature = TestHelper.SetupHsFeature(mockHsController,
                                      35673,
                                      1.1,
                                      displayString: "1.1",
@@ -216,10 +209,9 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
-            HsFeature feature;
             DateTime time = DateTime.Now;
 
-            feature = TestHelper.SetupHsFeature(mockHsController,
+            var feature = TestHelper.SetupHsFeature(mockHsController,
                                      35673,
                                      1.1,
                                      displayString: "1.1",

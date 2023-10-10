@@ -23,8 +23,7 @@ namespace Hspi
 {
     internal partial class PlugIn : HspiBase
     {
-        //used in tests for mocks
-        protected virtual DateTimeOffset TimeNow => DateTimeOffset.Now;
+        protected virtual ISystemClock CreateClock() => new SystemClock();
 
         public IList<string> GetAllowedDisplays(string? refIdString)
         {
@@ -77,7 +76,8 @@ namespace Hspi
         {
             int refId = ParseRefId(refIdString);
             var oldest = Collector.GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();
-            return (long)Math.Round((TimeNow - oldest).TotalSeconds);
+            var now = CreateClock().Now;
+            return (long)Math.Round((now - oldest).TotalSeconds);
         }
 
         public long GetTotalRecords(long refId)

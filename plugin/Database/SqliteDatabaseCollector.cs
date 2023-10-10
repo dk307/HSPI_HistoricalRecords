@@ -15,7 +15,7 @@ using static SQLitePCL.raw;
 
 namespace Hspi.Database
 {
-    internal sealed class SqliteDatabaseCollector : IDisposable
+    internal class SqliteDatabaseCollector : IDisposable
     {
         static SqliteDatabaseCollector()
         {
@@ -29,15 +29,16 @@ namespace Hspi.Database
             }
         }
 
-        public SqliteDatabaseCollector(string dbPath, CancellationToken shutdownToken)
+        public SqliteDatabaseCollector(IDBSettings settings, ISystemClock systemClock, CancellationToken shutdownToken)
         {
-            this.dbPath = dbPath;
+            this.settings = settings;
+            this.systemClock = systemClock;
             this.shutdownToken = shutdownToken;
-            CreateDBDirectory(dbPath);
+            CreateDBDirectory(settings.DBPath);
 
             const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_PRIVATECACHE;
 
-            sqliteConnection = ugly.open_v2(dbPath, OpenFlags, null);
+            sqliteConnection = ugly.open_v2(settings.DBPath, OpenFlags, null);
             Log.Information("{dll} version:{version}", GetNativeLibraryName(), sqlite3_libversion().utf8_to_string());
 
             SetupDatabase();
@@ -47,7 +48,10 @@ namespace Hspi.Database
             getRecordHistoryCountCommand = CreateStatement(RecordsHistoryCountSql);
             getTimeAndValueCommand = CreateStatement(GetTimeValueSql);
             getOldestRecordCommand = CreateStatement(OldestRecordSql);
+            allRefOldestRecordsCommand = CreateStatement(AllRefOldestRecordsSql);
+            deleteOldRecordByRefCommand = CreateStatement(DeleteOldRecordByRefSql);
             Utils.TaskHelper.StartAsyncWithErrorChecking("DB update records", UpdateRecords, shutdownToken);
+            Utils.TaskHelper.StartAsyncWithErrorChecking("Prune update records", PruneRecords, shutdownToken);
 
             static void CreateDBDirectory(string dbPath)
             {
@@ -59,14 +63,19 @@ namespace Hspi.Database
             }
         }
 
+        //used in tests for mocks
+        protected virtual DateTimeOffset TimeNow => DateTimeOffset.UtcNow;
+
         public void Dispose()
         {
-            getHistoryCommand.Dispose();
-            getOldestRecordCommand.Dispose();
-            getRecordHistoryCountCommand.Dispose();
-            getTimeAndValueCommand.Dispose();
-            insertCommand.Dispose();
-            sqliteConnection.Dispose();
+            getHistoryCommand?.Dispose();
+            getOldestRecordCommand?.Dispose();
+            getRecordHistoryCountCommand?.Dispose();
+            getTimeAndValueCommand?.Dispose();
+            insertCommand?.Dispose();
+            allRefOldestRecordsCommand?.Dispose();
+            deleteOldRecordByRefCommand.Dispose();
+            sqliteConnection?.Dispose();
         }
 
         /// <summary>
@@ -155,6 +164,11 @@ namespace Hspi.Database
             return stmt.column<long>(0);
         }
 
+        public void PruneNow()
+        {
+            pruneNowEvent.Set();
+        }
+
         public async Task Record(RecordData recordData)
         {
             await queue.EnqueueAsync(recordData).ConfigureAwait(false);
@@ -168,8 +182,8 @@ namespace Hspi.Database
 
         private async Task InsertRecord(RecordData record)
         {
-            sqlite3_stmt stmt = insertCommand;
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+            sqlite3_stmt stmt = insertCommand;
             ugly.reset(stmt);
             ugly.bind_int64(stmt, 1, record.TimeStamp.ToUnixTimeSeconds());
             ugly.bind_int64(stmt, 2, record.DeviceRefId);
@@ -177,14 +191,74 @@ namespace Hspi.Database
             ugly.bind_text(stmt, 4, record.DeviceString);
             ugly.step_done(stmt);
         }
+        private async Task PruneRecords()
+        {
+            CancellationToken token = shutdownToken;
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    Log.Information("Starting pruning database");
+
+                    using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+
+                    List<RecordData> records = new();
+
+                    var recordsToKeep = settings.MinRecordsToKeep;
+
+                    allRefOldestRecordsCommand.reset();
+
+                    DateTimeOffset now = systemClock.Now;
+                    while (ugly.step(allRefOldestRecordsCommand) != SQLITE_DONE)
+                    {
+                        // order: SELECT time, MIN(TS) FROM history
+                        var refId = ugly.column_int64(allRefOldestRecordsCommand, 0);
+                        var oldestRecordUnixTimeSeconds = ugly.column_int64(allRefOldestRecordsCommand, 1);
+                        var totalRecords = ugly.column_int64(allRefOldestRecordsCommand, 2);
+
+                        var cutoffTime = now - settings.GetDeviceRetentionPeriod(refId);
+                        var cutoffUnixTimeSeconds = cutoffTime.ToUnixTimeSeconds();
+                        bool hasRecordsNeedingPruning = oldestRecordUnixTimeSeconds <= cutoffUnixTimeSeconds && totalRecords > recordsToKeep;
+                        if (hasRecordsNeedingPruning)
+                        {
+                            Log.Debug("Pruning device:{refId} in database", refId);
+
+                            var stmt = deleteOldRecordByRefCommand;
+                            ugly.reset(stmt);
+                            ugly.bind_int64(stmt, 1, refId);
+                            ugly.bind_int64(stmt, 2, cutoffUnixTimeSeconds);
+                            ugly.bind_int64(stmt, 3, recordsToKeep);
+                            ugly.step_done(stmt);
+
+                            var changesCount = ugly.changes(sqliteConnection);
+                            Log.Information("Removed {rows} row(s) for device:{refId} in database", changesCount, refId);
+                        }
+                    };
+
+                    Log.Information("Finished pruning database");
+                }
+                catch (Exception ex)
+                {
+                    if (ex.IsCancelException())
+                    {
+                        throw;
+                    }
+
+                    Log.Warning("Failed to prune with {error}}", ExceptionHelper.GetFullMessage(ex));
+                }
+                var eventWaitTask = pruneNowEvent.WaitAsync(token);
+
+                await Task.WhenAny(Task.Delay(TimeSpan.FromHours(1), token), eventWaitTask).ConfigureAwait(false);
+            }
+        }
 
         private void SetupDatabase()
         {
-            Log.Information("Connecting to database: {dbPath}", dbPath);
+            Log.Information("Connecting to database: {dbPath}", settings.DBPath);
 
             if (sqlite3_threadsafe() == 0)
             {
-                throw new Exception("Sqlite is not thread safe");
+                throw new SystemException("Sqlite is not thread safe");
             }
 
             ugly.exec(sqliteConnection, "PRAGMA page_size=4096");
@@ -192,6 +266,7 @@ namespace Hspi.Database
             ugly.exec(sqliteConnection, "PRAGMA synchronous=normal");
             ugly.exec(sqliteConnection, "PRAGMA locking_mode=EXCLUSIVE");
             ugly.exec(sqliteConnection, "PRAGMA temp_store=MEMORY");
+            ugly.exec(sqliteConnection, "PRAGMA auto_vacuum=INCREMENTAL");
 
             ugly.exec(sqliteConnection, "BEGIN TRANSACTION");
 
@@ -236,6 +311,10 @@ namespace Hspi.Database
             }
         }
 
+        private const string AllRefOldestRecordsSql = "SELECT ref, MIN(ts), COUNT(*) FROM history GROUP BY ref";
+
+        private const string DeleteOldRecordByRefSql = "DELETE from history where ref=$ref and ts<$time AND ts NOT IN ( SELECT ts FROM history WHERE ref=$ref ORDER BY ts DESC LIMIT $limit)";
+
         // 1 record before the time range and one after
         private const string GetTimeValueSql =
             @"SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts<$min ORDER BY ts DESC LIMIT 1) UNION
@@ -258,14 +337,18 @@ namespace Hspi.Database
                     CASE WHEN $order = 5 THEN str END ASC
                 LIMIT $limit OFFSET $offset";
 
+        private readonly sqlite3_stmt allRefOldestRecordsCommand;
         private readonly AsyncLock connectionLock = new();
-        private readonly string dbPath;
+        private readonly sqlite3_stmt deleteOldRecordByRefCommand;
         private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getOldestRecordCommand;
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;
+        private readonly AsyncAutoResetEvent pruneNowEvent = new(false);
         private readonly AsyncProducerConsumerQueue<RecordData> queue = new();
+        private readonly IDBSettings settings;
+        private readonly ISystemClock systemClock;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;
     }

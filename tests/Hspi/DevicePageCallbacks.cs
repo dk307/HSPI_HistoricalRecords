@@ -6,6 +6,7 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Moq.Protected;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -143,7 +144,7 @@ namespace HSPI_HistoricalRecordsTest
         public void DatatableCallbackMinMoreThanMax(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -244,7 +245,10 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
+            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
+            plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
             DateTime nowTime = new(2222, 2, 2, 2, 2, 2);
+            mockClock.Setup(x => x.Now).Returns(nowTime);
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime,
                                                 apiType: (int)EApiType.Feature);
@@ -258,8 +262,6 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.STRING_CHANGE, feature, 345, "43", nowTime.AddSeconds(-1000));
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 2));
-
-            plugin.Protected().Setup<DateTimeOffset>("TimeNow").Returns((DateTimeOffset)nowTime);
 
             long oldestRecord = plugin.Object.GetOldestRecordTimeDate(feature.Ref.ToString());
             Assert.AreEqual(1000, oldestRecord);
