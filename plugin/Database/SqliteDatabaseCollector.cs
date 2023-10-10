@@ -213,12 +213,12 @@ namespace Hspi.Database
                     {
                         // order: SELECT time, MIN(TS) FROM history
                         var refId = ugly.column_int64(allRefOldestRecordsCommand, 0);
-                        var oldestTimeSpan = ugly.column_int64(allRefOldestRecordsCommand, 1);
+                        var oldestRecordUnixTimeSeconds = ugly.column_int64(allRefOldestRecordsCommand, 1);
                         var totalRecords = ugly.column_int64(allRefOldestRecordsCommand, 2);
 
                         var cutoffTime = now - settings.GetDeviceRetentionPeriod(refId);
                         var cutoffUnixTimeSeconds = cutoffTime.ToUnixTimeSeconds();
-                        bool hasRecordsNeedingPruning = oldestTimeSpan <= cutoffUnixTimeSeconds && totalRecords > recordsToKeep;
+                        bool hasRecordsNeedingPruning = oldestRecordUnixTimeSeconds <= cutoffUnixTimeSeconds && totalRecords > recordsToKeep;
                         if (hasRecordsNeedingPruning)
                         {
                             Log.Debug("Pruning device:{refId} in database", refId);
