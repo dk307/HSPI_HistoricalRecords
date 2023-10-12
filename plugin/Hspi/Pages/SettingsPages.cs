@@ -72,9 +72,9 @@ namespace Hspi
 
         public TimeSpan GetDeviceRetentionPeriod(long deviceRefId)
         {
-            if (this.perDeviceSettingsConfig.MonitoredDevices.TryGetValue(deviceRefId, out var result))
+            if (this.perDeviceSettingsConfig.DeviceSettings.TryGetValue(deviceRefId, out var result))
             {
-                return result.RetentionPeriod;
+                return result.RetentionPeriod ?? GlobalRetentionPeriod;
             }
 
             return GlobalRetentionPeriod;
@@ -82,12 +82,13 @@ namespace Hspi
 
         public bool IsTracked(long deviceRefId)
         {
-            if (this.perDeviceSettingsConfig.MonitoredDevices.TryGetValue(deviceRefId, out var result))
+            if (this.perDeviceSettingsConfig.DeviceSettings.TryGetValue(deviceRefId, out var result))
             {
                 return result.IsTracked;
             }
             return true;
         }
+
         public bool OnSettingChange(AbstractView changedView)
         {
             if (changedView.Id == LoggingLevelId)

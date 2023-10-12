@@ -24,7 +24,7 @@ namespace Hspi
             LoadSettings();
         }
 
-        public IImmutableDictionary<long, PerDeviceSettings> MonitoredDevices => monitoredDevices;
+        public IImmutableDictionary<long, PerDeviceSettings> DeviceSettings => monitoredDevices;
 
         public void AddOrUpdate(PerDeviceSettings device)
         {
@@ -37,7 +37,7 @@ namespace Hspi
 
             SetValue(DeviceRefIdKey, device.DeviceRefId, id);
             SetValue(IsTrackedTag, device.IsTracked, id);
-            SetValue(RetentionPeriodTag, device.RetentionPeriod.TotalSeconds, id);
+            SetValue(RetentionPeriodTag, device.RetentionPeriod?.ToString("c", CultureInfo.InvariantCulture) ?? string.Empty, id);
             SetValue(DeviceSettingsTag, monitoredDevices.Keys.Aggregate((x, y) => x + DeviceSettingsIdsSeparator + y));
         }
 
@@ -79,7 +79,7 @@ namespace Hspi
             {
                 try
                 {
-                    T result = (T)System.Convert.ChangeType(stringValue, typeof(T), CultureInfo.InvariantCulture);
+                    T result = (T)Convert.ChangeType(stringValue, typeof(T), CultureInfo.InvariantCulture);
                     return result;
                 }
                 catch (Exception)
@@ -93,7 +93,7 @@ namespace Hspi
         private void LoadSettings()
         {
             string deviceIdsConcatString = GetValue(DeviceSettingsTag, string.Empty);
-            var deviceSettingsIds = deviceIdsConcatString.Split(new char []{ DeviceSettingsIdsSeparator}, StringSplitOptions.RemoveEmptyEntries);
+            var deviceSettingsIds = deviceIdsConcatString.Split(new char[] { DeviceSettingsIdsSeparator }, StringSplitOptions.RemoveEmptyEntries);
 
             var data = new Dictionary<long, PerDeviceSettings>();
             foreach (var id in deviceSettingsIds)
@@ -106,10 +106,15 @@ namespace Hspi
                 }
 
                 var isTracked = GetValue<bool>(IsTrackedTag, true, id);
-                var retentionPeriodSeconds = GetValue<long>(RetentionPeriodTag, 0, id);
+                var retentionPeriodStr = GetValue<string>(RetentionPeriodTag, string.Empty, id);
 
+                TimeSpan? retentionPeriod = null;
+                if (TimeSpan.TryParse(retentionPeriodStr, CultureInfo.InvariantCulture, out var temp))
+                {
+                    retentionPeriod = temp;
+                }
                 this.monitoredDevices.Add(deviceRefId,
-                                          new PerDeviceSettings(deviceRefId, isTracked, TimeSpan.FromSeconds(retentionPeriodSeconds)));
+                                          new PerDeviceSettings(deviceRefId, isTracked, retentionPeriod));
             }
 
             this.monitoredDevices = data.ToImmutableDictionary();
