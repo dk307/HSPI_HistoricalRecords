@@ -70,6 +70,8 @@ namespace Hspi
 
         public void AddOrUpdate(PerDeviceSettings device) => perDeviceSettingsConfig.AddOrUpdate(device);
 
+        public void Remove(int deviceRefId) => perDeviceSettingsConfig.Remove(deviceRefId);
+
         public TimeSpan GetDeviceRetentionPeriod(long deviceRefId)
         {
             if (this.perDeviceSettingsConfig.DeviceSettings.TryGetValue(deviceRefId, out var result))

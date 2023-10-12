@@ -135,6 +135,47 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsFalse(settingPages.OnSettingChange(new ToggleView("id", "name")));
         }
+
+        [TestMethod]
+        public void AddRemovePerDeviceSettings()
+        {
+            var settingsCollection = new SettingsCollection
+            {
+                SettingsPages.CreateDefault()
+            };
+            PerDeviceSettings deviceSettings = new PerDeviceSettings(837, false, TimeSpan.FromSeconds(666));
+            var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
+
+            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "DeviceRefId", deviceSettings.DeviceRefId.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "IsTracked", deviceSettings.IsTracked.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "RetentionPeriod", deviceSettings.RetentionPeriod.ToString(), PlugInData.SettingFileName));
+
+            settingPages.AddOrUpdate(deviceSettings);
+
+            Assert.IsFalse(settingPages.IsTracked(deviceSettings.DeviceRefId));
+            Assert.AreEqual(settingPages.GetDeviceRetentionPeriod(deviceSettings.DeviceRefId), deviceSettings.RetentionPeriod.Value);
+            mockHsController.Verify();
+
+            mockHsController.Setup(x => x.ClearIniSection(deviceSettings.DeviceRefId.ToString(), PlugInData.SettingFileName));
+
+            settingPages.Remove((int)deviceSettings.DeviceRefId);
+            Assert.IsTrue(settingPages.IsTracked(deviceSettings.DeviceRefId));
+            Assert.AreEqual(settingPages.GetDeviceRetentionPeriod(deviceSettings.DeviceRefId), settingPages.GlobalRetentionPeriod);
+
+            mockHsController.Verify();
+
+            var deviceSettings2 = deviceSettings with { RetentionPeriod = null };
+
+            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "DeviceRefId", deviceSettings.DeviceRefId.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "IsTracked", deviceSettings.IsTracked.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "RetentionPeriod", string.Empty, PlugInData.SettingFileName));
+
+            settingPages.AddOrUpdate(deviceSettings2);
+
+            Assert.AreEqual(settingPages.GetDeviceRetentionPeriod(deviceSettings.DeviceRefId), settingPages.GlobalRetentionPeriod);
+            mockHsController.Verify();
+        }
+
         private readonly Mock<IHsController> mockHsController;
         private readonly Mock<PlugIn> plugin;
     }

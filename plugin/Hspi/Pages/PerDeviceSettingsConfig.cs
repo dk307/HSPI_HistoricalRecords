@@ -24,34 +24,35 @@ namespace Hspi
             LoadSettings();
         }
 
-        public IImmutableDictionary<long, PerDeviceSettings> DeviceSettings => monitoredDevices;
+        public IImmutableDictionary<long, PerDeviceSettings> DeviceSettings => deviceSettings;
 
         public void AddOrUpdate(PerDeviceSettings device)
         {
             string id = device.DeviceRefId.ToString(CultureInfo.InvariantCulture);
 
-            ImmutableDictionary<long, PerDeviceSettings>.Builder builder = monitoredDevices.ToBuilder();
+            ImmutableDictionary<long, PerDeviceSettings>.Builder builder = deviceSettings.ToBuilder();
             builder.Remove(device.DeviceRefId);
             builder.Add(device.DeviceRefId, device);
-            monitoredDevices = builder.ToImmutableDictionary();
+            deviceSettings = builder.ToImmutableDictionary();
 
             SetValue(DeviceRefIdKey, device.DeviceRefId, id);
             SetValue(IsTrackedTag, device.IsTracked, id);
             SetValue(RetentionPeriodTag, device.RetentionPeriod?.ToString("c", CultureInfo.InvariantCulture) ?? string.Empty, id);
-            SetValue(DeviceSettingsTag, monitoredDevices.Keys.Aggregate((x, y) => x + DeviceSettingsIdsSeparator + y));
+            SetValue(DeviceSettingsTag, deviceSettings.Keys.Aggregate((x, y) => x + DeviceSettingsIdsSeparator + y));
         }
 
         public void Remove(long deviceRefId)
         {
             string id = deviceRefId.ToString(CultureInfo.InvariantCulture);
 
-            ImmutableDictionary<long, PerDeviceSettings>.Builder builder = monitoredDevices.ToBuilder();
+            ImmutableDictionary<long, PerDeviceSettings>.Builder builder = deviceSettings.ToBuilder();
             builder.Remove(deviceRefId);
-            monitoredDevices = builder.ToImmutableDictionary();
+            deviceSettings = builder.ToImmutableDictionary();
 
-            if (monitoredDevices.Count > 0)
+            if (deviceSettings.Count > 0)
             {
-                SetValue(DeviceSettingsTag, monitoredDevices.Keys.Aggregate((x, y) => x + DeviceSettingsIdsSeparator + y));
+                long value = deviceSettings.Keys.Aggregate((x, y) => x + DeviceSettingsIdsSeparator + y);
+                SetValue(DeviceSettingsTag, value);
             }
             else
             {
@@ -113,11 +114,11 @@ namespace Hspi
                 {
                     retentionPeriod = temp;
                 }
-                this.monitoredDevices.Add(deviceRefId,
+                this.deviceSettings.Add(deviceRefId,
                                           new PerDeviceSettings(deviceRefId, isTracked, retentionPeriod));
             }
 
-            this.monitoredDevices = data.ToImmutableDictionary();
+            this.deviceSettings = data.ToImmutableDictionary();
         }
 
         private void SetValue<T>(string key, T value, string section = DefaultSection)
@@ -154,6 +155,6 @@ namespace Hspi
         private const string DeviceSettingsTag = "DeviceSettings";
         private const char DeviceSettingsIdsSeparator = ',';
         private readonly IHsController HS;
-        private ImmutableDictionary<long, PerDeviceSettings> monitoredDevices = ImmutableDictionary<long, PerDeviceSettings>.Empty;
+        private ImmutableDictionary<long, PerDeviceSettings> deviceSettings = ImmutableDictionary<long, PerDeviceSettings>.Empty;
     }
 }
