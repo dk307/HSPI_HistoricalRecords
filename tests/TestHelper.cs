@@ -155,7 +155,7 @@ namespace HSPI_HistoricalRecordsTest
             method.Invoke(mockPlugin.Object, new object[] { mockHsController.Object });
 
             mockHsController.Setup(x => x.GetAppPath()).Returns(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()));
-            mockHsController.Setup(x => x.GetINISetting("Settings", "gGlobalTempScaleF", "True", "")).Returns("True");
+            mockHsController.Setup(x => x.GetINISetting("Settings", "DeviceSettings", null, PlugInData.PlugInId + ".ini")).Returns(string.Empty);
             mockHsController.Setup(x => x.GetIniSection("Settings", PlugInData.PlugInId + ".ini")).Returns(settingsFromIni);
             mockHsController.Setup(x => x.SaveINISetting("Settings", It.IsAny<string>(), It.IsAny<string>(), PlugInData.PlugInId + ".ini"));
             mockHsController.Setup(x => x.WriteLog(It.IsAny<ELogType>(), It.IsAny<string>(), PlugInData.PlugInName, It.IsAny<string>()));

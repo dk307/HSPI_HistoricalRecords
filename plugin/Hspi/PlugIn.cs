@@ -55,7 +55,7 @@ namespace Hspi
 
         public override void HsEvent(Constants.HSEvent eventType, object[] parameters)
         {
-            HSEventImpl(eventType, parameters).Wait(ShutdownCancellationToken);
+            Task.Run(() => HSEventImpl(eventType, parameters)).Wait(ShutdownCancellationToken);
         }
 
         public void PruneDatabase() => Collector.PruneNow();
@@ -82,7 +82,6 @@ namespace Hspi
                 Settings.Add(SettingsPages.CreateDefault());
                 LoadSettingsFromIni();
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
-                // monitoredDevicesConfig = new MonitoredDevicesConfig(HomeSeerSystem);
                 UpdateDebugLevel();
 
                 CheckNotNull(settingsPages);
@@ -188,13 +187,19 @@ namespace Hspi
 
         private async Task RecordDeviceValue(int deviceRefId)
         {
-            var feature = HomeSeerSystem.GetFeatureByRef(deviceRefId);
-            if (feature != null)
+            if (settingsPages != null && settingsPages.IsTracked(deviceRefId))
             {
-                if (IsMonitored(feature))
+                var feature = HomeSeerSystem.GetFeatureByRef(deviceRefId);
+                if (feature != null)
                 {
-                    await RecordDeviceValue(feature).ConfigureAwait(false);
+                    if (IsMonitored(feature))
+                    {
+                        await RecordDeviceValue(feature).ConfigureAwait(false);
+                    }
                 }
+            } else
+            {
+                Log.Verbose("Not adding {refId} to db as it is not tracked", deviceRefId);
             }
         }
 

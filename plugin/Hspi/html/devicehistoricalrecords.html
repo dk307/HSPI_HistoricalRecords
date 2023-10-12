@@ -47,7 +47,8 @@
 	end		
  
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
-	oldestRecordTimeSpan=plugin_function 'HistoricalRecords' 'GetOldestRecordTimeSpan'[finalRefId] 
+	oldestRecordTimeSpan=plugin_function 'HistoricalRecords' 'GetOldestRecordTotalSeconds'[finalRefId] 
+	deviceTracked=plugin_function 'HistoricalRecords' 'IsDeviceTracked'[finalRefId] 
 		
 	if !deviceDisplayDetails
 		deviceDisplayDetails=[]
@@ -121,10 +122,10 @@
 }}	
 
 <script>
-{{ if durationSeconds }}
+{{ if durationSeconds != "" }}
 const displayEndDate = 1000 * Math.round(Date.now() / 1000);
 const displayStartDate = displayEndDate - {{durationSeconds}} * 1000;
-{{else}}
+{{else if displayMax != ""}}
 const displayEndDate = new Date({{displayMax}} * 1000).getTime();
 const displayStartDate = new Date({{displayMin}} * 1000).getTime();
 {{end}}	
@@ -146,6 +147,8 @@ function getRangeString(min, max) {
 <!-- displayMax={{displayMax}}<BR> -->
 <!-- displayPeriod={{displayPeriod}}<BR> -->
 <!-- oldestRecordTimeSpan={{oldestRecordTimeSpan}}<BR> -->
+<!-- durationSeconds={{durationSeconds}}<BR> -->
+<!-- deviceTracked={{deviceTracked}}<BR> -->
 
 <header>
 	<nav class="navbar">
@@ -207,7 +210,7 @@ function getRangeString(min, max) {
 			{{if displaySelect != ""}}
 				<ul class="navbar-nav ml-auto nav-flex-icons nav-right"  >
 				  <li class="nav-item">	  
-					<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change persistence options for device"  href="/HistoricalRecords/addeditpersistence.html?devicerefid={{finalRefId}}">
+					<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change tracking options for device" id="idModalEditLink"  href="#">
 					  <i class="fa fa-edit"></i>
 					</a>
 				  </li>
@@ -305,13 +308,38 @@ function getRangeString(min, max) {
 	{{end}}
 </div>
 
+<div class="modal fade" id="modalEdit" tabindex="-1" role="dialog" aria-labelledby="lblModalEdit" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="lblModalEdit">Tracked Device Options</h5>
+			</div>
+			<div class="modal-body">
+				<form>
+					<input type="hidden" id="ref" value="{{finalRefId}}"/>
+					<div class="row mt-1 mb-1 no-gutters">
+						<div class="form-check form-switch">
+						<div class="custom-control custom-switch">
+						  <input type="checkbox" class="custom-control-input" id="idTrackedFeature" {{if deviceTracked}} checked {{end}}>
+						  <label class="custom-control-label" for="idTrackedFeature">Track this device values</label>
+						</div>
+					</div>					 
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-primary" id="btnOk" favorite-key="">Save</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+
 {{includefile 'bootstrap/js/page_common.js'}}
 <script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
-
 {{if needDataTables}}
 <script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>
 {{end}}
-
 {{if displaySelect=="chart"}}
 <script type="text/javascript" src="/HistoricalRecords/chart.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
@@ -319,6 +347,7 @@ function getRangeString(min, max) {
 <script type="text/javascript" src="/HistoricalRecords/hammer.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/chartjs-plugin-zoom.min.js"></script>
 {{end}}
+<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
 
 <script>
 $(function() {
@@ -339,6 +368,20 @@ $(function() {
 			this.form.submit();
 		}
     });	
+	
+	 
+	$('#idModalEditLink').click(function(){
+		$('#modalEdit').modal('show');
+	});
+	
+	$(document).on('click', '#btnOk', {}, async function (e) {
+		$('#modalEdit').modal('hide');
+		var data = {
+			refId: $('#ref').val(),
+			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
+		};
+		await ajaxPostPlugIn("updatedevicesettings", data, null );
+	});	 
 });
 
 
@@ -426,43 +469,26 @@ $(document).ready(function () {
 		   min: min,
 		   max: max
 		};
-		const data = JSON.stringify(formObject);
-		$.ajax({
-			type: "POST",
-			async: "true",
-			url: '../HistoricalRecords/graphrecords',
-			cache: false,
-			data: data,
-			success: function (response) {
-				let result = JSON.parse(response);
-				let errorMessage = result.error;
-
-				if (errorMessage != null) {					
-					alert(errorMessage);
-				} else {
-					console.log('Fetched data between ' + min + ' and ' + max);
-					chart.data.datasets[0].data =  result.data;
-					chart.stop(); // make sure animations are not running
-					chart.options.plugins.subtitle.text = getRangeString(min, max);
-					
-					if ((max - min) > (1000 * 60 * 60 * 24 * 2)) {
-						chart.options.scales.x.time.displayFormats.hour = "MMM D";
-					} else {
-						chart.options.scales.x.time.displayFormats.hour = "hA";
-					}
-					
-					if (result.groupedbyseconds == 0) {
-						chartFunction(4);
-					} else {
-						chartFunction(3);
-					}
-					
-					chart.update('none');
-				}
-			},
-			error: function () {
-				alert("Error in operation");
+		
+		ajaxPostPlugIn("graphrecords", formObject, function (result) {	 
+			console.log('Fetched data between ' + min + ' and ' + max);
+			chart.data.datasets[0].data =  result.data;
+			chart.stop(); // make sure animations are not running
+			chart.options.plugins.subtitle.text = getRangeString(min, max);
+			
+			if ((max - min) > (1000 * 60 * 60 * 24 * 2)) {
+				chart.options.scales.x.time.displayFormats.hour = "MMM D";
+			} else {
+				chart.options.scales.x.time.displayFormats.hour = "hA";
 			}
+			
+			if (result.groupedbyseconds == 0) {
+				chartFunction(4);
+			} else {
+				chartFunction(3);
+			}
+			
+			chart.update('none');		 
 		});
 	}
 	

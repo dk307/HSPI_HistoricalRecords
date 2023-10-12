@@ -5,7 +5,7 @@ using Destructurama.Attributed;
 
 namespace Hspi
 {
-    public record RecordData
+    public sealed record RecordData
     {
         public RecordData(long deviceRefId, in double deviceValue, string? deviceString,
                             in long unixTimeSeconds)
