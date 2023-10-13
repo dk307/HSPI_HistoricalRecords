@@ -34,7 +34,7 @@ namespace Hspi
                 return displays;
             }
 
-            int refId = ParseRefId(refIdString);
+            var refId = ParseRefId(refIdString);
             AddToDisplayDetails(displays, refId);
             return displays;
         }
@@ -72,12 +72,26 @@ namespace Hspi
             }
         }
 
-        public long GetOldestRecordTimeDate(string refIdString)
+        public long GetOldestRecordTotalSeconds(string refIdString)
         {
             int refId = ParseRefId(refIdString);
             var oldest = Collector.GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();
             var now = CreateClock().Now;
             return (long)Math.Round((now - oldest).TotalSeconds);
+        }
+
+        public string GetFeatureUnit(string refIdString)
+        {
+            int refId = ParseRefId(refIdString);
+            var feature = HomeSeerSystem.GetFeatureByRef(refId);
+            return feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+        }
+
+        public bool IsDeviceTracked(string refIdString)
+        {
+            int refId = ParseRefId(refIdString);
+            CheckNotNull(settingsPages);
+            return settingsPages.IsTracked(refId);
         }
 
         public long GetTotalRecords(long refId)
@@ -92,6 +106,7 @@ namespace Hspi
             {
                 "historyrecords" => HandleHistoryRecords(data).ResultForSync(),
                 "graphrecords" => HandleGraphRecords(data).ResultForSync(),
+                "updatedevicesettings" => HandleUpdateDeviceSettings(data),
                 _ => base.PostBackProc(page, data, user, userRights),
             };
         }
@@ -175,16 +190,6 @@ namespace Hspi
                 {
                     displayTypes.Add("chart");
                 }
-                // displayTypes.Add("averageStats");
-
-                //if (hasNumericData)
-                //{
-                //    displayTypes.Add("averageStats");
-                //}
-                //else
-                //{
-                //    displayTypes.Add("histogram");
-                //}
             }
         }
 
@@ -244,9 +249,10 @@ namespace Hspi
                                             GroupValues(min.Value / 1000, max.Value / 1000, groupBySeconds, queryData) :
                                             queryData;
 
+                jsonWriter.WritePropertyName("result");
+                jsonWriter.WriteStartObject();
                 jsonWriter.WritePropertyName("groupedbyseconds");
                 jsonWriter.WriteValue(shouldGroup ? groupBySeconds : 0);
-
                 jsonWriter.WritePropertyName("data");
                 jsonWriter.WriteStartArray();
 
@@ -261,6 +267,7 @@ namespace Hspi
                 }
 
                 jsonWriter.WriteEndArray();
+                jsonWriter.WriteEndObject();
             }
             catch (Exception ex)
             {
@@ -278,6 +285,44 @@ namespace Hspi
                 TimeSeriesHelper helper = new(min, max, groupBySeconds, list);
                 return helper.ReduceSeriesWithAverageAndPreviousFill();
             }
+        }
+
+        private string HandleUpdateDeviceSettings(string data)
+        {
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
+
+            try
+            {
+                var collector = Collector;
+                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+
+                var refId = jsonData?["refId"]?.Value<int>();
+                if (refId == null)
+                {
+                    throw new ArgumentException("data is not correct");
+                }
+
+                CheckNotNull(settingsPages);
+
+                var tracked = jsonData?["tracked"]?.Value<bool>() ?? settingsPages.IsTracked(refId.Value);
+                var deviceSettings = new PerDeviceSettings(refId.Value, tracked, null);
+
+                settingsPages.AddOrUpdate(deviceSettings);
+                Log.Information("Updated Device tracking {record}", deviceSettings);
+            }
+            catch (Exception ex)
+            {
+                jsonWriter.WritePropertyName("error");
+                jsonWriter.WriteValue(ex.GetFullMessage());
+            }
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+
+            return stb.ToString();
         }
 
         private async Task<string> HandleHistoryRecords(string data)

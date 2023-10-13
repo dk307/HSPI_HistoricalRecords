@@ -27,18 +27,22 @@ namespace Hspi
 
             LogtoFileEnabled = collection[SettingPageId].GetViewById<ToggleView>(LogToFileId).IsEnabled;
             GlobalRetentionPeriod = collection[SettingPageId].GetViewById<TimeSpanView>(GlobalRetentionPeriodId).Value;
+            this.perDeviceSettingsConfig = new PerDeviceSettingsConfig(hs);
         }
 
         public static TimeSpan DefaultGlobalRetentionPeriod => TimeSpan.FromDays(30);
 
         public string DBPath => dbPath;
-        public bool DebugLoggingEnabled => LogLevel <= LogEventLevel.Debug;
-        public TimeSpan GlobalRetentionPeriod { get; private set; }
-        public LogEventLevel LogLevel { get; private set; }
-        public bool LogtoFileEnabled { get; private set; }
-        public bool LogValueChangeEnabled { get; private set; }
 
-        public const int MinRecordsToKeepDefault = 100;
+        public bool DebugLoggingEnabled => LogLevel <= LogEventLevel.Debug;
+
+        public TimeSpan GlobalRetentionPeriod { get; private set; }
+
+        public LogEventLevel LogLevel { get; private set; }
+
+        public bool LogtoFileEnabled { get; private set; }
+
+        public bool LogValueChangeEnabled { get; private set; }
 
         public long MinRecordsToKeep => MinRecordsToKeepDefault;
 
@@ -64,9 +68,27 @@ namespace Hspi
             return settings.Page;
         }
 
+        public void AddOrUpdate(PerDeviceSettings device) => perDeviceSettingsConfig.AddOrUpdate(device);
+
+        public void Remove(int deviceRefId) => perDeviceSettingsConfig.Remove(deviceRefId);
+
         public TimeSpan GetDeviceRetentionPeriod(long deviceRefId)
         {
+            if (this.perDeviceSettingsConfig.DeviceSettings.TryGetValue(deviceRefId, out var result))
+            {
+                return result.RetentionPeriod ?? GlobalRetentionPeriod;
+            }
+
             return GlobalRetentionPeriod;
+        }
+
+        public bool IsTracked(long deviceRefId)
+        {
+            if (this.perDeviceSettingsConfig.DeviceSettings.TryGetValue(deviceRefId, out var result))
+            {
+                return result.IsTracked;
+            }
+            return true;
         }
 
         public bool OnSettingChange(AbstractView changedView)
@@ -103,10 +125,12 @@ namespace Hspi
             return false;
         }
 
+        public const int MinRecordsToKeepDefault = 100;
         internal const string GlobalRetentionPeriodId = "GlobalRetentionPeriod";
         internal const string LoggingLevelId = "LogLevel";
         internal const string LogToFileId = "LogToFile";
         internal const string SettingPageId = "SettingPage";
         private readonly string dbPath;
+        private readonly PerDeviceSettingsConfig perDeviceSettingsConfig;
     }
 }

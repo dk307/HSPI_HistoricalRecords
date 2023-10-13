@@ -51,7 +51,7 @@ namespace Hspi.Database
             allRefOldestRecordsCommand = CreateStatement(AllRefOldestRecordsSql);
             deleteOldRecordByRefCommand = CreateStatement(DeleteOldRecordByRefSql);
             Utils.TaskHelper.StartAsyncWithErrorChecking("DB update records", UpdateRecords, shutdownToken);
-            Utils.TaskHelper.StartAsyncWithErrorChecking("Prune update records", PruneRecords, shutdownToken);
+            Utils.TaskHelper.StartAsyncWithErrorChecking("Prune DB records", PruneRecords, shutdownToken);
 
             static void CreateDBDirectory(string dbPath)
             {
@@ -267,6 +267,7 @@ namespace Hspi.Database
             ugly.exec(sqliteConnection, "PRAGMA locking_mode=EXCLUSIVE");
             ugly.exec(sqliteConnection, "PRAGMA temp_store=MEMORY");
             ugly.exec(sqliteConnection, "PRAGMA auto_vacuum=INCREMENTAL");
+            ugly.exec(sqliteConnection, "PRAGMA integrity_check");
 
             ugly.exec(sqliteConnection, "BEGIN TRANSACTION");
 
@@ -293,7 +294,7 @@ namespace Hspi.Database
                 var record = await queue.DequeueAsync(token).ConfigureAwait(false);
                 try
                 {
-                    Log.Debug("Adding to database: {record}", record);
+                    Log.Debug("Adding to database: {@record}", record);
                     await InsertRecord(record).ConfigureAwait(false);
                 }
                 catch (Exception ex)

@@ -44,7 +44,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 115));
 
             // first 5 are gone
-            Assert.AreEqual(plugin.Object.GetOldestRecordTimeDate(feature.Ref.ToString()),  10 - 5);
+            Assert.AreEqual(plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString()),  10 - 5);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -84,7 +84,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, SettingsPages.MinRecordsToKeepDefault));
 
             // first 20 are gone
-            Assert.AreEqual(plugin.Object.GetOldestRecordTimeDate(feature.Ref.ToString()),  200 - 20);
+            Assert.AreEqual(plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString()),  200 - 20);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
