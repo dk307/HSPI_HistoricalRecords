@@ -270,6 +270,61 @@ namespace HSPI_HistoricalRecordsTest
             plugin.Object.Dispose();
         }
 
+        [TestMethod]
+        public void HandleUpdateDeviceSettings()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            int deviceRefId = 373;
+            var feature = TestHelper.SetupHsFeature(mockHsController, deviceRefId, 1.1, displayString: "1.1");
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            Assert.IsTrue(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+
+            mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "DeviceRefId", deviceRefId.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "IsTracked", false.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "RetentionPeriod", string.Empty, PlugInData.SettingFileName));
+
+            string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"373\",\"tracked\":0}", string.Empty, 0);
+            Assert.IsNotNull(data);
+
+            var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+            Assert.IsNotNull(jsonData);
+
+            Assert.IsFalse(jsonData.ContainsKey("error"));
+
+            Assert.IsFalse(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void HandleUpdateDeviceSettingsError()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1");
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            // send invalid json
+            string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"tracked\":1}", string.Empty, 0);
+            Assert.IsNotNull(data);
+
+            var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+            Assert.IsNotNull(jsonData);
+
+            var errorMessage = jsonData["error"].Value<string>();
+            Assert.IsNotNull(errorMessage);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
         private class StringValueComparer : IComparer<RecordData>
         {
             public int Compare(RecordData x, RecordData y) => StringComparer.Ordinal.Compare(x.DeviceString, y.DeviceString);
