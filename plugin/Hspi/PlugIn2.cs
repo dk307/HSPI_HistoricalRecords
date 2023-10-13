@@ -302,13 +302,7 @@ namespace Hspi
                 CheckNotNull(settingsPages);
 
                 var tracked = jsonData?["tracked"]?.Value<bool>() ?? settingsPages.IsTracked(refId.Value);
-                var retentionPeriodStr = jsonData?["retentionperiod"]?.Value<string>();
-
-                TimeSpan retentionPeriod = !string.IsNullOrWhiteSpace(retentionPeriodStr)
-                    ? TimeSpan.Parse(retentionPeriodStr, CultureInfo.InvariantCulture)
-                    : settingsPages.GetDeviceRetentionPeriod(refId.Value);
-
-                var deviceSettings = new PerDeviceSettings(refId.Value, tracked, retentionPeriod);
+                var deviceSettings = new PerDeviceSettings(refId.Value, tracked, null);
 
                 settingsPages.AddOrUpdate(deviceSettings);
                 Log.Information("Updated Device tracking {record}", deviceSettings);
@@ -322,13 +316,6 @@ namespace Hspi
             jsonWriter.Close();
 
             return stb.ToString();
-
-            static IEnumerable<TimeAndValue> GroupValues(long min, long max, long groupBySeconds, IList<TimeAndValue> data)
-            {
-                var list = new TimeAndValueList(data);
-                TimeSeriesHelper helper = new(min, max, groupBySeconds, list);
-                return helper.ReduceSeriesWithAverageAndPreviousFill();
-            }
         }
 
         private async Task<string> HandleHistoryRecords(string data)

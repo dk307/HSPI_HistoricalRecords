@@ -114,8 +114,7 @@ namespace Hspi
                 {
                     retentionPeriod = temp;
                 }
-                this.deviceSettings.Add(deviceRefId,
-                                          new PerDeviceSettings(deviceRefId, isTracked, retentionPeriod));
+                data.Add(deviceRefId, new PerDeviceSettings(deviceRefId, isTracked, retentionPeriod));
             }
 
             this.deviceSettings = data.ToImmutableDictionary();
