@@ -49,6 +49,7 @@
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
 	oldestRecordTimeSpan=plugin_function 'HistoricalRecords' 'GetOldestRecordTotalSeconds'[finalRefId] 
 	deviceTracked=plugin_function 'HistoricalRecords' 'IsDeviceTracked'[finalRefId] 
+	deviceUnits=plugin_function 'HistoricalRecords' 'GetFeatureUnit'[finalRefId] 
 		
 	if !deviceDisplayDetails
 		deviceDisplayDetails=[]
@@ -149,6 +150,7 @@ function getRangeString(min, max) {
 <!-- oldestRecordTimeSpan={{oldestRecordTimeSpan}}<BR> -->
 <!-- durationSeconds={{durationSeconds}}<BR> -->
 <!-- deviceTracked={{deviceTracked}}<BR> -->
+<!-- deviceUnits={{deviceUnits}}<BR> -->
 
 <header>
 	<nav class="navbar">
@@ -546,6 +548,11 @@ $(document).ready(function () {
 	  y: {
 		type: 'linear',
 		position: 'left',
+		ticks: {
+			callback: function(value, index, ticks) {
+				return Chart.Ticks.formatters.numeric.apply(this, [value, index, ticks]) + '{{deviceUnits}}'
+			}
+        }
 	  },
 	};
 

@@ -80,6 +80,13 @@ namespace Hspi
             return (long)Math.Round((now - oldest).TotalSeconds);
         }
 
+        public string GetFeatureUnit(string refIdString)
+        {
+            int refId = ParseRefId(refIdString);
+            var feature = HomeSeerSystem.GetFeatureByRef(refId);
+            return feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+        }
+
         public bool IsDeviceTracked(string refIdString)
         {
             int refId = ParseRefId(refIdString);

@@ -126,27 +126,6 @@ namespace Hspi
             HS.SaveINISetting(section, key, stringValue, fileName: PlugInData.SettingFileName);
         }
 
-        private void SetValue<T>(string key, Nullable<T> value, string section = DefaultSection) where T : struct
-        {
-            string stringValue = value.HasValue ? System.Convert.ToString(value.Value, CultureInfo.InvariantCulture) : string.Empty;
-            HS.SaveINISetting(section, key, stringValue, fileName: PlugInData.SettingFileName);
-        }
-
-        private void SetValue<T>(string key, T value, ref T oldValue)
-        {
-            SetValue<T>(key, value, ref oldValue, DefaultSection);
-        }
-
-        private void SetValue<T>(string key, T value, ref T oldValue, string section)
-        {
-            if (!object.Equals(value, oldValue))
-            {
-                string stringValue = System.Convert.ToString(value, CultureInfo.InvariantCulture);
-                HS.SaveINISetting(section, key, stringValue, fileName: PlugInData.SettingFileName);
-                oldValue = value;
-            }
-        }
-
         private const string DefaultSection = "Settings";
         private const string DeviceRefIdKey = "DeviceRefId";
         private const string IsTrackedTag = "IsTracked";
