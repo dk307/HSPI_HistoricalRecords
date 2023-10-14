@@ -118,7 +118,7 @@ namespace Hspi.Database
 
             long GetTotalRecordsInLastDay()
             {
-                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>(unixepoch()-86400)");
+                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>(STRFTIME('%s')-86400)");
             }
         }
 
