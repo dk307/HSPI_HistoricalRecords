@@ -150,6 +150,9 @@
     <PackageReference Include="HomeSeer-PluginSDK">
       <Version>1.4.4</Version>
     </PackageReference>
+    <PackageReference Include="Humanizer.Core">
+      <Version>2.14.1</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers">
       <Version>7.0.4</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

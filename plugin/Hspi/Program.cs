@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using System;
+using Serilog;
 using Serilog.Events;
 
 #nullable enable
@@ -14,9 +15,16 @@ namespace Hspi
         {
             Logger.ConfigureLogging(LogEventLevel.Warning, false);
             Log.Information("Starting");
+
             try
             {
                 using var plugin = new HSPI_HistoricalRecords.HSPI();
+                Console.CancelKeyPress += (sender, e) =>
+                {
+                    e.Cancel = true;
+                    Console.WriteLine("Ctrl+C pressed");
+                    plugin.ShutdownIO();
+                };
                 plugin.Connect(args);
             }
             finally
@@ -24,6 +32,11 @@ namespace Hspi
                 Log.Information("Exiting");
                 Log.CloseAndFlush();
             }
+        }
+
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            throw new NotImplementedException();
         }
     }
 }

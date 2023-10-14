@@ -156,7 +156,7 @@ namespace Hspi
             }
         }
 
-        private static bool ShouldShowChartByDefault(HsFeature feature)
+        private static bool ShouldShowChart(HsFeature feature)
         {
             if (IsOnlyOnOffFeature(feature) && !HasAnyRangeGraphics(feature))
             {
@@ -179,7 +179,7 @@ namespace Hspi
             var feature = HomeSeerSystem.GetFeatureByRef(refId);
 
             displayTypes.Add("table");
-            if (ShouldShowChartByDefault(feature))
+            if (ShouldShowChart(feature))
             {
                 displayTypes.Add("chart");
             }

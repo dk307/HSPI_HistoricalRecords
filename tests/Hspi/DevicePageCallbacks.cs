@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -238,6 +237,40 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void GetDatabaseStats()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            DateTime nowTime = DateTime.Now;
+
+            var feature1 = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
+            var feature2 = TestHelper.SetupHsFeature(mockHsController, 374, 1.1, displayString: "4.5", lastChange: nowTime);
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            for (int i = 0; i < 10; i++)
+            {
+                TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                                         feature1, i, i.ToString(), nowTime.AddMinutes(i), i + 1);
+                TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                                         feature2, i, i.ToString(), nowTime.AddMinutes(i), i + 1);
+            }
+
+            var stats = plugin.Object.GetDatabaseStats();
+            Assert.IsNotNull(stats);
+            Assert.IsTrue(stats.ContainsKey("Path"));
+            Assert.IsTrue(stats.ContainsKey("Sqlite version"));
+            Assert.IsTrue(stats.ContainsKey("Sqlite memory used"));
+            Assert.IsTrue(stats.ContainsKey("Size"));
+            Assert.AreEqual(stats["Total records"], "20");
+            Assert.AreEqual(stats["Total records from last 24 hr"], "20");
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
         public void GetOldestRecordTimeDate()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -262,6 +295,39 @@ namespace HSPI_HistoricalRecordsTest
 
             long oldestRecord = plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString());
             Assert.AreEqual(1000, oldestRecord);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void GetTop10RecordsStats()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            DateTime nowTime = DateTime.Now;
+
+            List<HsFeature> hsFeatures = new List<HsFeature>();
+
+            Assert.IsTrue(plugin.Object.InitIO());
+            for (int i = 0; i < 15; i++)
+            {
+                hsFeatures.Add(TestHelper.SetupHsFeature(mockHsController, 1307 + i, 1.1, displayString: "1.1", lastChange: nowTime));
+                for (int j = 0; j < i; j++)
+                {
+                    TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                                   hsFeatures[i], i, i.ToString(), nowTime.AddMinutes(i * j), j + 1);
+                }
+            }
+
+            var stats = plugin.Object.GetTop10RecordsStats();
+            Assert.IsNotNull(stats);
+            Assert.AreEqual(10, stats.Count);
+            Assert.AreEqual(stats[0].Key, 1307 + 14);
+            Assert.AreEqual(stats[0].Value, 14);
+            Assert.AreEqual(stats[9].Key, 1307 + 5);
+            Assert.AreEqual(stats[9].Value, 5);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();

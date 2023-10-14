@@ -1,7 +1,7 @@
 
 
 async function ajaxPostPlugIn(url, data, successCallback) {
-    const result = $.ajax({ 
+    const result = $.ajax({
         type: 'POST',
         async: 'true',
         url: '../HistoricalRecords/' + url,

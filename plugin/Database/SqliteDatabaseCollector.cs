@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Hspi.Utils;
+using Humanizer;
 using Nito.AsyncEx;
 using Serilog;
 using SQLitePCL;
@@ -76,6 +77,49 @@ namespace Hspi.Database
             allRefOldestRecordsCommand?.Dispose();
             deleteOldRecordByRefCommand.Dispose();
             sqliteConnection?.Dispose();
+        }
+
+        public IDictionary<string, string> GetDatabaseStats()
+        {
+            return new Dictionary<string, string>()
+            {
+                { "Path", settings.DBPath },
+                { "Sqlite version",  raw.sqlite3_libversion().utf8_to_string() },
+                { "Sqlite memory used",  raw.sqlite3_memory_used().Bytes().Humanize() },
+                { "Size",   GetTotalFileSize().Bytes().Humanize() },
+                { "Total records",  GetTotalRecords().ToString("N0") },
+                { "Total records from last 24 hr",  GetTotalRecordsInLastDay().ToString("N0") },
+            };
+
+            long GetTotalFileSize()
+            {
+                return GetFileSizeIfExists(settings.DBPath) +
+                       GetFileSizeIfExists(settings.DBPath + "-shm") +
+                       GetFileSizeIfExists(settings.DBPath + "-wal");
+            }
+
+            long GetFileSizeIfExists(string dBPath)
+            {
+                try
+                {
+                    var info = new FileInfo(dBPath);
+                    return info.Length;
+                }
+                catch (FileNotFoundException)
+                {
+                    return 0;
+                }
+            }
+
+            long GetTotalRecords()
+            {
+                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history");
+            }
+
+            long GetTotalRecordsInLastDay()
+            {
+                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>(STRFTIME('%s')-86400)");
+            }
         }
 
         /// <summary>
@@ -164,6 +208,18 @@ namespace Hspi.Database
             return stmt.column<long>(0);
         }
 
+        public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
+        {
+            var records = new List<KeyValuePair<long, long>>();
+            using var stmt = CreateStatement("SELECT ref, COUNT(*) as rcount FROM history GROUP BY ref ORDER BY rcount DESC LIMIT 10");
+
+            while (ugly.step(stmt) != SQLITE_DONE)
+            {
+                records.Add(new KeyValuePair<long, long>(ugly.column_int64(stmt, 0), ugly.column_int64(stmt, 1)));
+            };
+            return records;
+        }
+
         public void PruneNow()
         {
             pruneNowEvent.Set();
@@ -194,8 +250,7 @@ namespace Hspi.Database
 
         private async Task PruneRecords()
         {
-            CancellationToken token = shutdownToken;
-            while (!token.IsCancellationRequested)
+            while (!shutdownToken.IsCancellationRequested)
             {
                 try
                 {
@@ -236,9 +291,9 @@ namespace Hspi.Database
 
                     Log.Warning("Failed to prune with {error}}", ExceptionHelper.GetFullMessage(ex));
                 }
-                var eventWaitTask = pruneNowEvent.WaitAsync(token);
+                var eventWaitTask = pruneNowEvent.WaitAsync(shutdownToken);
 
-                await Task.WhenAny(Task.Delay(TimeSpan.FromHours(1), token), eventWaitTask).ConfigureAwait(false);
+                await Task.WhenAny(Task.Delay(TimeSpan.FromHours(1), shutdownToken), eventWaitTask).ConfigureAwait(false);
             }
 
             void PruneRecord(long refId, long recordsToKeep, long cutoffUnixTimeSeconds)
@@ -266,6 +321,7 @@ namespace Hspi.Database
 
             ugly.exec(sqliteConnection, "PRAGMA page_size=4096");
             ugly.exec(sqliteConnection, "PRAGMA journal_mode=WAL");
+            ugly.exec(sqliteConnection, "PRAGMA wal_autocheckpoint=100");
             ugly.exec(sqliteConnection, "PRAGMA synchronous=normal");
             ugly.exec(sqliteConnection, "PRAGMA locking_mode=EXCLUSIVE");
             ugly.exec(sqliteConnection, "PRAGMA temp_store=MEMORY");
@@ -291,10 +347,9 @@ namespace Hspi.Database
 
         private async Task UpdateRecords()
         {
-            CancellationToken token = shutdownToken;
-            while (!token.IsCancellationRequested)
+            while (!shutdownToken.IsCancellationRequested)
             {
-                var record = await queue.DequeueAsync(token).ConfigureAwait(false);
+                var record = await queue.DequeueAsync(shutdownToken).ConfigureAwait(false);
                 try
                 {
                     Log.Debug("Adding to database: {@record}", record);
@@ -309,8 +364,8 @@ namespace Hspi.Database
 
                     Log.Warning("Failed to update {record} with {error}}", record, ExceptionHelper.GetFullMessage(ex));
 
-                    await queue.EnqueueAsync(record, token).ConfigureAwait(false);
-                    await Task.Delay(TimeSpan.FromSeconds(30), token).ConfigureAwait(false);
+                    await queue.EnqueueAsync(record, shutdownToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(30), shutdownToken).ConfigureAwait(false);
                 }
             }
         }
@@ -352,8 +407,8 @@ namespace Hspi.Database
         private readonly AsyncAutoResetEvent pruneNowEvent = new(false);
         private readonly AsyncProducerConsumerQueue<RecordData> queue = new();
         private readonly IDBSettings settings;
-        private readonly ISystemClock systemClock;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;
+        private readonly ISystemClock systemClock;
     }
 }
