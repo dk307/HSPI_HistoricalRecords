@@ -13,7 +13,7 @@ namespace HSPI_HistoricalRecordsTest
     {
         [DataTestMethod]
         [DataRow(Constants.HSEvent.VALUE_CHANGE, "abcd", "abcd")]
-        [DataRow(Constants.HSEvent.STRING_CHANGE, "abcd", "abcd")]
+        [DataRow(Constants.HSEvent.STRING_CHANGE, "abcd3", "abcd3")]
         [TestMethod]
         public void DeviceValueUpdateIsRecorded(Constants.HSEvent eventType, string displayStatus, string expectedString)
         {
@@ -28,7 +28,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            TestHelper.RaiseHSEvent(eventType, plugin, mockHsController, feature);
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, eventType);
 
             RecordData recordData = new(feature.Ref, feature.Value,
                                                      expectedString,
@@ -55,7 +55,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            TestHelper.RaiseHSEvent(Constants.HSEvent.VALUE_CHANGE, plugin, mockHsController, feature);
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
 
             var records = TestHelper.GetHistoryRecords(plugin, feature.Ref);
             Assert.IsTrue(records.Count == 0);
@@ -82,7 +82,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(plugin.Object.InitIO());
             List<RecordData> expected = new();
 
-            TestHelper.RaiseHSEvent(Constants.HSEvent.VALUE_CHANGE, plugin, mockHsController, feature);
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
             expected.Add(new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds()));
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
@@ -124,7 +124,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(plugin.Object.InitIO());
             List<RecordData> expected = new();
 
-            TestHelper.RaiseHSEvent(Constants.HSEvent.VALUE_CHANGE, plugin, mockHsController, feature);
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
 
@@ -132,7 +132,7 @@ namespace HSPI_HistoricalRecordsTest
             feature.Changes[EProperty.DisplayedStatus] = "34324";
             // No time change is done here
 
-            TestHelper.RaiseHSEvent(Constants.HSEvent.VALUE_CHANGE, plugin, mockHsController, feature);
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
 

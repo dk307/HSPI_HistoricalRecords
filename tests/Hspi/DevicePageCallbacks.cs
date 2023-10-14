@@ -252,7 +252,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            TestHelper.RaiseHSEvent(Constants.HSEvent.STRING_CHANGE, plugin, mockHsController, feature);
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.STRING_CHANGE);
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
 

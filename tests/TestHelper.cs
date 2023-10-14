@@ -110,14 +110,13 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
-                                                    Mock<IHsController> mockHsController,
-                                                    Constants.HSEvent eventType,
-                                                    HsFeature feature,
-                                                    double value,
-                                                    string status,
-                                                    DateTime lastChange,
-
-                                               int expectedCount)
+                                                     Mock<IHsController> mockHsController,
+                                                     Constants.HSEvent eventType,
+                                                     HsFeature feature,
+                                                     double value,
+                                                     string status,
+                                                     DateTime lastChange,
+                                                     int expectedCount)
         {
             RaiseHSEvent(plugin, mockHsController, eventType, feature, value, status, lastChange);
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, expectedCount));
@@ -130,10 +129,10 @@ namespace HSPI_HistoricalRecordsTest
             feature.Changes[EProperty.DisplayedStatus] = status;
             feature.Changes[EProperty.LastChange] = lastChange;
 
-            RaiseHSEvent(eventType, plugin, mockHsController, feature);
+            RaiseHSEvent(plugin, mockHsController, feature, eventType);
         }
 
-        public static void RaiseHSEvent(Constants.HSEvent eventType, Mock<PlugIn> plugin, Mock<IHsController> mockHsController, HsFeature feature)
+        public static void RaiseHSEvent(Mock<PlugIn> plugin, Mock<IHsController> mockHsController, HsFeature feature, Constants.HSEvent eventType)
         {
             foreach (var change in feature.Changes)
             {
