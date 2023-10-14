@@ -271,6 +271,36 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void GetOldestRecordTimeDate()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
+            plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
+            DateTime nowTime = new(2222, 2, 2, 2, 2, 2);
+            mockClock.Setup(x => x.Now).Returns(nowTime);
+
+            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.STRING_CHANGE);
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
+
+            TestHelper.RaiseHSEvent(plugin, mockHsController, Constants.HSEvent.STRING_CHANGE, feature, 345, "43", nowTime.AddSeconds(-1000));
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 2));
+
+            long oldestRecord = plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString());
+            Assert.AreEqual(1000, oldestRecord);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
         public void GetTop10RecordsStats()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -298,36 +328,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.AreEqual(stats[0].Value, 14);
             Assert.AreEqual(stats[9].Key, 1307 + 5);
             Assert.AreEqual(stats[9].Value, 5);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
-        }
-
-        [TestMethod]
-        public void GetOldestRecordTimeDate()
-        {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
-
-            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
-            plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
-            DateTime nowTime = new(2222, 2, 2, 2, 2, 2);
-            mockClock.Setup(x => x.Now).Returns(nowTime);
-
-            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
-
-            Assert.IsTrue(plugin.Object.InitIO());
-
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.STRING_CHANGE);
-
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
-
-            TestHelper.RaiseHSEvent(plugin, mockHsController, Constants.HSEvent.STRING_CHANGE, feature, 345, "43", nowTime.AddSeconds(-1000));
-
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 2));
-
-            long oldestRecord = plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString());
-            Assert.AreEqual(1000, oldestRecord);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
