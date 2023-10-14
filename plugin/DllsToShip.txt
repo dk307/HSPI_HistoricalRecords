@@ -1,4 +1,5 @@
 ﻿Destructurama.Attributed.dll
+Humanizer.dll
 Microsoft.Win32.Primitives.dll
 netstandard.dll
 Newtonsoft.Json.dll
