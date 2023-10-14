@@ -3,7 +3,7 @@
 namespace Hspi
 {
     /// <summary>
-    /// Class to store static data
+    /// Class to store static data for plugin
     /// </summary>
     internal static class PlugInData
     {
@@ -16,6 +16,10 @@ namespace Hspi
         /// The plugin name
         /// </summary>
         public const string PlugInName = @"Historical Records";
+
+        /// <summary>
+        /// Config file name
+        /// </summary>
         public const string SettingFileName = @"HistoricalRecords.ini";
     }
 }

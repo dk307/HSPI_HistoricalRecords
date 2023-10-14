@@ -191,6 +191,7 @@ namespace Hspi.Database
             ugly.bind_text(stmt, 4, record.DeviceString);
             ugly.step_done(stmt);
         }
+
         private async Task PruneRecords()
         {
             CancellationToken token = shutdownToken;
@@ -203,9 +204,7 @@ namespace Hspi.Database
                     using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
 
                     List<RecordData> records = new();
-
                     var recordsToKeep = settings.MinRecordsToKeep;
-
                     allRefOldestRecordsCommand.reset();
 
                     DateTimeOffset now = systemClock.Now;
@@ -222,16 +221,7 @@ namespace Hspi.Database
                         if (hasRecordsNeedingPruning)
                         {
                             Log.Debug("Pruning device:{refId} in database", refId);
-
-                            var stmt = deleteOldRecordByRefCommand;
-                            ugly.reset(stmt);
-                            ugly.bind_int64(stmt, 1, refId);
-                            ugly.bind_int64(stmt, 2, cutoffUnixTimeSeconds);
-                            ugly.bind_int64(stmt, 3, recordsToKeep);
-                            ugly.step_done(stmt);
-
-                            var changesCount = ugly.changes(sqliteConnection);
-                            Log.Information("Removed {rows} row(s) for device:{refId} in database", changesCount, refId);
+                            PruneRecord(refId, recordsToKeep, cutoffUnixTimeSeconds);
                         }
                     };
 
@@ -249,6 +239,19 @@ namespace Hspi.Database
                 var eventWaitTask = pruneNowEvent.WaitAsync(token);
 
                 await Task.WhenAny(Task.Delay(TimeSpan.FromHours(1), token), eventWaitTask).ConfigureAwait(false);
+            }
+
+            void PruneRecord(long refId, long recordsToKeep, long cutoffUnixTimeSeconds)
+            {
+                var stmt = deleteOldRecordByRefCommand;
+                ugly.reset(stmt);
+                ugly.bind_int64(stmt, 1, refId);
+                ugly.bind_int64(stmt, 2, cutoffUnixTimeSeconds);
+                ugly.bind_int64(stmt, 3, recordsToKeep);
+                ugly.step_done(stmt);
+
+                var changesCount = ugly.changes(sqliteConnection);
+                Log.Information("Removed {rows} row(s) for device:{refId} in database", changesCount, refId);
             }
         }
 

@@ -39,9 +39,8 @@ namespace Hspi
             return displays;
         }
 
-        public IDictionary<int, string> GetDeviceAndFeaturesNames(string refIdString)
+        public List<int> GetDeviceAndFeaturesRefIds(string refIdString)
         {
-            var idNames = new Dictionary<int, string>();
             int refId = ParseRefId(refIdString);
 
             HashSet<int> featureRefIds;
@@ -59,17 +58,8 @@ namespace Hspi
             }
 
             featureRefIds.Add(refId);
-            foreach (var featureRefId in featureRefIds)
-            {
-                idNames.Add(featureRefId, GetNameOfDevice(featureRefId));
-            }
 
-            return idNames;
-
-            string GetNameOfDevice(int deviceRefId)
-            {
-                return HomeSeerSystem.GetNameByRef(deviceRefId).ToString() ?? Invariant($"RefId:{deviceRefId}");
-            }
+            return featureRefIds.ToList();
         }
 
         public long GetOldestRecordTotalSeconds(string refIdString)
@@ -80,11 +70,16 @@ namespace Hspi
             return (long)Math.Round((now - oldest).TotalSeconds);
         }
 
-        public string GetFeatureUnit(string refIdString)
+        public string? GetFeatureUnit(string refIdString)
         {
             int refId = ParseRefId(refIdString);
             var feature = HomeSeerSystem.GetFeatureByRef(refId);
-            return feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            string value = feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+            return null;
         }
 
         public bool IsDeviceTracked(string refIdString)
@@ -183,13 +178,10 @@ namespace Hspi
         {
             var feature = HomeSeerSystem.GetFeatureByRef(refId);
 
-            if (IsMonitored(feature))
+            displayTypes.Add("table");
+            if (ShouldShowChartByDefault(feature))
             {
-                displayTypes.Add("table");
-                if (ShouldShowChartByDefault(feature))
-                {
-                    displayTypes.Add("chart");
-                }
+                displayTypes.Add("chart");
             }
         }
 
