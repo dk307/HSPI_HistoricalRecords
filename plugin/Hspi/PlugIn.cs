@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading.Tasks;
@@ -53,7 +54,18 @@ namespace Hspi
 
         public override void HsEvent(Constants.HSEvent eventType, object[] parameters)
         {
-            Task.Run(() => HSEventImpl(eventType, parameters)).Wait(ShutdownCancellationToken);
+            try
+            {
+                Task.Run(() => HSEventImpl(eventType, parameters)).Wait(ShutdownCancellationToken);
+            }
+            catch (Exception ex)
+            {
+                if (ex.IsCancelException())
+                {
+                    return;
+                }
+                Log.Warning("Error in recording event");
+            }
         }
 
         public void PruneDatabase() => Collector.PruneNow();
@@ -87,6 +99,7 @@ namespace Hspi
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
+                HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
 
                 RestartProcessing();
 
@@ -200,6 +213,16 @@ namespace Hspi
             {
                 Log.Verbose("Not adding {refId} to db as it is not tracked", deviceRefId);
             }
+        }
+
+        public IDictionary<string, string> GetDatabaseStats()
+        {
+            return Collector.GetDatabaseStats();
+        }
+
+        public IDictionary<long, long> GetTop10RecordsStats()
+        {
+            return Collector.GetTop10RecordsStats();
         }
 
         private async Task RecordDeviceValue(HsFeatureData feature)

@@ -151,6 +151,7 @@ function getRangeString(min, max) {
 <!-- durationSeconds={{durationSeconds}}<BR> -->
 <!-- deviceTracked={{deviceTracked}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
+{{status_text finalRefId}}
 
 <header>
 	<nav class="navbar">
@@ -251,7 +252,7 @@ function getRangeString(min, max) {
 				<thead>
 					<tr>
 						<th>Time</th>
-						<th>Value</th>
+						<th>Value{{if deviceUnits}}({{deviceUnits}}){{end}}</th>
 						<th>String</th>						 
 					</tr>
 				</thead>			
@@ -531,7 +532,6 @@ $(document).ready(function () {
 		min: displayStartDate,
 		max: displayEndDate,
 		time: {
-			// unit: 'day',
 			displayFormats: {
 			  hour: "hA"
 			},
