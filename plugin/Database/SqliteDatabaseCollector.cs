@@ -208,14 +208,14 @@ namespace Hspi.Database
             return stmt.column<long>(0);
         }
 
-        public IDictionary<long, long> GetTop10RecordsStats()
+        public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
         {
-            var records = new Dictionary<long, long>();
+            var records = new List<KeyValuePair<long, long>>();
             using var stmt = CreateStatement("SELECT ref, COUNT(*) as rcount FROM history GROUP BY ref ORDER BY rcount DESC LIMIT 10");
 
             while (ugly.step(stmt) != SQLITE_DONE)
             {
-                records.Add(ugly.column_int64(stmt, 0), ugly.column_int64(stmt, 1));
+                records.Add(new KeyValuePair<long, long>(ugly.column_int64(stmt, 0), ugly.column_int64(stmt, 1)));
             };
             return records;
         }

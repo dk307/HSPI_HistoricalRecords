@@ -220,7 +220,7 @@ namespace Hspi
             return Collector.GetDatabaseStats();
         }
 
-        public IDictionary<long, long> GetTop10RecordsStats()
+        public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
         {
             return Collector.GetTop10RecordsStats();
         }
