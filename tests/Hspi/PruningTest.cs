@@ -34,7 +34,7 @@ namespace HSPI_HistoricalRecordsTest
             var added = new List<RecordData>();
             for (int i = 0; i < addedRecordCount; i++)
             {
-                added.Add(TestHelper.RaiseHSEventAndWait(plugin, Constants.HSEvent.VALUE_CHANGE,
+                added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
                                                          feature, i, i.ToString(), aTime.AddSeconds(i), i + 1));
             }
             Assert.AreEqual(plugin.Object.GetTotalRecords(feature.Ref), addedRecordCount);
@@ -44,12 +44,11 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 115));
 
             // first 5 are gone
-            Assert.AreEqual(plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString()),  10 - 5);
+            Assert.AreEqual(plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString()), 10 - 5);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
         }
-
 
         [TestMethod]
         public void PruningPrservesMinRecords()
@@ -74,7 +73,7 @@ namespace HSPI_HistoricalRecordsTest
             var added = new List<RecordData>();
             for (int i = 0; i < addedRecordCount; i++)
             {
-                added.Add(TestHelper.RaiseHSEventAndWait(plugin, Constants.HSEvent.VALUE_CHANGE,
+                added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
                                                          feature, i, i.ToString(), aTime.AddSeconds(i), i + 1));
             }
             Assert.AreEqual(plugin.Object.GetTotalRecords(feature.Ref), addedRecordCount);
@@ -84,7 +83,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, SettingsPages.MinRecordsToKeepDefault));
 
             // first 20 are gone
-            Assert.AreEqual(plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString()),  200 - 20);
+            Assert.AreEqual(plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString()), 200 - 20);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();

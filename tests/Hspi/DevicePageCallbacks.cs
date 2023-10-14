@@ -174,8 +174,7 @@ namespace HSPI_HistoricalRecordsTest
 
             DateTime nowTime = DateTime.Now;
 
-            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime,
-                                               apiType: (int)EApiType.Feature);
+            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -183,7 +182,7 @@ namespace HSPI_HistoricalRecordsTest
             for (int i = 0; i < addedRecordCount; i++)
             {
                 double val = 1000 - i;
-                added.Add(TestHelper.RaiseHSEventAndWait(plugin, Constants.HSEvent.VALUE_CHANGE,
+                added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
                                                          feature, val, val.ToString(), nowTime.AddMinutes(i), i + 1));
             }
 
@@ -214,8 +213,7 @@ namespace HSPI_HistoricalRecordsTest
 
             DateTime nowTime = DateTime.Now;
 
-            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime,
-                                               apiType: (int)EApiType.Feature);
+            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -223,7 +221,7 @@ namespace HSPI_HistoricalRecordsTest
             for (int i = 0; i < 100; i++)
             {
                 double val = 1000 - i;
-                added.Add(TestHelper.RaiseHSEventAndWait(plugin, Constants.HSEvent.VALUE_CHANGE,
+                added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
                                                          feature, val, val.ToString(), nowTime.AddMinutes(i), i + 1));
             }
 
@@ -250,16 +248,15 @@ namespace HSPI_HistoricalRecordsTest
             DateTime nowTime = new(2222, 2, 2, 2, 2, 2);
             mockClock.Setup(x => x.Now).Returns(nowTime);
 
-            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime,
-                                                apiType: (int)EApiType.Feature);
+            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            TestHelper.RaiseHSEvent(Constants.HSEvent.STRING_CHANGE, plugin, feature);
+            TestHelper.RaiseHSEvent(Constants.HSEvent.STRING_CHANGE, plugin, mockHsController, feature);
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
 
-            TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.STRING_CHANGE, feature, 345, "43", nowTime.AddSeconds(-1000));
+            TestHelper.RaiseHSEvent(plugin, mockHsController, Constants.HSEvent.STRING_CHANGE, feature, 345, "43", nowTime.AddSeconds(-1000));
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 2));
 

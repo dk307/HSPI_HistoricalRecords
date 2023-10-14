@@ -160,12 +160,12 @@ function getRangeString(min, max) {
 			<input type="hidden" id="displayMax" name="displayMax" value="{{displayMax}}"> 
 			<input type="hidden" id="displayLabel" name="displayLabel" value="{{displayLabel}}"> 
 
-			{{device=plugin_function 'HistoricalRecords' 'GetDeviceAndFeaturesNames'[refId] }}
+			{{device=plugin_function 'HistoricalRecords' 'GetDeviceAndFeaturesRefIds'[refId] }}
 			{{if device}}
 				<div class="md-form my-0 mr-3" style="width:100%">
 					<select id="displayDeviceRefId" class="mdb-select md-form  dropdown-primary colorful-select" name="displayDeviceRefId" >
-						{{for child in device}}
-							<option value="{{child.key}}" {{if child.key==finalRefId;}}selected{{end}} >{{child.value | html.escape}}</option>	
+						{{for refId in device}}
+							<option value="{{refId}}" {{if refId==finalRefId;}}selected{{end}} >{{device_name_full refId  | html.escape}}</option>	
 						{{end}}			
 					</select> 
 					<label class="mdb-main-label" for="displayDeviceRefId">Feature</label>

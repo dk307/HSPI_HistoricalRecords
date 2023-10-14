@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
-using HomeSeer.PluginSdk.Devices;
 using Hspi.Database;
 using Hspi.Utils;
 using Serilog;
@@ -13,7 +12,6 @@ using Constants = HomeSeer.PluginSdk.Constants;
 #nullable enable
 
 namespace Hspi
-
 {
     internal partial class PlugIn : HspiBase
     {
@@ -130,7 +128,7 @@ namespace Hspi
             }
         }
 
-        private static bool IsMonitored(AbstractHsDevice feature)
+        private static bool IsMonitored(HsFeatureData feature)
         {
             if (IsTimer(feature))  //ignore timer changes
             {
@@ -139,7 +137,7 @@ namespace Hspi
 
             return true;
 
-            static bool IsTimer(AbstractHsDevice feature)
+            static bool IsTimer(HsFeatureData feature)
             {
                 if (string.IsNullOrEmpty(feature.Interface))
                 {
@@ -189,7 +187,7 @@ namespace Hspi
         {
             if (settingsPages != null && settingsPages.IsTracked(deviceRefId))
             {
-                var feature = HomeSeerSystem.GetFeatureByRef(deviceRefId);
+                var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
                 if (feature != null)
                 {
                     if (IsMonitored(feature))
@@ -197,70 +195,25 @@ namespace Hspi
                         await RecordDeviceValue(feature).ConfigureAwait(false);
                     }
                 }
-            } else
+            }
+            else
             {
                 Log.Verbose("Not adding {refId} to db as it is not tracked", deviceRefId);
             }
         }
 
-        private async Task RecordDeviceValue(HsFeature feature)
+        private async Task RecordDeviceValue(HsFeatureData feature)
         {
             CheckNotNull(collector);
 
-            ExtractValues(feature, out var deviceValue, out var lastChange, out var deviceString);
+            var deviceValue = feature.Value;
+            var lastChange = feature.LastChange;
+            var deviceString = feature.DisplayedStatus;
 
-            RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
+            RecordData recordData = new(feature.DeviceRef, deviceValue, deviceString, lastChange);
             Log.Debug("Recording {@record}", recordData);
 
             await collector.Record(recordData).ConfigureAwait(false);
-
-            static void ExtractValues(HsFeature feature, out double deviceValue,
-                                                         out DateTimeOffset lastChange,
-                                                         out string deviceString)
-            {
-                deviceValue = feature.Value;
-                lastChange = feature.LastChange;
-                var type = feature.TypeInfo.ApiType;
-
-                switch (type)
-                {
-                    default: // older types from HS3
-                    case HomeSeer.PluginSdk.Devices.Identification.EApiType.NotSpecified:
-                        deviceString = feature.StatusString;
-                        if (string.IsNullOrWhiteSpace(deviceString))
-                        {
-                            if (feature.StatusGraphics.ContainsValue(deviceValue))
-                            {
-                                var control = feature.StatusGraphics[deviceValue];
-                                if (control.IsValueInRange(deviceValue))
-                                {
-                                    deviceString = control.GetLabelForValue(deviceValue);
-                                }
-                            }
-                        }
-                        if (string.IsNullOrWhiteSpace(deviceString))
-                        {
-                            if (feature.StatusControls.ContainsValue(deviceValue))
-                            {
-                                var control = feature.StatusControls[deviceValue];
-                                if (control.IsValueInRange(deviceValue))
-                                {
-                                    deviceString = control.GetLabelForValue(deviceValue);
-                                }
-                            }
-                        }
-                        break;
-
-                    case HomeSeer.PluginSdk.Devices.Identification.EApiType.Device:
-                    case HomeSeer.PluginSdk.Devices.Identification.EApiType.Feature:
-                        deviceString = feature.DisplayedStatus;
-                        if (string.IsNullOrWhiteSpace(deviceString))
-                        {
-                            deviceString = feature.StatusString;
-                        }
-                        break;
-                }
-            }
         }
 
         private void RestartProcessing()
@@ -280,7 +233,6 @@ namespace Hspi
             Logger.ConfigureLogging(settingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
-        
         private SqliteDatabaseCollector? collector;
         private SettingsPages? settingsPages;
     }
