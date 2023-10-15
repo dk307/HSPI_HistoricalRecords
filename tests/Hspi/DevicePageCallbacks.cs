@@ -252,7 +252,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(stats.ContainsKey("Sqlite memory used"));
             Assert.IsTrue(stats.ContainsKey("Size"));
             Assert.AreEqual("20", stats["Total records"]);
-            Assert.AreEqual(stats["Total records from last 24 hr"], "20");
+            Assert.AreEqual("20", stats["Total records from last 24 hr"]);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -266,7 +266,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
             plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
-            DateTime nowTime = new(2222, 2, 2, 2, 2, 2);
+            DateTime nowTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(nowTime);
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
@@ -312,10 +312,10 @@ namespace HSPI_HistoricalRecordsTest
             var stats = plugin.Object.GetTop10RecordsStats();
             Assert.IsNotNull(stats);
             Assert.AreEqual(10, stats.Count);
-            Assert.AreEqual(stats[0].Key, 1307 + 14);
-            Assert.AreEqual(stats[0].Value, 14);
-            Assert.AreEqual(stats[9].Key, 1307 + 5);
-            Assert.AreEqual(stats[9].Value, 5);
+            Assert.AreEqual(1307 + 14, stats[0].Key);
+            Assert.AreEqual(14, stats[0].Value);
+            Assert.AreEqual(1307 + 5, stats[9].Key);
+            Assert.AreEqual(5, stats[9].Value);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -328,7 +328,7 @@ namespace HSPI_HistoricalRecordsTest
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
             int deviceRefId = 373;
-            var feature = TestHelper.SetupHsFeature(mockHsController, deviceRefId, 1.1, displayString: "1.1");
+            TestHelper.SetupHsFeature(mockHsController, deviceRefId, 1.1, displayString: "1.1");
 
             Assert.IsTrue(plugin.Object.InitIO());
 
