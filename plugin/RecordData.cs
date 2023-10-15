@@ -5,7 +5,7 @@ using Destructurama.Attributed;
 
 namespace Hspi
 {
-    public sealed record RecordData
+    public record RecordData
     {
         public RecordData(long deviceRefId, in double deviceValue, string? deviceString,
                             in long unixTimeSeconds)
@@ -36,5 +36,17 @@ namespace Hspi
         public long UnixTimeMilliSeconds => UnixTimeSeconds * 1000;
 
         public DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);
+    }
+
+    public sealed record RecordDataAndDuration : RecordData
+    {
+        public long? DurationSeconds { get; init; }
+
+        public RecordDataAndDuration(long deviceRefId, in double deviceValue, string? deviceString,
+                                     in long unixTimeSeconds, in long? durationSeconds)
+            : base(deviceRefId, deviceValue, deviceString, unixTimeSeconds)
+        {
+            DurationSeconds = durationSeconds;
+        }
     }
 }

@@ -17,9 +17,9 @@ namespace HSPI_HistoricalRecordsTest
     {
         public static IEnumerable<object[]> GetDatatableCallbacksData()
         {
-            // 1) record limit  = 100, start = 0, length = 10, no ordering specified
+            // 1) min=0, max= lonf.max start = 0, length = 10, no ordering specified
             yield return new object[] {
-                new  Func<HsFeature, List<RecordData>, string> ((feature, _) => $"refId={feature.Ref}&recordLimit=100&start=0&length=10"),
+                new  Func<HsFeature, List<RecordData>, string> ((feature, _) => $"refId={feature.Ref}&min=0&max={long.MaxValue}&start=0&length=10"),
                 new Func<List<RecordData>, List<RecordData>>( (records) => {
                     records.Sort(new TimeComparer());
                     records.Reverse();
@@ -27,36 +27,7 @@ namespace HSPI_HistoricalRecordsTest
                 } )
             };
 
-            // 2) record limit = 100, start = 10, length = 10, no ordering specified
-            yield return new object[] {
-                new Func<HsFeature, List<RecordData>, string> ((feature, _) => $"refId={feature.Ref}&recordLimit=100&start=10&length=10"),
-                new Func<List<RecordData>, List<RecordData>>( (records) => {
-                    records.Sort(new TimeComparer());
-                    records.Reverse();
-                    return records.Skip(10).Take(10).ToList();
-                } )
-            };
-
-            // 3) record limit = 100, start = 10, length = 10, time sort ,asc
-            yield return new object[] {
-                new Func<HsFeature, List<RecordData>, string> ((feature, _) => $"refId={feature.Ref}&recordLimit=100&start=10&length=10&order[0][column]=0&order[0][dir]=asc"),
-                new Func<List<RecordData>, List<RecordData>>( (records) => {
-                    records.Sort(new TimeComparer());
-                    return records.Skip(10).Take(10).ToList();
-                } )
-            };
-
-            // 4) record limit = 1000, start = 0, length = 1000, string sort, desc
-            yield return new object[] {
-                new Func<HsFeature, List<RecordData>, string> ((feature, _) => $"refId={feature.Ref}&recordLimit=1000&start=0&length=1000&order[0][column]=2&order[0][dir]=desc"),
-                new Func<List<RecordData>, List<RecordData>>( (records) => {
-                    records.Sort(new StringValueComparer());
-                    records.Reverse();
-                    return records.Take(1000).ToList();
-                } )
-            };
-
-            // 5) min , max, start = 0, length = 10, time sort ,desc
+            // 2) min , max, start = 0, length = 10, time sort ,desc
             yield return new object[] {
                 new Func<HsFeature, List<RecordData>, string> ((feature, records) =>
                 {
@@ -71,7 +42,7 @@ namespace HSPI_HistoricalRecordsTest
                 } )
             };
 
-            // 6) min , max, start = 10, length = 100, value sort ,asc
+            // 3) min , max, start = 10, length = 100, value sort ,desc
             yield return new object[] {
                 new Func<HsFeature, List<RecordData>, string> ((feature, records) =>
                 {
@@ -88,29 +59,28 @@ namespace HSPI_HistoricalRecordsTest
                     return newList.Skip(10).Take(100).ToList();
                 } )
              };
+
+            // 4) min , max, start = 10, length = 100, string sort ,asc
+            yield return new object[] {
+                new Func<HsFeature, List<RecordData>, string> ((feature, records) =>
+                {
+                    records.Sort(new TimeComparer());
+                    var min = records[20].UnixTimeMilliSeconds;
+                    var max = records[80].UnixTimeMilliSeconds;
+                    return $"refId={feature.Ref}&min={min}&max={max}&start=10&length=100&order[0][column]=&2order[0][dir]=asc";
+                }),
+                new Func<List<RecordData>, List<RecordData>>( (records) => {
+                    records.Sort(new TimeComparer());
+                    var newList = records.Skip(20).Take(80 - 20 + 1).ToList();
+                    newList.Sort(new StringValueComparer());
+                    return newList.Skip(10).Take(100).ToList();
+                } )
+             };
         }
 
         public static IEnumerable<object[]> GetDatatableCallbackTotalData()
         {
-            // 1) record limit  = 100, start = 0, length = 10, no ordering specified
-            yield return new object[] {
-                new  Func<HsFeature, List<RecordData>, string> ((feature, _) => $"refId={feature.Ref}&recordLimit=100&start=0&length=10"),
-                10, 10
-            };
-
-            // 2) record limit = 100, start = 10, length = 10, no ordering specified
-            yield return new object[] {
-                new Func<HsFeature, List<RecordData>, string> ((feature, _) => $"refId={feature.Ref}&recordLimit=100&start=10&length=50"),
-                10, 10
-            };
-
-            // 3) record limit = 10, start = 10, length = 10, time sort ,asc
-            yield return new object[] {
-                new Func<HsFeature, List<RecordData>, string> ((feature, _) => $"refId={feature.Ref}&recordLimit=100&start=10&length=10&order[0][column]=0&order[0][dir]=asc"),
-               100, 100
-            };
-
-            // 5) min , max, start = 0, length = 10, time sort ,desc
+            // 1) min , max, start = 0, length = 10, time sort ,desc
             yield return new object[] {
                 new Func<HsFeature, List<RecordData>, string> ((feature, records) =>
                 {
@@ -122,7 +92,7 @@ namespace HSPI_HistoricalRecordsTest
                 100, 21
             };
 
-            // 6) min , max, start = 10, length = 100, value sort ,asc
+            // 2) min , max, start = 10, length = 100, value sort ,asc
             yield return new object[] {
                 new Func<HsFeature, List<RecordData>, string> ((feature, records) =>
                 {
@@ -139,7 +109,7 @@ namespace HSPI_HistoricalRecordsTest
         [DataTestMethod]
         [DataRow("refId={0}&min=1001&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "max < min")]
         [DataRow("refId={0}&min=abc&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "Parameter name: min")]
-        [DataRow("refId={0}&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "Neither min/max or recordCount specified")]
+        [DataRow("refId={0}&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min/max not specified")]
         public void DatatableCallbackMinMoreThanMax(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -216,13 +186,19 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
+            var durations = new SortedDictionary<long, long?>();
             var added = new List<RecordData>();
             for (int i = 0; i < 100; i++)
             {
                 double val = 1000 - i;
+                DateTime lastChange = nowTime.AddMinutes(i * i);
+                durations[((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds()] = (long)(lastChange - feature.LastChange).TotalSeconds;
+
                 added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                                         feature, val, val.ToString(), nowTime.AddMinutes(i), i + 1));
+                                                         feature, val, val.ToString(), lastChange, i + 1));
             }
+
+            durations[((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds()] = null;
 
             string paramsForRecord = createString(feature, added.Clone());
             var records = TestHelper.GetHistoryRecords(plugin, feature.Ref, paramsForRecord);
@@ -230,7 +206,19 @@ namespace HSPI_HistoricalRecordsTest
 
             var filterRecords = filter(added.Clone());
 
-            CollectionAssert.AreEqual(records, filterRecords);
+            Assert.AreEqual(records.Count, filterRecords.Count);
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                var record = records[i];
+                var expected = filterRecords[i];
+
+                Assert.AreEqual(record.DeviceRefId, expected.DeviceRefId);
+                Assert.AreEqual(record.UnixTimeSeconds, expected.UnixTimeSeconds);
+                Assert.AreEqual(record.DeviceValue, expected.DeviceValue);
+                Assert.AreEqual(record.DeviceString, expected.DeviceString);
+                Assert.AreEqual(record.DurationSeconds, durations[record.UnixTimeSeconds]);
+            }
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -293,7 +281,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 2));
 
-            long oldestRecord = plugin.Object.GetOldestRecordTotalSeconds(feature.Ref.ToString());
+            long oldestRecord = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString())[0];
             Assert.AreEqual(1000, oldestRecord);
 
             plugin.Object.ShutdownIO();
@@ -308,7 +296,7 @@ namespace HSPI_HistoricalRecordsTest
 
             DateTime nowTime = DateTime.Now;
 
-            List<HsFeature> hsFeatures = new List<HsFeature>();
+            List<HsFeature> hsFeatures = new();
 
             Assert.IsTrue(plugin.Object.InitIO());
             for (int i = 0; i < 15; i++)
@@ -370,7 +358,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
-            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1");
+            TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1");
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -386,6 +374,12 @@ namespace HSPI_HistoricalRecordsTest
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
+        }
+
+        private class DurationComparer : IComparer<RecordDataAndDuration>
+        {
+            public int Compare(RecordDataAndDuration x, RecordDataAndDuration y)
+                    => StringComparer.Ordinal.Compare(x.DurationSeconds, y.DurationSeconds);
         }
 
         private class StringValueComparer : IComparer<RecordData>

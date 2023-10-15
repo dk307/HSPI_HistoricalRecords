@@ -19,6 +19,9 @@ csharp_style_expression_bodied_accessors = true:silent
 csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
 
+# CS0618: Type or member is obsolete
+dotnet_diagnostic.CS0618.severity = none
+
 [*.{cs,vb}]
 dotnet_diagnostic.CA2251.severity=suggestion
 [*.{cs,vb}]

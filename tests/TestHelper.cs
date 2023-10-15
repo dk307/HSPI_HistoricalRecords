@@ -14,6 +14,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Schema;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -79,15 +80,15 @@ namespace HSPI_HistoricalRecordsTest
             };
         }
 
-        public static List<RecordData> GetHistoryRecords(Mock<PlugIn> plugin, int refId, int recordLimit = 10)
+        public static List<RecordDataAndDuration> GetHistoryRecords(Mock<PlugIn> plugin, int refId, int recordLimit = 10)
         {
-            string paramsForRecord = $"refId={refId}&recordLimit={recordLimit}&start=0&length={recordLimit}";
+            string paramsForRecord = $"refId={refId}&min=0&max={long.MaxValue}&start=0&length={recordLimit}";
             return GetHistoryRecords(plugin, refId, paramsForRecord);
         }
 
-        public static List<RecordData> GetHistoryRecords(Mock<PlugIn> plugin, int refId, string paramsForRecord)
+        public static List<RecordDataAndDuration> GetHistoryRecords(Mock<PlugIn> plugin, int refId, string paramsForRecord)
         {
-            List<RecordData> result = new();
+            List<RecordDataAndDuration> result = new();
             string data = plugin.Object.PostBackProc("historyrecords", paramsForRecord, string.Empty, 0);
             if (!string.IsNullOrEmpty(data))
             {
@@ -99,10 +100,12 @@ namespace HSPI_HistoricalRecordsTest
                 foreach (var record in records)
                 {
                     var recordArray = (JArray)record;
-                    result.Add(new RecordData(refId,
+                    var rd = new RecordDataAndDuration(refId,
                                               recordArray[1].Value<double>(),
                                               recordArray[2].Value<string>(),
-                                              recordArray[0].Value<long>() / 1000));
+                                              recordArray[0].Value<long>() / 1000,
+                                              durationSeconds: (long?)recordArray[3]);
+                    result.Add(rd);
                 }
             }
 
