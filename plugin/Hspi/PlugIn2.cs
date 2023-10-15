@@ -79,7 +79,7 @@ namespace Hspi
         {
             int refId = ParseRefId(refIdString);
             var feature = HomeSeerSystem.GetFeatureByRef(refId);
-            string value = feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            var value = feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
             if (!string.IsNullOrWhiteSpace(value))
             {
                 return value;
@@ -171,11 +171,11 @@ namespace Hspi
 
             static bool IsOnlyOnOffFeature(HsFeature feature)
             {
-                return feature.StatusControls.Values.All(x => x.ControlUse == EControlUse.On || x.ControlUse == EControlUse.Off);
+                return feature.StatusControls.Values.TrueForAll(x => x.ControlUse == EControlUse.On || x.ControlUse == EControlUse.Off);
             }
             static bool HasAnyRangeGraphics(HsFeature feature)
             {
-                return feature.StatusGraphics.Values.Any(x => x.IsRange);
+                return feature.StatusGraphics.Values.Exists(x => x.IsRange);
             }
         }
 
@@ -224,7 +224,6 @@ namespace Hspi
 
             try
             {
-                var collector = Collector;
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
                 var refId = jsonData?["refId"]?.Value<int>();
@@ -238,7 +237,7 @@ namespace Hspi
                 long groupBySeconds = (long)GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max.Value - min.Value)).TotalSeconds;
                 bool shouldGroup = groupBySeconds >= 5;
 
-                var queryData = await collector.GetGraphValues(refId.Value,
+                var queryData = await Collector.GetGraphValues(refId.Value,
                                                                min.Value / 1000,
                                                                max.Value / 1000).ConfigureAwait(false);
 
@@ -294,7 +293,6 @@ namespace Hspi
 
             try
             {
-                var collector = Collector;
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
                 var refId = (jsonData?["refId"]?.Value<int>()) ?? throw new ArgumentException("data is not correct");
@@ -329,7 +327,6 @@ namespace Hspi
 
             try
             {
-                var collector = Collector;
                 var parameters = HttpUtility.ParseQueryString(data);
 
                 var refId = ParseParameterAsInt(parameters, "refId");
@@ -351,14 +348,14 @@ namespace Hspi
                         throw new ArgumentException("max < min");
                     }
 
-                    totalResultsCount = await collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
+                    totalResultsCount = await Collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
                 }
                 else
                 {
                     throw new ArgumentException("min/max not specified");
                 }
 
-                var queryData = await collector.GetRecords(refId,
+                var queryData = await Collector.GetRecords(refId,
                                                            min,
                                                            max,
                                                            start,

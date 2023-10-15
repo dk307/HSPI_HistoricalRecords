@@ -251,7 +251,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(stats.ContainsKey("Sqlite version"));
             Assert.IsTrue(stats.ContainsKey("Sqlite memory used"));
             Assert.IsTrue(stats.ContainsKey("Size"));
-            Assert.AreEqual(stats["Total records"], "20");
+            Assert.AreEqual("20", stats["Total records"]);
             Assert.AreEqual(stats["Total records from last 24 hr"], "20");
 
             plugin.Object.ShutdownIO();
@@ -374,12 +374,6 @@ namespace HSPI_HistoricalRecordsTest
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
-        }
-
-        private class DurationComparer : IComparer<RecordDataAndDuration>
-        {
-            public int Compare(RecordDataAndDuration x, RecordDataAndDuration y)
-                    => StringComparer.Ordinal.Compare(x.DurationSeconds, y.DurationSeconds);
         }
 
         private class StringValueComparer : IComparer<RecordData>

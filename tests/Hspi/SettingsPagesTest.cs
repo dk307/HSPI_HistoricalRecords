@@ -28,7 +28,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 SettingsPages.CreateDefault()
             };
-            PerDeviceSettings deviceSettings = new PerDeviceSettings(837, false, TimeSpan.FromSeconds(666));
+            PerDeviceSettings deviceSettings = new(837, false, TimeSpan.FromSeconds(666));
             var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
 
             mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "DeviceRefId", deviceSettings.DeviceRefId.ToString(), PlugInData.SettingFileName));
@@ -116,7 +116,7 @@ namespace HSPI_HistoricalRecordsTest
             };
             var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
 
-            var logOptions = EnumHelper.GetValues<LogEventLevel>().Select(x => x.ToString()).ToList();
+            EnumHelper.GetValues<LogEventLevel>().Select(x => x.ToString()).ToList();
             TimeSpanView changedView = new(SettingsPages.GlobalRetentionPeriodId, "name")
             {
                 Value = TimeSpan.FromSeconds(seconds)

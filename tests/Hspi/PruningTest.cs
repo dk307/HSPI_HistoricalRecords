@@ -22,7 +22,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
             plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
-            DateTime aTime = new(2222, 2, 2, 2, 2, 2);
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(10));
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 3, 100);
@@ -44,7 +44,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 115));
 
             // first 5 are gone
-            Assert.AreEqual(plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString())[0], 10 - 5);
+            Assert.AreEqual(10 - 5, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString())[0]);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -61,7 +61,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
             plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
-            DateTime aTime = new(2222, 2, 2, 2, 2, 2);
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(200));
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 3, 100);
@@ -83,7 +83,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, SettingsPages.MinRecordsToKeepDefault));
 
             // first 20 are gone
-            Assert.AreEqual(plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString())[0], 200 - 20);
+            Assert.AreEqual(200 - 20, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString())[0]);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();

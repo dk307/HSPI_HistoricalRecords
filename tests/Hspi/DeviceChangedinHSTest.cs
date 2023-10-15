@@ -95,7 +95,19 @@ namespace HSPI_HistoricalRecordsTest
 
             var records = TestHelper.GetHistoryRecords(plugin, feature.Ref, 100);
             records.Reverse();
-            CollectionAssert.AreEqual(expected, records);
+
+            Assert.AreEqual(expected.Count, records.Count);
+
+            for (int i = 0; i < records.Count; i++)
+            {
+                var record = records[i];
+                var expectedRecord = expected[i];
+
+                Assert.AreEqual(record.DeviceRefId, expectedRecord.DeviceRefId);
+                Assert.AreEqual(record.UnixTimeSeconds, expectedRecord.UnixTimeSeconds);
+                Assert.AreEqual(record.DeviceValue, expectedRecord.DeviceValue);
+                Assert.AreEqual(record.DeviceString, expectedRecord.DeviceString);
+            }
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -122,7 +134,6 @@ namespace HSPI_HistoricalRecordsTest
                                      lastChange: time);
 
             Assert.IsTrue(plugin.Object.InitIO());
-            List<RecordData> expected = new();
 
             TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
 
@@ -145,7 +156,7 @@ namespace HSPI_HistoricalRecordsTest
                     return false;
                 }
 
-                Assert.AreEqual(records.Count, 1);
+                Assert.AreEqual(1, records.Count);
 
                 return (feature.Ref == records[0].DeviceRefId) &&
                        (feature.Value == records[0].DeviceValue) &&

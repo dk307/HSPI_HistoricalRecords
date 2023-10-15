@@ -153,15 +153,15 @@ namespace HSPI_HistoricalRecordsTest
 
             int devOrFeatRef = 10;
 
-            var feature = TestHelper.SetupHsFeature(mockHsController, devOrFeatRef, 100);
+            TestHelper.SetupHsFeature(mockHsController, devOrFeatRef, 100);
 
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
             var data = (JObject)JsonConvert.DeserializeObject(pageJson);
             Assert.IsNotNull(data);
-            Assert.AreEqual(data["id"].Value<string>(), PlugInData.PlugInId);
-            Assert.AreEqual(data["name"].Value<string>(), "Device");
-            Assert.AreEqual(data["type"].Value<int>(), 5);
+            Assert.AreEqual(PlugInData.PlugInId, data["id"].Value<string>());
+            Assert.AreEqual("Device", data["name"].Value<string>());
+            Assert.AreEqual(5, data["type"].Value<int>());
 
             string labelHtml = data["views"][0]["name"].Value<string>();
 
