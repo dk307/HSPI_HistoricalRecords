@@ -47,9 +47,12 @@
 	end		
  
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
-	oldestRecordTimeSpan=plugin_function 'HistoricalRecords' 'GetOldestRecordTotalSeconds'[finalRefId] 
+	recordTimeSpans=plugin_function 'HistoricalRecords' 'GetEarliestAndOldestRecordTotalSeconds'[finalRefId] 
 	deviceTracked=plugin_function 'HistoricalRecords' 'IsDeviceTracked'[finalRefId] 
 	deviceUnits=plugin_function 'HistoricalRecords' 'GetFeatureUnit'[finalRefId] 
+	
+	oldestRecordTimeSpan=recordTimeSpans[0]
+	earliestRecordTimeSpan=recordTimeSpans[1]
 		
 	if !deviceDisplayDetails
 		deviceDisplayDetails=[]
@@ -69,28 +72,21 @@
 	
 	
 	if displaySelect != ""
-		rangeOptionsForTable=[ 
-						 ["Last 10 values", "10", "", "last10values"], 
-					 ]
 									 
 		rangeOptionsForOthers=[ 
-						 ["Last 6 hours", "", 21600, "6hr"],
-						 ["Last 24 hours", "", 86400, "1d"],
-						 ["Last 7 days", "", 604800, "7d"],
-						 ["Last 30 days", "", 2592000, "30d"],
-						 ["Last 90 days", "", 7776000, "90d"],
-						 ["Last 180 days", "", 15552000, "90d"],
-						 ["Last 365 days", "", 31536000, "365d"],
+						 ["Last 6 hours", 21600, "6hr"],
+						 ["Last 24 hours", 86400, "1d"],
+						 ["Last 7 days", 604800, "7d"],
+						 ["Last 30 days", 2592000, "30d"],
+						 ["Last 90 days", 7776000, "90d"],
+						 ["Last 180 days", 15552000, "90d"],
+						 ["Last 365 days", 31536000, "365d"],
 					 ]		 
 					 			 
-		if displaySelect=="table"
-			rangeOptions = rangeOptionsForTable
-		else
-			rangeOptions=[]		
-		end
+		rangeOptions=[]		
 
 		for rangeOption in rangeOptionsForOthers
-			if  rangeOption[2] <= oldestRecordTimeSpan
+			if  rangeOption[1] <= oldestRecordTimeSpan
 				rangeOptions = rangeOptions | array.add rangeOption
 		 	else  
 				# add one more after the limit
@@ -101,20 +97,31 @@
 		
 		rangeOptionFound = false
 		for rangeOption in rangeOptions
-			if rangeOption[3]==displayPeriod
+			if rangeOption[2]==displayPeriod
 				rangeOptionFound=true
 				break
 			end
 		end
 
 		if !rangeOptionFound
-			displayPeriod = rangeOptions[0][3]
+			# find the first option which would display some data
+			for rangeOption in rangeOptions
+				if  rangeOption[1] >= earliestRecordTimeSpan
+					displayPeriod=rangeOption[2]
+					rangeOptionFound=true
+					break
+				end
+			end	
+		end	
+		
+		if !rangeOptionFound			
+			displayPeriod=rangeOptions[0][2]
 		end	
 		
 		durationSeconds = ""
 		for rangeOption in rangeOptions
-			if  rangeOption[2] != "" && displayPeriod == rangeOption[3]
-				durationSeconds = rangeOption[2]
+			if  rangeOption[1] != "" && displayPeriod == rangeOption[2]
+				durationSeconds=rangeOption[1]
 				break
 			end
 		end				
@@ -147,12 +154,11 @@ function getRangeString(min, max) {
 <!-- displayMin={{displayMin}}<BR> -->
 <!-- displayMax={{displayMax}}<BR> -->
 <!-- displayPeriod={{displayPeriod}}<BR> -->
+<!-- earliestRecordTimeSpan={{earliestRecordTimeSpan}}<BR> -->
 <!-- oldestRecordTimeSpan={{oldestRecordTimeSpan}}<BR> -->
 <!-- durationSeconds={{durationSeconds}}<BR> -->
 <!-- deviceTracked={{deviceTracked}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
-{{status_text finalRefId}}
-
 <header>
 	<nav class="navbar">
 		<form class="form-inline my-0 mx-0" id="mainform" action="/HistoricalRecords/devicehistoricalrecords.html" method="GET" style="width:100%">	
@@ -204,7 +210,7 @@ function getRangeString(min, max) {
 				<div class="md-form my-0 mr-3">
 					<select id="displayPeriod" class="mdb-select md-form colorful-select" name="displayPeriod">
 						{{for rangeOption in rangeOptions}}
-							<option value="{{rangeOption[3]}}" {{if rangeOption[3]==displayPeriod;}}selected{{end}}>{{rangeOption[0] | html.escape}}</option>	
+							<option value="{{rangeOption[2]}}" {{if rangeOption[2]==displayPeriod;}}selected{{end}}>{{rangeOption[0] | html.escape}}</option>	
 						{{end}}			
 					</select> 
 					<label class="mdb-main-label" for="displayPeriod">Period</label>
@@ -234,13 +240,11 @@ function getRangeString(min, max) {
 
 	{{if displaySelect != ""}}
 		{{			
-			recordLimit = ""
 			duration = ""
 		 
 			for rangeOption in rangeOptions
-				if rangeOption[3]==displayPeriod
-					recordLimit=rangeOption[1]
-					duration=rangeOption[2]
+				if rangeOption[2]==displayPeriod
+					duration=rangeOption[1]
 					break
 				end
 			end
@@ -253,7 +257,8 @@ function getRangeString(min, max) {
 					<tr>
 						<th>Time</th>
 						<th>Value{{if deviceUnits}}({{deviceUnits}}){{end}}</th>
-						<th>String</th>						 
+						<th>Status</th>						 
+						<th>Duration</th>						 
 					</tr>
 				</thead>			
 			<table>	
@@ -342,6 +347,7 @@ function getRangeString(min, max) {
 <script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
 {{if needDataTables}}
 <script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
 {{end}}
 {{if displaySelect=="chart"}}
 <script type="text/javascript" src="/HistoricalRecords/chart.min.js"></script>
@@ -421,13 +427,9 @@ function setUpPersistanceTable() {
         url: '../HistoricalRecords/historyrecords',
         type: 'POST',
 		data: function (d) {
-            d.refId = {{finalRefId}};
-			{{if recordLimit != ""}}
-			d.recordLimit = '{{recordLimit}}';
-			{{else}}
+            d.refId = {{finalRefId}};	 
 			d.min = displayStartDate;
-			d.max = displayEndDate;
-			{{end}}
+			d.max = displayEndDate;	 
         }
     },
 	columnDefs: [
@@ -435,6 +437,20 @@ function setUpPersistanceTable() {
 			targets: 0,
 			render: function (data, type, full, meta) {
 				return humanizeTime(data);
+			}
+		},
+		{
+			targets: 3,
+			render: function (data, type, full, meta) {
+				if (data >= 60) {
+					return moment.duration(data, 'seconds').humanize();
+				} else if (data > 1) {
+					return  data + ' seconds';
+				} else if (data == 1) {
+					return data + 'second';
+				}
+				
+				return "";
 			}
 		},
 	],

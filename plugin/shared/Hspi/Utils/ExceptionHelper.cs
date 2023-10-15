@@ -50,7 +50,7 @@ namespace Hspi.Utils
 
                 default:
                     {
-                        string message = ex.Message.Trim(new char[] { ' ', '\r', '\n' });
+                        string message = ex.Message.Trim(' ', '\r', '\n');
                         list.Add(message);
                         if (ex.InnerException != null)
                         {

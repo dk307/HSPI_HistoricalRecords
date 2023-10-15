@@ -7,8 +7,10 @@ namespace Hspi.Database
         TimeDesc = 0,
         ValueDesc = 1,
         StringDesc = 2,
-        TimeAsc = 3,
-        ValueAsc = 4,
-        StringAsc = 5,
+        DurationDesc = 3,
+        TimeAsc = 4,
+        ValueAsc = 5,
+        StringAsc = 6,
+        DurationAsc = 7,
     }
 }

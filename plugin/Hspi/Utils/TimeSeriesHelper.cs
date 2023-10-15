@@ -8,7 +8,6 @@ using Hspi.Database;
 
 namespace Hspi
 {
-
     internal sealed class TimeSeriesHelper
     {
         public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
@@ -105,7 +104,7 @@ namespace Hspi
             }
         }
 
-        private class ResultType
+        private sealed class ResultType
         {
             public void Add(double value, long duration)
             {

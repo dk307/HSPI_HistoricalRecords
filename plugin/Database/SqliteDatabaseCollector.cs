@@ -48,7 +48,7 @@ namespace Hspi.Database
             getHistoryCommand = CreateStatement(RecordsHistorySql);
             getRecordHistoryCountCommand = CreateStatement(RecordsHistoryCountSql);
             getTimeAndValueCommand = CreateStatement(GetTimeValueSql);
-            getOldestRecordCommand = CreateStatement(OldestRecordSql);
+            getEarliestAndOldestRecordCommand = CreateStatement(EarliestAndOldestRecordSql);
             allRefOldestRecordsCommand = CreateStatement(AllRefOldestRecordsSql);
             deleteOldRecordByRefCommand = CreateStatement(DeleteOldRecordByRefSql);
             Utils.TaskHelper.StartAsyncWithErrorChecking("DB update records", UpdateRecords, shutdownToken);
@@ -70,7 +70,7 @@ namespace Hspi.Database
         public void Dispose()
         {
             getHistoryCommand?.Dispose();
-            getOldestRecordCommand?.Dispose();
+            getEarliestAndOldestRecordCommand?.Dispose();
             getRecordHistoryCountCommand?.Dispose();
             getTimeAndValueCommand?.Dispose();
             insertCommand?.Dispose();
@@ -150,19 +150,21 @@ namespace Hspi.Database
             return records;
         }
 
-        public async Task<DateTimeOffset> GetOldestRecordTimeDate(int refId)
+        public async Task<Tuple<DateTimeOffset, DateTimeOffset>> GetEarliestAndOldestRecordTimeDate(int refId)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-            var stmt = getOldestRecordCommand;
+            var stmt = getEarliestAndOldestRecordCommand;
 
             ugly.reset(stmt);
             ugly.bind_int(stmt, 1, refId);
             ugly.step(stmt);
 
-            return DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(0));
+            return new Tuple<DateTimeOffset, DateTimeOffset>(
+                        DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(0)),
+                        DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(1)));
         }
 
-        public async Task<IList<RecordData>> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
+        public async Task<IList<RecordDataAndDuration>> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
                                                         long start, long length, ResultSortBy sortBy)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
@@ -176,16 +178,17 @@ namespace Hspi.Database
             ugly.bind_int64(stmt, 5, length);
             ugly.bind_int64(stmt, 6, start);
 
-            List<RecordData> records = new();
+            List<RecordDataAndDuration> records = new();
 
             while (ugly.step(stmt) != SQLITE_DONE)
             {
-                // order: SELECT (time, value, string) FROM history
-                var record = new RecordData(
+                // order: SELECT (time, value, string, duration) FROM history
+                var record = new RecordDataAndDuration(
                         refId,
                         ugly.column_double(stmt, 1),
                         ugly.column_text(stmt, 2),
-                        ugly.column_int64(stmt, 0)
+                        ugly.column_int64(stmt, 0),
+                        ugly.column_type(stmt, 3) == SQLITE_NULL ? null : ugly.column_int64(stmt, 3)
                     );
 
                 records.Add(record);
@@ -336,6 +339,7 @@ namespace Hspi.Database
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_index ON history (ts);");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_ref_index ON history (ref);");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_ref_index ON history (ts, ref);");
+                ugly.exec(sqliteConnection, "CREATE VIEW IF NOT EXISTS history_with_duration as select ts, value, str, (lag(ts, 1) OVER ( PARTITION BY ref ORDER BY ts desc) - ts) as duration, ref from history order by ref, ts desc");
                 ugly.exec(sqliteConnection, "COMMIT");
             }
             catch (Exception)
@@ -381,26 +385,28 @@ namespace Hspi.Database
               SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
 
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
-        private const string OldestRecordSql = "SELECT MIN(ts) FROM history WHERE ref=?";
+        private const string EarliestAndOldestRecordSql = "SELECT MIN(ts), MAX(ts) FROM history WHERE ref=?";
         private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
 
         private const string RecordsHistorySql = @"
-                SELECT ts, value, str FROM history
+                SELECT ts, value, str, duration FROM history_with_duration
                 WHERE ref=$refid AND ts>=$minV AND ts<=$maxV
                 ORDER BY
                     CASE WHEN $order = 0 THEN ts END DESC,
                     CASE WHEN $order = 1 THEN value END DESC,
                     CASE WHEN $order = 2 THEN str END DESC,
-                    CASE WHEN $order = 3 THEN ts END ASC,
-                    CASE WHEN $order = 4 THEN value END ASC,
-                    CASE WHEN $order = 5 THEN str END ASC
+                    CASE WHEN $order = 3 THEN duration END DESC,
+                    CASE WHEN $order = 4 THEN ts END ASC,
+                    CASE WHEN $order = 5 THEN value END ASC,
+                    CASE WHEN $order = 6 THEN str END ASC,
+                    CASE WHEN $order = 7 THEN duration END ASC
                 LIMIT $limit OFFSET $offset";
 
         private readonly sqlite3_stmt allRefOldestRecordsCommand;
         private readonly AsyncLock connectionLock = new();
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
         private readonly sqlite3_stmt getHistoryCommand;
-        private readonly sqlite3_stmt getOldestRecordCommand;
+        private readonly sqlite3_stmt getEarliestAndOldestRecordCommand;
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;

@@ -62,19 +62,24 @@ namespace Hspi
             return featureRefIds.ToList();
         }
 
-        public long GetOldestRecordTotalSeconds(string refIdString)
+        public IList<long> GetEarliestAndOldestRecordTotalSeconds(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-            var oldest = Collector.GetOldestRecordTimeDate(refId).ResultForSync<DateTimeOffset>();
+            var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).ResultForSync();
+
             var now = CreateClock().Now;
-            return (long)Math.Round((now - oldest).TotalSeconds);
+
+            return new List<long>() {
+                (long)Math.Round((now - data.Item1).TotalSeconds),
+                (long)Math.Round((now - data.Item2).TotalSeconds)
+                };
         }
 
         public string? GetFeatureUnit(string refIdString)
         {
             int refId = ParseRefId(refIdString);
             var feature = HomeSeerSystem.GetFeatureByRef(refId);
-            string value = feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
+            var value = feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
             if (!string.IsNullOrWhiteSpace(value))
             {
                 return value;
@@ -166,11 +171,11 @@ namespace Hspi
 
             static bool IsOnlyOnOffFeature(HsFeature feature)
             {
-                return feature.StatusControls.Values.All(x => x.ControlUse == EControlUse.On || x.ControlUse == EControlUse.Off);
+                return feature.StatusControls.Values.TrueForAll(x => x.ControlUse == EControlUse.On || x.ControlUse == EControlUse.Off);
             }
             static bool HasAnyRangeGraphics(HsFeature feature)
             {
-                return feature.StatusGraphics.Values.Any(x => x.IsRange);
+                return feature.StatusGraphics.Values.Exists(x => x.IsRange);
             }
         }
 
@@ -219,7 +224,6 @@ namespace Hspi
 
             try
             {
-                var collector = Collector;
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
                 var refId = jsonData?["refId"]?.Value<int>();
@@ -233,7 +237,7 @@ namespace Hspi
                 long groupBySeconds = (long)GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max.Value - min.Value)).TotalSeconds;
                 bool shouldGroup = groupBySeconds >= 5;
 
-                var queryData = await collector.GetGraphValues(refId.Value,
+                var queryData = await Collector.GetGraphValues(refId.Value,
                                                                min.Value / 1000,
                                                                max.Value / 1000).ConfigureAwait(false);
 
@@ -289,19 +293,13 @@ namespace Hspi
 
             try
             {
-                var collector = Collector;
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
-                var refId = jsonData?["refId"]?.Value<int>();
-                if (refId == null)
-                {
-                    throw new ArgumentException("data is not correct");
-                }
-
+                var refId = (jsonData?["refId"]?.Value<int>()) ?? throw new ArgumentException("data is not correct");
                 CheckNotNull(settingsPages);
 
-                var tracked = jsonData?["tracked"]?.Value<bool>() ?? settingsPages.IsTracked(refId.Value);
-                var deviceSettings = new PerDeviceSettings(refId.Value, tracked, null);
+                var tracked = jsonData?["tracked"]?.Value<bool>() ?? settingsPages.IsTracked(refId);
+                var deviceSettings = new PerDeviceSettings(refId, tracked, null);
 
                 settingsPages.AddOrUpdate(deviceSettings);
                 Log.Information("Updated Device tracking {record}", deviceSettings);
@@ -329,7 +327,6 @@ namespace Hspi
 
             try
             {
-                var collector = Collector;
                 var parameters = HttpUtility.ParseQueryString(data);
 
                 var refId = ParseParameterAsInt(parameters, "refId");
@@ -338,7 +335,6 @@ namespace Hspi
                 var sortOrder = CalculateSortOrder(parameters["order[0][column]"], parameters["order[0][dir]"]);
 
                 long totalResultsCount = 0;
-                long recordLimit;
 
                 long min;
                 long max;
@@ -352,27 +348,18 @@ namespace Hspi
                         throw new ArgumentException("max < min");
                     }
 
-                    totalResultsCount = await collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
-                    recordLimit = int.MaxValue;
-                }
-                else if (!string.IsNullOrEmpty(parameters["recordLimit"]))
-                {
-                    min = 0;
-                    max = long.MaxValue;
-                    recordLimit = ParseParameterAsInt(parameters, "recordLimit");
-                    totalResultsCount = Math.Min(recordLimit,
-                                                 await collector.GetRecordsCount(refId, min, max).ConfigureAwait(false));
+                    totalResultsCount = await Collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
                 }
                 else
                 {
-                    throw new ArgumentException("Neither min/max or recordCount specified");
+                    throw new ArgumentException("min/max not specified");
                 }
 
-                var queryData = await collector.GetRecords(refId,
+                var queryData = await Collector.GetRecords(refId,
                                                            min,
                                                            max,
                                                            start,
-                                                           Math.Min(length, recordLimit),
+                                                           length,
                                                            sortOrder).ConfigureAwait(false);
 
                 jsonWriter.WritePropertyName("draw");
@@ -393,6 +380,7 @@ namespace Hspi
                     jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
                     jsonWriter.WriteValue(GetTableValue(CultureInfo.InvariantCulture, row.DeviceValue));
                     jsonWriter.WriteValue(GetTableValue(CultureInfo.InvariantCulture, row.DeviceString));
+                    jsonWriter.WriteValue(GetTableValue(CultureInfo.InvariantCulture, row.DurationSeconds));
                     jsonWriter.WriteEndArray();
                 }
 
@@ -416,6 +404,7 @@ namespace Hspi
                     "0" => sortDir == "desc" ? ResultSortBy.TimeDesc : ResultSortBy.TimeAsc,
                     "1" => sortDir == "desc" ? ResultSortBy.ValueDesc : ResultSortBy.ValueAsc,
                     "2" => sortDir == "desc" ? ResultSortBy.StringDesc : ResultSortBy.StringAsc,
+                    "3" => sortDir == "desc" ? ResultSortBy.DurationDesc : ResultSortBy.DurationAsc,
                     _ => ResultSortBy.TimeDesc,
                 };
             }
