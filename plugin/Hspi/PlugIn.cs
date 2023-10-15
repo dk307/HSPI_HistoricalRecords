@@ -33,6 +33,11 @@ namespace Hspi
             }
         }
 
+        public IDictionary<string, string> GetDatabaseStats()
+        {
+            return Collector.GetDatabaseStats();
+        }
+
         public override string GetJuiDeviceConfigPage(int deviceRef)
         {
             try
@@ -50,6 +55,11 @@ namespace Hspi
                 });
                 return page.Page.ToJsonString();
             }
+        }
+
+        public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
+        {
+            return Collector.GetTop10RecordsStats();
         }
 
         public override void HsEvent(Constants.HSEvent eventType, object[] parameters)
@@ -201,28 +211,15 @@ namespace Hspi
             if (settingsPages != null && settingsPages.IsTracked(deviceRefId))
             {
                 var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
-                if (feature != null)
+                if (IsMonitored(feature))
                 {
-                    if (IsMonitored(feature))
-                    {
-                        await RecordDeviceValue(feature).ConfigureAwait(false);
-                    }
+                    await RecordDeviceValue(feature).ConfigureAwait(false);
                 }
             }
             else
             {
                 Log.Verbose("Not adding {refId} to db as it is not tracked", deviceRefId);
             }
-        }
-
-        public IDictionary<string, string> GetDatabaseStats()
-        {
-            return Collector.GetDatabaseStats();
-        }
-
-        public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
-        {
-            return Collector.GetTop10RecordsStats();
         }
 
         private async Task RecordDeviceValue(HsFeatureData feature)

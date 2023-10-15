@@ -29,7 +29,8 @@
     <link href="/css/hs.css" rel="stylesheet">
     <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
     <link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css" />	
+    <link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
+	<!-- <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css" />	 -->
 </head>
 
 {{
@@ -347,7 +348,7 @@ function getRangeString(min, max) {
 <script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
 {{if needDataTables}}
 <script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>
-<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/humanize-duration.js"></script>
 {{end}}
 {{if displaySelect=="chart"}}
 <script type="text/javascript" src="/HistoricalRecords/chart.min.js"></script>
@@ -404,9 +405,9 @@ function humanizeTime(unix_timestamp) {
 	const nowDate = new Date(Date.now());
 	
 	const isSameDay = (date.getDate() === nowDate.getDate() 
-				 && date.getMonth() === nowDate.getMonth()
-				 && date.getFullYear() === nowDate.getFullYear())
-				 
+				    && date.getMonth() === nowDate.getMonth()
+				    && date.getFullYear() === nowDate.getFullYear())
+				   
 	if (isSameDay) {
 		return "Today, " + date.toLocaleTimeString();
 	}					
@@ -442,15 +443,11 @@ function setUpPersistanceTable() {
 		{
 			targets: 3,
 			render: function (data, type, full, meta) {
-				if (data >= 60) {
-					return moment.duration(data, 'seconds').humanize();
-				} else if (data > 1) {
-					return  data + ' seconds';
-				} else if (data == 1) {
-					return data + 'second';
+				if (data === null) {
+					return "";
+				} else {
+					return humanizeDuration(data * 1000);
 				}
-				
-				return "";
 			}
 		},
 	],

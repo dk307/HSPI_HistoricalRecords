@@ -5,6 +5,7 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -34,32 +35,6 @@ namespace HSPI_HistoricalRecordsTest
                                                      expectedString,
                                                      ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
             TestHelper.CheckRecordedValue(plugin, feature.Ref, recordData, 100, 1);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
-        }
-
-        [TestMethod]
-        public void TimerChangeIsNotRecorded()
-        {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
-
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController, 673, 1);
-
-            feature.Changes[EProperty.DeviceType] = new HomeSeer.PluginSdk.Devices.Identification.TypeInfo()
-            {
-                ApiType = EApiType.Device,
-                Summary = "Timer"
-            };
-
-            Assert.IsTrue(plugin.Object.InitIO());
-
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
-
-            var records = TestHelper.GetHistoryRecords(plugin, feature.Ref);
-            Assert.IsTrue(records.Count == 0);
-            // this is not a good test as maynot actually end up waiting for failure
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -163,6 +138,67 @@ namespace HSPI_HistoricalRecordsTest
                        (feature.DisplayedStatus == records[0].DeviceString) &&
                        (((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds() == records[0].UnixTimeSeconds);
             }));
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void TimerChangeIsNotRecorded()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController, 673, 1);
+
+            feature.Changes[EProperty.DeviceType] = new HomeSeer.PluginSdk.Devices.Identification.TypeInfo()
+            {
+                ApiType = EApiType.Device,
+                Summary = "Timer"
+            };
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
+
+            var records = TestHelper.GetHistoryRecords(plugin, feature.Ref);
+            Assert.IsTrue(records.Count == 0);
+            // this is not a good test as maynot actually end up waiting for failure
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void UnTrackedDeviceIsNotStored()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            DateTime time = DateTime.Now;
+
+            int deviceRefId = 35673;
+            var feature = TestHelper.SetupHsFeature(mockHsController,
+                                     deviceRefId,
+                                     1.1,
+                                     displayString: "1.1",
+                                     lastChange: time);
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), It.IsAny<string>(), It.IsAny<string>(), PlugInData.SettingFileName));
+            plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"35673\",\"tracked\":0}", string.Empty, 0);
+
+            Assert.IsFalse(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+
+            for (var i = 0; i < 100; i++)
+            {
+                TestHelper.RaiseHSEvent(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, i, "33", feature.LastChange.AddSeconds(7));
+            }
+
+            // this is not a good test as there is no good event to wait to ensure nothing was recorded
+
+            Assert.AreEqual(0, plugin.Object.GetTotalRecords(deviceRefId));
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();

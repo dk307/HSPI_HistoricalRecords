@@ -259,7 +259,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void GetOldestRecordTimeDate()
+        public void GetEarliestAndOldestRecordTimeDate()
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -269,20 +269,17 @@ namespace HSPI_HistoricalRecordsTest
             DateTime nowTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(nowTime);
 
-            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
+            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime.AddSeconds(-50));
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.STRING_CHANGE);
+            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 3333, "3333", nowTime.AddSeconds(-100), 1);
+            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 33434, "333", nowTime.AddSeconds(-1000), 2);
+            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 334, "333", nowTime.AddSeconds(-2000), 3);
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
-
-            TestHelper.RaiseHSEvent(plugin, mockHsController, Constants.HSEvent.STRING_CHANGE, feature, 345, "43", nowTime.AddSeconds(-1000));
-
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 2));
-
-            long oldestRecord = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString())[0];
-            Assert.AreEqual(1000, oldestRecord);
+            var records = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString());
+            Assert.AreEqual(2000, records[0]);
+            Assert.AreEqual(100, records[1]);
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();

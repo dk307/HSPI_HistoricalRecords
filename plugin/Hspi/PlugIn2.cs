@@ -23,19 +23,24 @@ namespace Hspi
 {
     internal partial class PlugIn : HspiBase
     {
-        protected virtual ISystemClock CreateClock() => new SystemClock();
-
         public IList<string> GetAllowedDisplays(string? refIdString)
         {
             var displays = new List<string>();
 
-            if (string.IsNullOrEmpty(refIdString))
+            if (string.IsNullOrWhiteSpace(refIdString))
             {
                 return displays;
             }
 
             var refId = ParseRefId(refIdString);
-            AddToDisplayDetails(displays, refId);
+            var feature = HomeSeerSystem.GetFeatureByRef(refId);
+
+            displays.Add("table");
+            if (ShouldShowChart(feature))
+            {
+                displays.Add("chart");
+            }
+
             return displays;
         }
 
@@ -78,13 +83,33 @@ namespace Hspi
         public string? GetFeatureUnit(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-            var feature = HomeSeerSystem.GetFeatureByRef(refId);
-            var value = feature.AdditionalStatusData.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
-            if (!string.IsNullOrWhiteSpace(value))
+
+            var validUnits = new List<string>()
             {
-                return value;
-            }
-            return null;
+                " Watts", " W",
+                " kWh", " kW Hours",
+                " Volts", " V",
+                " vah",
+                " F", " C", " K", "°F", "°C", "°K",
+                " lux", " lx",
+                " %",
+                " A",
+                " ppm", " ppb",
+                " db", " dbm",
+                " μs", " ms", " s", " min",
+                " g", "kg", " mg", " uq", " oz", " lb",
+            };
+
+            //  an ugly way to get unit, but there is no universal way to get them in HS4
+            var displayStatus = (string)HomeSeerSystem.GetPropertyByRef(refId, EProperty.DisplayedStatus);
+            var unit = validUnits.Find(x => displayStatus.EndsWith(x, StringComparison.OrdinalIgnoreCase));
+            return unit?.Substring(1);
+        }
+
+        public long GetTotalRecords(long refId)
+        {
+            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).ResultForSync<long>();
+            return count;
         }
 
         public bool IsDeviceTracked(string refIdString)
@@ -92,12 +117,6 @@ namespace Hspi
             int refId = ParseRefId(refIdString);
             CheckNotNull(settingsPages);
             return settingsPages.IsTracked(refId);
-        }
-
-        public long GetTotalRecords(long refId)
-        {
-            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).ResultForSync<long>();
-            return count;
         }
 
         public override string PostBackProc(string page, string data, string user, int userRights)
@@ -111,40 +130,12 @@ namespace Hspi
             };
         }
 
+        protected virtual ISystemClock CreateClock() => new SystemClock();
+
         private static TimeSpan GetDefaultGroupInterval(TimeSpan duration)
         {
             // aim for 256 points on graph
             return TimeSpan.FromSeconds(duration.TotalSeconds / 256);
-        }
-
-        private static string? GetTableValue(CultureInfo culture, object? column)
-        {
-            switch (column)
-            {
-                case double doubleValue:
-                    return RoundDoubleValue(culture, doubleValue);
-
-                case float floatValue:
-                    return RoundDoubleValue(culture, floatValue);
-
-                case null:
-                    return null;
-
-                case string stringValue:
-                    if (double.TryParse(stringValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double parsedValue))
-                    {
-                        return RoundDoubleValue(culture, parsedValue);
-                    }
-                    return stringValue;
-
-                default:
-                    return Convert.ToString(column, culture);
-            }
-
-            static string RoundDoubleValue(CultureInfo culture, double floatValue)
-            {
-                return Math.Round(floatValue, 3, MidpointRounding.AwayFromZero).ToString("G", culture);
-            }
         }
 
         private static long ParseInt(string argumentName, string? refIdString)
@@ -176,17 +167,6 @@ namespace Hspi
             static bool HasAnyRangeGraphics(HsFeature feature)
             {
                 return feature.StatusGraphics.Values.Exists(x => x.IsRange);
-            }
-        }
-
-        private void AddToDisplayDetails(IList<string> displayTypes, int refId)
-        {
-            var feature = HomeSeerSystem.GetFeatureByRef(refId);
-
-            displayTypes.Add("table");
-            if (ShouldShowChart(feature))
-            {
-                displayTypes.Add("chart");
             }
         }
 
@@ -283,38 +263,6 @@ namespace Hspi
             }
         }
 
-        private string HandleUpdateDeviceSettings(string data)
-        {
-            StringBuilder stb = new();
-            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-            using var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
-
-            try
-            {
-                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
-
-                var refId = (jsonData?["refId"]?.Value<int>()) ?? throw new ArgumentException("data is not correct");
-                CheckNotNull(settingsPages);
-
-                var tracked = jsonData?["tracked"]?.Value<bool>() ?? settingsPages.IsTracked(refId);
-                var deviceSettings = new PerDeviceSettings(refId, tracked, null);
-
-                settingsPages.AddOrUpdate(deviceSettings);
-                Log.Information("Updated Device tracking {record}", deviceSettings);
-            }
-            catch (Exception ex)
-            {
-                jsonWriter.WritePropertyName("error");
-                jsonWriter.WriteValue(ex.GetFullMessage());
-            }
-            jsonWriter.WriteEndObject();
-            jsonWriter.Close();
-
-            return stb.ToString();
-        }
-
         private async Task<string> HandleHistoryRecords(string data)
         {
             Log.Debug("HandleHistoryRecords {data}", data);
@@ -378,9 +326,9 @@ namespace Hspi
                 {
                     jsonWriter.WriteStartArray();
                     jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
-                    jsonWriter.WriteValue(GetTableValue(CultureInfo.InvariantCulture, row.DeviceValue));
-                    jsonWriter.WriteValue(GetTableValue(CultureInfo.InvariantCulture, row.DeviceString));
-                    jsonWriter.WriteValue(GetTableValue(CultureInfo.InvariantCulture, row.DurationSeconds));
+                    jsonWriter.WriteValue(row.DeviceValue);
+                    jsonWriter.WriteValue(row.DeviceString);
+                    jsonWriter.WriteValue(row.DurationSeconds);
                     jsonWriter.WriteEndArray();
                 }
 
@@ -410,6 +358,38 @@ namespace Hspi
             }
 
             static long ParseParameterAsInt(NameValueCollection parameters, string name) => ParseInt(name, parameters[name]);
+        }
+
+        private string HandleUpdateDeviceSettings(string data)
+        {
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
+
+            try
+            {
+                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+
+                var refId = (jsonData?["refId"]?.Value<int>()) ?? throw new ArgumentException("data is not correct");
+                CheckNotNull(settingsPages);
+
+                var tracked = jsonData?["tracked"]?.Value<bool>() ?? settingsPages.IsTracked(refId);
+                var deviceSettings = new PerDeviceSettings(refId, tracked, null);
+
+                settingsPages.AddOrUpdate(deviceSettings);
+                Log.Information("Updated Device tracking {record}", deviceSettings);
+            }
+            catch (Exception ex)
+            {
+                jsonWriter.WritePropertyName("error");
+                jsonWriter.WriteValue(ex.GetFullMessage());
+            }
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+
+            return stb.ToString();
         }
     }
 }
