@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
 using Hspi.Utils;
+using Nito.AsyncEx;
+using Nito.AsyncEx.Synchronous;
 using Serilog;
 using Constants = HomeSeer.PluginSdk.Constants;
 
@@ -38,16 +42,16 @@ namespace Hspi
             return Collector.GetDatabaseStats();
         }
 
-        public override string GetJuiDeviceConfigPage(int deviceRef)
+        public override string GetJuiDeviceConfigPage(int devOrFeatRef)
         {
             try
             {
-                var device = HomeSeerSystem.GetFeatureByRef(deviceRef);
+                var device = HomeSeerSystem.GetFeatureByRef(devOrFeatRef);
                 return CreateDeviceConfigPage(device, "devicehistoricalrecords.html");
             }
             catch (Exception ex)
             {
-                Log.Error("Failed to create page for {deviceRef} with error:{error}", deviceRef, ex.GetFullMessage());
+                Log.Error("Failed to create page for {deviceRef} with error:{error}", devOrFeatRef, ex.GetFullMessage());
                 var page = PageFactory.CreateDeviceConfigPage(PlugInData.PlugInId, PlugInData.PlugInName);
                 page = page.WithView(new LabelView("exception", string.Empty, ex.GetFullMessage())
                 {
@@ -62,11 +66,11 @@ namespace Hspi
             return Collector.GetTop10RecordsStats();
         }
 
-        public override void HsEvent(Constants.HSEvent eventType, object[] parameters)
+        public override void HsEvent(Constants.HSEvent eventType, object[] @params)
         {
             try
             {
-                Task.Run(() => HSEventImpl(eventType, parameters)).Wait(ShutdownCancellationToken);
+                HSEventImpl(eventType, @params).WaitAndUnwrapException(ShutdownCancellationToken);
             }
             catch (Exception ex)
             {
@@ -74,7 +78,7 @@ namespace Hspi
                 {
                     return;
                 }
-                Log.Warning("Error in recording event");
+                Log.Warning("Error in recording event with {error}", ex.GetFullMessage());
             }
         }
 
@@ -151,48 +155,43 @@ namespace Hspi
             }
         }
 
-        private static bool IsMonitored(HsFeatureData feature)
+        private bool IsMonitored(HsFeatureData feature)
         {
-            if (IsTimer(feature))  //ignore timer changes
+            if (monitoredFeatureCache.TryGetValue(feature.Ref, out var state))
             {
-                return false;
+                return state;
             }
 
-            return true;
+            bool monitored = !feature.IsCounterOrTimer;
 
-            static bool IsTimer(HsFeatureData feature)
+            // cache the value
+            UpdateCachedValue(feature, monitored);
+
+            if (!monitored)
             {
-                if (string.IsNullOrEmpty(feature.Interface))
-                {
-                    var typeInfo = feature.TypeInfo;
-                    if (typeInfo.Summary == "Timer")
-                    {
-                        return true;
-                    }
-                }
+                Log.Debug("Device is not recorded:{deviceRefId}", feature.Ref);
+            }
+            return monitored;
 
-                return false;
+            void UpdateCachedValue(HsFeatureData feature, bool monitored)
+            {
+                var builder = monitoredFeatureCache.ToBuilder();
+                builder.Add(feature.Ref, monitored);
+                monitoredFeatureCache = builder.ToImmutableDictionary();
             }
         }
 
         private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
         {
-            try
+            if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
             {
-                if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
-                {
-                    int deviceRefId = Convert.ToInt32(parameters[4], CultureInfo.InvariantCulture);
-                    await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
-                }
-                else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
-                {
-                    int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
-                    await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
-                }
+                int deviceRefId = Convert.ToInt32(parameters[4], CultureInfo.InvariantCulture);
+                await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
             {
-                Log.Warning("Failed to process HSEvent {eventType} with {error}", eventType, ex.GetFullMessage());
+                int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
+                await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
             }
         }
 
@@ -230,7 +229,7 @@ namespace Hspi
             var lastChange = feature.LastChange;
             var deviceString = feature.DisplayedStatus;
 
-            RecordData recordData = new(feature.DeviceRef, deviceValue, deviceString, lastChange);
+            RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
             Log.Debug("Recording {@record}", recordData);
 
             await collector.Record(recordData).ConfigureAwait(false);
@@ -253,6 +252,7 @@ namespace Hspi
             Logger.ConfigureLogging(settingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
+        private ImmutableDictionary<int, bool> monitoredFeatureCache = ImmutableDictionary<int, bool>.Empty;
         private SqliteDatabaseCollector? collector;
         private SettingsPages? settingsPages;
     }

@@ -1,7 +1,6 @@
 ﻿using System;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Identification;
 
 #nullable enable
 
@@ -14,13 +13,24 @@ namespace Hspi
         public HsFeatureData(IHsController homeSeerSystem, int deviceRef)
         {
             this.homeSeerSystem = homeSeerSystem;
-            DeviceRef = deviceRef;
+            Ref = deviceRef;
         }
 
-        public int DeviceRef { get; }
-        public string? Interface => GetPropertyValue<string>(EProperty.Interface);
+        public int Ref { get; }
 
-        public TypeInfo TypeInfo => GetPropertyValue<TypeInfo>(EProperty.DeviceType);
+        public bool IsCounterOrTimer
+        {
+            get
+            {
+                var plugExtraData = GetPropertyValue<PlugExtraData>(EProperty.PlugExtraData);
+                if (plugExtraData.NamedKeys.Contains("timername") || plugExtraData.NamedKeys.Contains("countername"))
+                {
+                    return true;
+                }
+
+                return false;
+            }
+        }
 
         public double Value => GetPropertyValue<double>(EProperty.Value);
         public DateTimeOffset LastChange => GetPropertyValue<DateTime>(EProperty.LastChange);
@@ -28,7 +38,7 @@ namespace Hspi
 
         private T GetPropertyValue<T>(EProperty prop)
         {
-            return (T)homeSeerSystem.GetPropertyByRef(DeviceRef, prop);
+            return (T)homeSeerSystem.GetPropertyByRef(Ref, prop);
         }
     }
 }

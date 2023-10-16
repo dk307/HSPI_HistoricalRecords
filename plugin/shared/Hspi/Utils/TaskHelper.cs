@@ -1,7 +1,7 @@
-﻿using Serilog;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
 
 #nullable enable
 
@@ -9,17 +9,6 @@ namespace Hspi.Utils
 {
     internal static class TaskHelper
     {
-        public static T ResultForSync<T>(this Task<T> @this)
-        {
-            // https://blogs.msdn.microsoft.com/pfxteam/2012/04/13/should-i-expose-synchronous-wrappers-for-asynchronous-methods/
-            return Task.Run(() => @this).Result;
-        }
-
-        public static void ResultForSync(this Task @this)
-        {
-            Task.Run(() => @this).Wait();
-        }
-
         public static void StartAsyncWithErrorChecking(string taskName,
                                                        Func<Task> taskAction,
                                                        CancellationToken token,

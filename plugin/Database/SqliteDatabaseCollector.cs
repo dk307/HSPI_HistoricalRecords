@@ -16,7 +16,7 @@ using static SQLitePCL.raw;
 
 namespace Hspi.Database
 {
-    internal class SqliteDatabaseCollector : IDisposable
+    internal sealed class SqliteDatabaseCollector : IDisposable
     {
         static SqliteDatabaseCollector()
         {
@@ -63,9 +63,6 @@ namespace Hspi.Database
                 }
             }
         }
-
-        //used in tests for mocks
-        protected virtual DateTimeOffset TimeNow => DateTimeOffset.UtcNow;
 
         public void Dispose()
         {
@@ -145,7 +142,7 @@ namespace Hspi.Database
                 // order: SELECT (time, value) FROM history
                 var record = new TimeAndValue(ugly.column_int64(stmt, 0), ugly.column_double(stmt, 1));
                 records.Add(record);
-            };
+            }
 
             return records;
         }
@@ -192,7 +189,7 @@ namespace Hspi.Database
                     );
 
                 records.Add(record);
-            };
+            }
 
             return records;
         }
@@ -219,7 +216,7 @@ namespace Hspi.Database
             while (ugly.step(stmt) != SQLITE_DONE)
             {
                 records.Add(new KeyValuePair<long, long>(ugly.column_int64(stmt, 0), ugly.column_int64(stmt, 1)));
-            };
+            }
             return records;
         }
 
@@ -261,7 +258,6 @@ namespace Hspi.Database
 
                     using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
 
-                    List<RecordData> records = new();
                     var recordsToKeep = settings.MinRecordsToKeep;
                     allRefOldestRecordsCommand.reset();
 
@@ -281,7 +277,7 @@ namespace Hspi.Database
                             Log.Debug("Pruning device:{refId} in database", refId);
                             PruneRecord(refId, recordsToKeep, cutoffUnixTimeSeconds);
                         }
-                    };
+                    }
 
                     Log.Information("Finished pruning database");
                 }
