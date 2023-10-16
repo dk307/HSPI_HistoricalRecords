@@ -165,9 +165,6 @@
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.3</Version>
     </PackageReference>
-    <PackageReference Include="Nito.AsyncEx.Context">
-      <Version>5.1.2</Version>
-    </PackageReference>
     <PackageReference Include="Nito.AsyncEx.Coordination">
       <Version>5.1.2</Version>
     </PackageReference>
