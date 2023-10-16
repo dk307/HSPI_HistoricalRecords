@@ -39,16 +39,16 @@ namespace Hspi
             return Collector.GetDatabaseStats();
         }
 
-        public override string GetJuiDeviceConfigPage(int deviceRef)
+        public override string GetJuiDeviceConfigPage(int devOrFeatRef)
         {
             try
             {
-                var device = HomeSeerSystem.GetFeatureByRef(deviceRef);
+                var device = HomeSeerSystem.GetFeatureByRef(devOrFeatRef);
                 return CreateDeviceConfigPage(device, "devicehistoricalrecords.html");
             }
             catch (Exception ex)
             {
-                Log.Error("Failed to create page for {deviceRef} with error:{error}", deviceRef, ex.GetFullMessage());
+                Log.Error("Failed to create page for {deviceRef} with error:{error}", devOrFeatRef, ex.GetFullMessage());
                 var page = PageFactory.CreateDeviceConfigPage(PlugInData.PlugInId, PlugInData.PlugInName);
                 page = page.WithView(new LabelView("exception", string.Empty, ex.GetFullMessage())
                 {
@@ -63,11 +63,11 @@ namespace Hspi
             return Collector.GetTop10RecordsStats();
         }
 
-        public override void HsEvent(Constants.HSEvent eventType, object[] parameters)
+        public override void HsEvent(Constants.HSEvent eventType, object[] @params)
         {
             try
             {
-                Task.Run(() => HSEventImpl(eventType, parameters)).Wait(ShutdownCancellationToken);
+                Task.Run(() => HSEventImpl(eventType, @params)).Wait(ShutdownCancellationToken);
             }
             catch (Exception ex)
             {

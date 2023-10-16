@@ -375,7 +375,7 @@ namespace Hspi
                 var refId = (jsonData?["refId"]?.Value<int>()) ?? throw new ArgumentException("data is not correct");
                 CheckNotNull(settingsPages);
 
-                var tracked = jsonData?["tracked"]?.Value<bool>() ?? settingsPages.IsTracked(refId);
+                var tracked = jsonData["tracked"]?.Value<bool>() ?? throw new ArgumentException("data is not correct");
                 var deviceSettings = new PerDeviceSettings(refId, tracked, null);
 
                 settingsPages.AddOrUpdate(deviceSettings);
