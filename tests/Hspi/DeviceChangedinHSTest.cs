@@ -144,18 +144,19 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void TimerChangeIsNotRecorded()
+        [DataTestMethod]
+        [DataRow("timername")]
+        [DataRow("countername")]
+        public void TimerOrCounterChangeIsNotRecorded(string plugInExtraKey)
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
             HsFeature feature = TestHelper.SetupHsFeature(mockHsController, 673, 1);
 
-            feature.Changes[EProperty.DeviceType] = new HomeSeer.PluginSdk.Devices.Identification.TypeInfo()
-            {
-                ApiType = EApiType.Device,
-                Summary = "Timer"
-            };
+            var data = new PlugExtraData();
+            data.AddNamed(plugInExtraKey, "123");
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.PlugExtraData)).Returns(data);
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -163,6 +164,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var records = TestHelper.GetHistoryRecords(plugin, feature.Ref);
             Assert.IsTrue(records.Count == 0);
+
             // this is not a good test as maynot actually end up waiting for failure
 
             plugin.Object.ShutdownIO();
