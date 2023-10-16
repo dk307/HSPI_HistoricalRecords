@@ -157,6 +157,7 @@ namespace HSPI_HistoricalRecordsTest
             var data = new PlugExtraData();
             data.AddNamed(plugInExtraKey, "123");
             mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.PlugExtraData)).Returns(data);
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.Interface)).Returns(string.Empty);
 
             Assert.IsTrue(plugin.Object.InitIO());
 

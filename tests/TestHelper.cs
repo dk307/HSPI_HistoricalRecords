@@ -186,6 +186,9 @@ namespace HSPI_HistoricalRecordsTest
                 feature.Changes.Add(change.Key, change.Value);
             }
 
+            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.Interface)).Returns("Z-Wave");
+            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.DeviceType)).Returns(new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Feature });
+            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.StatusGraphics)).Returns(new List<StatusGraphic>());
             mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(new PlugExtraData());
             mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Returns(feature);
             return feature;

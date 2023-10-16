@@ -152,6 +152,21 @@ namespace Hspi
             }
         }
 
+        private static string WriteExceptionResultAsJson(Exception ex)
+        {
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
+
+            jsonWriter.WritePropertyName("error");
+            jsonWriter.WriteValue(ex.GetFullMessage());
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+            return stb.ToString();
+        }
+
         private string CreateDeviceConfigPage(AbstractHsDevice device, string iFrameName)
         {
             StringBuilder stb = new();
@@ -178,12 +193,6 @@ namespace Hspi
 
         private async Task<string> HandleGraphRecords(string data)
         {
-            StringBuilder stb = new();
-            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-            using var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
-
             try
             {
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
@@ -207,6 +216,13 @@ namespace Hspi
                                             GroupValues(min.Value / 1000, max.Value / 1000, groupBySeconds, queryData) :
                                             queryData;
 
+                var precision = hsFeatureCachedDataProvider.GetPrecision((int)refId);
+                StringBuilder stb = new();
+                using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+                using var jsonWriter = new JsonTextWriter(stringWriter);
+                jsonWriter.Formatting = Formatting.Indented;
+                jsonWriter.WriteStartObject();
+
                 jsonWriter.WritePropertyName("result");
                 jsonWriter.WriteStartObject();
                 jsonWriter.WritePropertyName("groupedbyseconds");
@@ -220,22 +236,23 @@ namespace Hspi
                     jsonWriter.WritePropertyName("x");
                     jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
                     jsonWriter.WritePropertyName("y");
-                    jsonWriter.WriteValue(row.DeviceValue);
+                    jsonWriter.WriteValue(Math.Round(row.DeviceValue, precision));
                     jsonWriter.WriteEndObject();
                 }
 
                 jsonWriter.WriteEndArray();
                 jsonWriter.WriteEndObject();
+
+                jsonWriter.WriteEndObject();
+                jsonWriter.Close();
+
+                return stb.ToString();
             }
             catch (Exception ex)
             {
-                jsonWriter.WritePropertyName("error");
-                jsonWriter.WriteValue(ex.GetFullMessage());
+                Log.Error("Getting graph data failed for {param} with {error}", data, ex.GetFullMessage());
+                return WriteExceptionResultAsJson(ex);
             }
-            jsonWriter.WriteEndObject();
-            jsonWriter.Close();
-
-            return stb.ToString();
 
             static IEnumerable<TimeAndValue> GroupValues(long min, long max, long groupBySeconds, IList<TimeAndValue> data)
             {
@@ -249,14 +266,9 @@ namespace Hspi
         {
             Log.Debug("HandleHistoryRecords {data}", data);
 
-            StringBuilder stb = new();
-            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-            using var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
-
             try
             {
+                StringBuilder stb = new();
                 var parameters = HttpUtility.ParseQueryString(data);
 
                 var refId = ParseParameterAsInt(parameters, "refId");
@@ -292,6 +304,11 @@ namespace Hspi
                                                            length,
                                                            sortOrder).ConfigureAwait(false);
 
+                using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+                using var jsonWriter = new JsonTextWriter(stringWriter);
+                jsonWriter.Formatting = Formatting.Indented;
+                jsonWriter.WriteStartObject();
+
                 jsonWriter.WritePropertyName("draw");
                 jsonWriter.WriteValue(parameters["draw"]);
 
@@ -304,28 +321,28 @@ namespace Hspi
                 jsonWriter.WritePropertyName("data");
                 jsonWriter.WriteStartArray();
 
+                CheckNotNull(hsFeatureCachedDataProvider);
+                var precision = hsFeatureCachedDataProvider.GetPrecision((int)refId);
                 foreach (var row in queryData)
                 {
                     jsonWriter.WriteStartArray();
                     jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
-                    jsonWriter.WriteValue(row.DeviceValue);
+                    jsonWriter.WriteValue(Math.Round(row.DeviceValue, precision));
                     jsonWriter.WriteValue(row.DeviceString);
                     jsonWriter.WriteValue(row.DurationSeconds);
                     jsonWriter.WriteEndArray();
                 }
 
                 jsonWriter.WriteEndArray();
+                jsonWriter.WriteEndObject();
+                jsonWriter.Close();
+                return stb.ToString();
             }
             catch (Exception ex)
             {
                 Log.Error("Getting Records failed for {param} with {error}", data, ex.GetFullMessage());
-                jsonWriter.WritePropertyName("error");
-                jsonWriter.WriteValue(ex.GetFullMessage());
+                return WriteExceptionResultAsJson(ex);
             }
-            jsonWriter.WriteEndObject();
-            jsonWriter.Close();
-
-            return stb.ToString();
 
             static ResultSortBy CalculateSortOrder(string? sortBy, string? sortDir)
             {

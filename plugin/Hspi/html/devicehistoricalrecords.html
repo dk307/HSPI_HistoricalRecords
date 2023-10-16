@@ -30,7 +30,6 @@
     <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
     <link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />
     <link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
-	<!-- <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css" />	 -->
 </head>
 
 {{
@@ -72,15 +71,14 @@
 	end	 
 	
 	
-	if displaySelect != ""
-									 
+	if displaySelect != ""									 
 		rangeOptionsForOthers=[ 
 						 ["Last 6 hours", 21600, "6hr"],
 						 ["Last 24 hours", 86400, "1d"],
 						 ["Last 7 days", 604800, "7d"],
 						 ["Last 30 days", 2592000, "30d"],
 						 ["Last 90 days", 7776000, "90d"],
-						 ["Last 180 days", 15552000, "90d"],
+						 ["Last 180 days", 15552000, "180d"],
 						 ["Last 365 days", 31536000, "365d"],
 					 ]		 
 					 			 
@@ -107,7 +105,7 @@
 		if !rangeOptionFound
 			# find the first option which would display some data
 			for rangeOption in rangeOptions
-				if  rangeOption[1] >= earliestRecordTimeSpan
+				if rangeOption[1]>=earliestRecordTimeSpan
 					displayPeriod=rangeOption[2]
 					rangeOptionFound=true
 					break
@@ -160,6 +158,7 @@ function getRangeString(min, max) {
 <!-- durationSeconds={{durationSeconds}}<BR> -->
 <!-- deviceTracked={{deviceTracked}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
+
 <header>
 	<nav class="navbar">
 		<form class="form-inline my-0 mx-0" id="mainform" action="/HistoricalRecords/devicehistoricalrecords.html" method="GET" style="width:100%">	

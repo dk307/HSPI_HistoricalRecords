@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Devices.Identification;
 
 #nullable enable
 
@@ -55,10 +56,58 @@ namespace Hspi.Hspi
             }
         }
 
+        public int GetPrecision(int refId)
+        {
+            if (featurePrecisionCache.TryGetValue(refId, out var value))
+            {
+                return value;
+            }
+
+            var typeInfo = GetPropertyValue<TypeInfo>(refId, EProperty.DeviceType);
+
+            int? precision = null;
+            if (typeInfo.ApiType == EApiType.Feature)
+            {
+                var graphics = GetPropertyValue<List<StatusGraphic>>(refId, EProperty.StatusGraphics);
+
+                if (graphics != null)
+                {
+                    foreach (StatusGraphic graphic in graphics)
+                    {
+                        if (graphic.IsRange)
+                        {
+                            if (precision == null)
+                            {
+                                precision = graphic.TargetRange.DecimalPlaces;
+                            }
+                            else
+                            {
+                                precision = Math.Max(precision.Value, graphic.TargetRange.DecimalPlaces);
+                            }
+                        }
+                    }
+                }
+            }
+
+            precision ??= 3;
+
+            CacheFeaturePrecision(refId, precision.Value);
+
+            return precision.Value;
+
+            void CacheFeaturePrecision(int refId, int value)
+            {
+                var builder = featurePrecisionCache.ToBuilder();
+                builder.Add(refId, value);
+                featurePrecisionCache = builder.ToImmutable();
+            }
+        }
+
         public void Invalidate(int refId)
         {
             InvalidateFeatureUnit(refId);
             InvalidateMonitored(refId);
+            InvalidatePrecision(refId);
 
             void InvalidateFeatureUnit(int refId)
             {
@@ -72,6 +121,13 @@ namespace Hspi.Hspi
                 var builder = monitoredFeatureCache.ToBuilder();
                 builder.Remove(refId);
                 monitoredFeatureCache = builder.ToImmutable();
+            }
+
+            void InvalidatePrecision(int refId)
+            {
+                var builder = featurePrecisionCache.ToBuilder();
+                builder.Remove(refId);
+                featurePrecisionCache = builder.ToImmutable();
             }
         }
 
@@ -98,10 +154,14 @@ namespace Hspi.Hspi
 
             bool IsTimerOrCounter(int refId)
             {
-                var plugExtraData = GetPropertyValue<PlugExtraData>(refId, EProperty.PlugExtraData);
-                if (plugExtraData.NamedKeys.Contains("timername") || plugExtraData.NamedKeys.Contains("countername"))
+                var featureInterface = GetPropertyValue<string>(refId, EProperty.Interface);
+                if (string.IsNullOrEmpty(featureInterface))
                 {
-                    return false;
+                    var plugExtraData = GetPropertyValue<PlugExtraData>(refId, EProperty.PlugExtraData);
+                    if (plugExtraData.NamedKeys.Contains("timername") || plugExtraData.NamedKeys.Contains("countername"))
+                    {
+                        return false;
+                    }
                 }
 
                 return true;
@@ -114,6 +174,7 @@ namespace Hspi.Hspi
         }
 
         private readonly IHsController homeSeerSystem;
+        private ImmutableDictionary<int, int> featurePrecisionCache = ImmutableDictionary<int, int>.Empty;
         private ImmutableDictionary<int, string?> featureUnitCache = ImmutableDictionary<int, string?>.Empty;
         private ImmutableDictionary<int, bool> monitoredFeatureCache = ImmutableDictionary<int, bool>.Empty;
     }
