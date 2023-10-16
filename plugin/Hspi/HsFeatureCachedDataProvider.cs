@@ -8,7 +8,7 @@ using HomeSeer.PluginSdk.Devices;
 
 namespace Hspi.Hspi
 {
-    internal class HsFeatureCachedDataProvider
+    public sealed class HsFeatureCachedDataProvider
     {
         public HsFeatureCachedDataProvider(IHsController hs)
         {
@@ -52,6 +52,26 @@ namespace Hspi.Hspi
                 var builder = featureUnitCache.ToBuilder();
                 builder.Add(refId, unit);
                 featureUnitCache = builder.ToImmutable();
+            }
+        }
+
+        public void Invalidate(int refId)
+        {
+            InvalidateFeatureUnit(refId);
+            InvalidateMonitored(refId);
+
+            void InvalidateFeatureUnit(int refId)
+            {
+                var builder = featureUnitCache.ToBuilder();
+                builder.Remove(refId);
+                featureUnitCache = builder.ToImmutable();
+            }
+
+            void InvalidateMonitored(int refId)
+            {
+                var builder = monitoredFeatureCache.ToBuilder();
+                builder.Remove(refId);
+                monitoredFeatureCache = builder.ToImmutable();
             }
         }
 

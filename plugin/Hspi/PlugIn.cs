@@ -112,6 +112,7 @@ namespace Hspi
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
+                HomeSeerSystem.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
 
                 RestartProcessing();
@@ -165,6 +166,14 @@ namespace Hspi
             {
                 int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
                 await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
+            }
+            else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 3))
+            {
+                if (Convert.ToInt32(parameters[1], CultureInfo.InvariantCulture) == 0) // device changes
+                {
+                    int refId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
+                    hsFeatureCachedDataProvider?.Invalidate(refId);
+                }
             }
         }
 
