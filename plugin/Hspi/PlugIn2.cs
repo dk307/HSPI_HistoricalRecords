@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
@@ -85,6 +86,11 @@ namespace Hspi
         {
             int refId = ParseRefId(refIdString);
 
+            if (featureUnitCache.TryGetValue(refId, out var value))
+            {
+                return value;
+            }
+
             var validUnits = new List<string>()
             {
                 " Watts", " W",
@@ -103,8 +109,19 @@ namespace Hspi
 
             //  an ugly way to get unit, but there is no universal way to get them in HS4
             var displayStatus = (string)HomeSeerSystem.GetPropertyByRef(refId, EProperty.DisplayedStatus);
-            var unit = validUnits.Find(x => displayStatus.EndsWith(x, StringComparison.OrdinalIgnoreCase));
-            return unit?.Substring(1);
+            var unitFound = validUnits.Find(x => displayStatus.EndsWith(x, StringComparison.OrdinalIgnoreCase));
+            var unit = unitFound?.Substring(1);
+
+            CacheFeatureUnit(refId, unit);
+
+            return unit;
+
+            void CacheFeatureUnit(int refId, string? unit)
+            {
+                var builder = featureUnitCache.ToBuilder();
+                builder.Add(refId, unit);
+                featureUnitCache = builder.ToImmutable();
+            }
         }
 
         public long GetTotalRecords(long refId)
@@ -392,5 +409,8 @@ namespace Hspi
 
             return stb.ToString();
         }
+
+        private ImmutableDictionary<int, string?> featureUnitCache = ImmutableDictionary<int, string?>.Empty;
+        private ImmutableDictionary<int, bool> monitoredFeatureCache = ImmutableDictionary<int, bool>.Empty;
     }
 }

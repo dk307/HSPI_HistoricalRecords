@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
 using Hspi.Utils;
-using Nito.AsyncEx;
 using Nito.AsyncEx.Synchronous;
 using Serilog;
 using Constants = HomeSeer.PluginSdk.Constants;
@@ -155,6 +152,20 @@ namespace Hspi
             }
         }
 
+        private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
+        {
+            if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
+            {
+                int deviceRefId = Convert.ToInt32(parameters[4], CultureInfo.InvariantCulture);
+                await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
+            }
+            else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
+            {
+                int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
+                await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
+            }
+        }
+
         private bool IsMonitored(HsFeatureData feature)
         {
             if (monitoredFeatureCache.TryGetValue(feature.Ref, out var state))
@@ -177,21 +188,7 @@ namespace Hspi
             {
                 var builder = monitoredFeatureCache.ToBuilder();
                 builder.Add(feature.Ref, monitored);
-                monitoredFeatureCache = builder.ToImmutableDictionary();
-            }
-        }
-
-        private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
-        {
-            if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
-            {
-                int deviceRefId = Convert.ToInt32(parameters[4], CultureInfo.InvariantCulture);
-                await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
-            }
-            else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
-            {
-                int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
-                await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
+                monitoredFeatureCache = builder.ToImmutable();
             }
         }
 
@@ -252,7 +249,6 @@ namespace Hspi
             Logger.ConfigureLogging(settingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
-        private ImmutableDictionary<int, bool> monitoredFeatureCache = ImmutableDictionary<int, bool>.Empty;
         private SqliteDatabaseCollector? collector;
         private SettingsPages? settingsPages;
     }
