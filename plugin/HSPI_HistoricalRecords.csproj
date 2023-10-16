@@ -119,7 +119,6 @@
     <Compile Include="Shared\Hspi\Logger2.cs" />
     <Compile Include="Shared\Hspi\Utils\EnumHelper.cs" />
     <Compile Include="Shared\Hspi\Utils\ExceptionHelper.cs" />
-    <Compile Include="Shared\Hspi\Utils\MiscHelper.cs" />
     <Compile Include="Shared\Hspi\Utils\TaskHelper.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -165,6 +164,9 @@
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json">
       <Version>13.0.3</Version>
+    </PackageReference>
+    <PackageReference Include="Nito.AsyncEx.Context">
+      <Version>5.1.2</Version>
     </PackageReference>
     <PackageReference Include="Nito.AsyncEx.Coordination">
       <Version>5.1.2</Version>

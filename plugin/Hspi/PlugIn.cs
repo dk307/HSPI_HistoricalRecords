@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
 using Hspi.Utils;
+using Nito.AsyncEx;
+using Nito.AsyncEx.Synchronous;
 using Serilog;
 using Constants = HomeSeer.PluginSdk.Constants;
 
@@ -67,7 +70,7 @@ namespace Hspi
         {
             try
             {
-                Task.Run(() => HSEventImpl(eventType, @params)).Wait(ShutdownCancellationToken);
+                HSEventImpl(eventType, @params).WaitAndUnwrapException(ShutdownCancellationToken);
             }
             catch (Exception ex)
             {

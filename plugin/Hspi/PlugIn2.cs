@@ -14,6 +14,7 @@ using Hspi.Database;
 using Hspi.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Nito.AsyncEx.Synchronous;
 using Serilog;
 using static System.FormattableString;
 
@@ -70,7 +71,7 @@ namespace Hspi
         public IList<long> GetEarliestAndOldestRecordTotalSeconds(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-            var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).ResultForSync();
+            var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).WaitAndUnwrapException(ShutdownCancellationToken);
 
             var now = CreateClock().Now;
 
@@ -108,7 +109,7 @@ namespace Hspi
 
         public long GetTotalRecords(long refId)
         {
-            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).ResultForSync<long>();
+            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).WaitAndUnwrapException(ShutdownCancellationToken);
             return count;
         }
 
@@ -123,8 +124,8 @@ namespace Hspi
         {
             return page switch
             {
-                "historyrecords" => HandleHistoryRecords(data).ResultForSync(),
-                "graphrecords" => HandleGraphRecords(data).ResultForSync(),
+                "historyrecords" => HandleHistoryRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
+                "graphrecords" => HandleGraphRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
                 "updatedevicesettings" => HandleUpdateDeviceSettings(data),
                 _ => base.PostBackProc(page, data, user, userRights),
             };
