@@ -94,6 +94,7 @@
     <Compile Include="Database\ResultSortBy.cs" />
     <Compile Include="Database\TimeAndValue.cs" />
     <Compile Include="Hspi\HsFeatureData.cs" />
+    <Compile Include="Hspi\HsFeatureCachedDataProvider.cs" />
     <Compile Include="Hspi\Pages\PerDeviceSettings.cs" />
     <Compile Include="Hspi\Pages\PerDeviceSettingsConfig.cs" />
     <Compile Include="Hspi\SystemClock.cs" />

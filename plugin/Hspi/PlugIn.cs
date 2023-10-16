@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
+using Hspi.Hspi;
 using Hspi.Utils;
 using Nito.AsyncEx.Synchronous;
 using Serilog;
@@ -100,6 +101,7 @@ namespace Hspi
             try
             {
                 Log.Information("Plugin Starting");
+                hsFeatureCachedDataProvider = new HsFeatureCachedDataProvider(HomeSeerSystem);
                 Settings.Add(SettingsPages.CreateDefault());
                 LoadSettingsFromIni();
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
@@ -166,32 +168,6 @@ namespace Hspi
             }
         }
 
-        private bool IsMonitored(HsFeatureData feature)
-        {
-            if (monitoredFeatureCache.TryGetValue(feature.Ref, out var state))
-            {
-                return state;
-            }
-
-            bool monitored = !feature.IsCounterOrTimer;
-
-            // cache the value
-            UpdateCachedValue(feature, monitored);
-
-            if (!monitored)
-            {
-                Log.Debug("Device is not recorded:{deviceRefId}", feature.Ref);
-            }
-            return monitored;
-
-            void UpdateCachedValue(HsFeatureData feature, bool monitored)
-            {
-                var builder = monitoredFeatureCache.ToBuilder();
-                builder.Add(feature.Ref, monitored);
-                monitoredFeatureCache = builder.ToImmutable();
-            }
-        }
-
         private async Task RecordAllDevices()
         {
             var deviceEnumerator = HomeSeerSystem.GetAllRefs();
@@ -206,9 +182,10 @@ namespace Hspi
         {
             if (settingsPages != null && settingsPages.IsTracked(deviceRefId))
             {
-                var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
-                if (IsMonitored(feature))
+                CheckNotNull(hsFeatureCachedDataProvider);
+                if (hsFeatureCachedDataProvider.IsMonitored(deviceRefId))
                 {
+                    var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
                     await RecordDeviceValue(feature).ConfigureAwait(false);
                 }
             }
@@ -250,6 +227,7 @@ namespace Hspi
         }
 
         private SqliteDatabaseCollector? collector;
+        private HsFeatureCachedDataProvider? hsFeatureCachedDataProvider;
         private SettingsPages? settingsPages;
     }
 }
