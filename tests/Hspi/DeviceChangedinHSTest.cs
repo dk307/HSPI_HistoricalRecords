@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;

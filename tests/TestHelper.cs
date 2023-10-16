@@ -169,8 +169,6 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.WriteLog(It.IsAny<ELogType>(), It.IsAny<string>(), PlugInData.PlugInName, It.IsAny<string>()));
             mockHsController.Setup(x => x.RegisterDeviceIncPage(PlugInData.PlugInId, It.IsAny<string>(), It.IsAny<string>()));
             mockHsController.Setup(x => x.RegisterFeaturePage(PlugInData.PlugInId, It.IsAny<string>(), It.IsAny<string>()));
-            mockHsController.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, true)).Returns(new List<int>());
-            mockHsController.Setup(x => x.GetNameByRef(It.IsAny<int>())).Returns("Test");
             mockHsController.Setup(x => x.GetAllRefs()).Returns(new List<int>());
             mockHsController.Setup(x => x.RegisterEventCB(It.IsAny<Constants.HSEvent>(), PlugInData.PlugInId));
             return mockHsController;

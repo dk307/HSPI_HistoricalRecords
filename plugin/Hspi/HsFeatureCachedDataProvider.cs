@@ -105,6 +105,7 @@ namespace Hspi.Hspi
 
         public void Invalidate(int refId)
         {
+            // there is chance we end up removing extra cached values since the time builder is created and immutable data is created
             InvalidateFeatureUnit(refId);
             InvalidateMonitored(refId);
             InvalidatePrecision(refId);
@@ -112,22 +113,28 @@ namespace Hspi.Hspi
             void InvalidateFeatureUnit(int refId)
             {
                 var builder = featureUnitCache.ToBuilder();
-                builder.Remove(refId);
-                featureUnitCache = builder.ToImmutable();
+                if (builder.Remove(refId))
+                {
+                    featureUnitCache = builder.ToImmutable();
+                }
             }
 
             void InvalidateMonitored(int refId)
             {
                 var builder = monitoredFeatureCache.ToBuilder();
-                builder.Remove(refId);
-                monitoredFeatureCache = builder.ToImmutable();
+                if (builder.Remove(refId))
+                {
+                    monitoredFeatureCache = builder.ToImmutable();
+                }
             }
 
             void InvalidatePrecision(int refId)
             {
                 var builder = featurePrecisionCache.ToBuilder();
-                builder.Remove(refId);
-                featurePrecisionCache = builder.ToImmutable();
+                if (builder.Remove(refId))
+                {
+                    featurePrecisionCache = builder.ToImmutable();
+                }
             }
         }
 

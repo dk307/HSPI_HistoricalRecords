@@ -13,7 +13,7 @@ using Newtonsoft.Json.Linq;
 namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
-    public class DevicePageCallbacks
+    public class DevicePageHistoryCallbacks
     {
         public static IEnumerable<object[]> GetDatatableCallbacksData()
         {
@@ -368,6 +368,39 @@ namespace HSPI_HistoricalRecordsTest
 
             var errorMessage = jsonData["error"].Value<string>();
             Assert.IsNotNull(errorMessage);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void ReturnedValuesAreRounded()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            DateTime time = DateTime.Now;
+
+            var feature = TestHelper.SetupHsFeature(mockHsController,
+                                     35673,
+                                     1.1029847263452,
+                                     displayString: "1.1",
+                                     lastChange: time);
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
+
+            List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.StatusGraphics)).Returns(statusGraphics);
+
+            var records = TestHelper.GetHistoryRecords(plugin, feature.Ref);
+            Assert.IsNotNull(records);
+            Assert.AreEqual(1, records.Count);
+
+            Assert.AreEqual(records[0].DeviceValue, Math.Round(feature.Value, 1));
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
