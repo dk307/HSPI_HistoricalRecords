@@ -45,19 +45,6 @@ namespace Hspi
             return displays;
         }
 
-        public List<object?> GetDeviceStatsForPage(string refIdString)
-        {
-            int refId = ParseRefId(refIdString);
-            var result = new List<object?>();
-
-            result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
-            result.Add(IsFeatureTracked(refId).WaitAndUnwrapException());
-            result.Add(GetFeaturePrecision(refId));
-            result.Add(GetFeatureUnit(refId));
-
-            return result;
-        }
-
         public List<int> GetDeviceAndFeaturesRefIds(string refIdString)
         {
             int refId = ParseRefId(refIdString);
@@ -78,6 +65,19 @@ namespace Hspi
             featureRefIds.Add(refId);
 
             return featureRefIds.ToList();
+        }
+
+        public List<object?> GetDeviceStatsForPage(string refIdString)
+        {
+            int refId = ParseRefId(refIdString);
+            var result = new List<object?>();
+
+            result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
+            result.Add(IsFeatureTracked(refId).WaitAndUnwrapException());
+            result.Add(GetFeaturePrecision(refId));
+            result.Add(GetFeatureUnit(refId));
+
+            return result;
         }
 
         public IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
@@ -132,7 +132,7 @@ namespace Hspi
         private static TimeSpan GetDefaultGroupInterval(TimeSpan duration)
         {
             // aim for 256 points on graph
-            return TimeSpan.FromSeconds(duration.TotalSeconds / 256);
+            return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
         }
 
         private static long ParseInt(string argumentName, string? refIdString)
@@ -206,29 +206,42 @@ namespace Hspi
             }
         }
 
+        private T GetJsonValue<T>(JObject? json, string tokenStr)
+        {
+            try
+            {
+                var token = (json?.SelectToken(tokenStr)) ?? throw new ArgumentException(tokenStr + " is not correct");
+                return token.Value<T?>() ?? throw new ArgumentException(tokenStr + " is not correct");
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException(tokenStr + " is not correct", ex);
+            }
+        }
+
         private async Task<string> HandleGraphRecords(string data)
         {
             try
             {
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
-                var refId = jsonData?["refId"]?.Value<int>();
-                var min = jsonData?["min"]?.Value<long>();
-                var max = jsonData?["max"]?.Value<long>();
-                if (refId == null || min == null || max == null)
+                var refId = GetJsonValue<int>(jsonData, "refId");
+                var min = GetJsonValue<long>(jsonData, "min");
+                var max = GetJsonValue<long>(jsonData, "max");
+                if (max < min)
                 {
-                    throw new ArgumentException("data is not correct");
+                    throw new ArgumentException("max < min");
                 }
 
-                long groupBySeconds = (long)GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max.Value - min.Value)).TotalSeconds;
+                long groupBySeconds = (long)Math.Round(GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max - min)).TotalSeconds);
                 bool shouldGroup = groupBySeconds >= 5;
 
-                var queryData = await Collector.GetGraphValues(refId.Value,
-                                                               min.Value / 1000,
-                                                               max.Value / 1000).ConfigureAwait(false);
+                var queryData = await Collector.GetGraphValues(refId,
+                                                               min / 1000,
+                                                               max / 1000).ConfigureAwait(false);
 
                 var queryDataGrouped = shouldGroup ?
-                                            GroupValues(min.Value / 1000, max.Value / 1000, groupBySeconds, queryData) :
+                                            GroupValues(min / 1000, max / 1000, groupBySeconds, queryData) :
                                             queryData;
 
                 CheckNotNull(hsFeatureCachedDataProvider);
@@ -375,34 +388,24 @@ namespace Hspi
 
         private string HandleUpdateDeviceSettings(string data)
         {
-            StringBuilder stb = new();
-            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-            using var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
-
             try
             {
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
-                var refId = (jsonData?["refId"]?.Value<int>()) ?? throw new ArgumentException("data is not correct");
-                CheckNotNull(settingsPages);
+                var refId = GetJsonValue<int>(jsonData, "refId");
+                var tracked = GetJsonValue<bool>(jsonData, "tracked");
 
-                var tracked = jsonData["tracked"]?.Value<bool>() ?? throw new ArgumentException("data is not correct");
                 var deviceSettings = new PerDeviceSettings(refId, tracked, null);
-
+                CheckNotNull(settingsPages);
                 settingsPages.AddOrUpdate(deviceSettings);
                 Log.Information("Updated Device tracking {record}", deviceSettings);
+                return "{}";
             }
             catch (Exception ex)
             {
-                jsonWriter.WritePropertyName("error");
-                jsonWriter.WriteValue(ex.GetFullMessage());
+                Log.Error("Updating device setting failed for {param} with {error}", data, ex.GetFullMessage());
+                return WriteExceptionResultAsJson(ex);
             }
-            jsonWriter.WriteEndObject();
-            jsonWriter.Close();
-
-            return stb.ToString();
         }
 
         private async Task<bool> IsFeatureTracked(int refId)
@@ -412,5 +415,7 @@ namespace Hspi
             return settingsPages.IsTracked(refId) &&
                    await hsFeatureCachedDataProvider.IsMonitored(refId).ConfigureAwait(false);
         }
+
+        public const int MaxGraphPoints = 256;
     }
 }

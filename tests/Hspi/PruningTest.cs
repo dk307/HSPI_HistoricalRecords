@@ -51,7 +51,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void PruningPrservesMinRecords()
+        public void PruningPreservesMinRecords()
         {
             TimeSpan pruningTimePeriod = TimeSpan.FromSeconds(1);
 
