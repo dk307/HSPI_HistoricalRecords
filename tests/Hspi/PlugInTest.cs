@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
+using HomeSeer.PluginSdk.Devices;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -104,43 +105,31 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void InitFirstTime()
+        public void GetFeatureUnit()
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
+                                              35673,
+                                              1.132,
+                                              "1.1 F");
+
             Assert.IsTrue(plugin.Object.InitIO());
+
+            var unit1 = plugin.Object.GetFeatureUnit(feature.Ref);
+            Assert.AreEqual("F", unit1);
+
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.DisplayedStatus)).Returns("1.1 C");
+
+            // invalidate the cache
+            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+
+            var unit2 = plugin.Object.GetFeatureUnit(feature.Ref);
+            Assert.AreEqual("C", unit2);
+
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
-
-            mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId));
-            mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId));
-
-            string dbPath = Path.Combine(mockHsController.Object.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
-            Assert.IsTrue(File.Exists(dbPath));
-        }
-
-        [TestMethod]
-        public void PostBackProcforNonHandled()
-        {
-            var plugin = new PlugIn();
-            Assert.AreEqual(plugin.PostBackProc("Random", "data", "user", 0), string.Empty);
-        }
-
-        [TestMethod]
-        public void VerifyNameAndId()
-        {
-            var plugin = new PlugIn();
-            Assert.AreEqual(PlugInData.PlugInId, plugin.Id);
-            Assert.AreEqual(PlugInData.PlugInName, plugin.Name);
-        }
-
-        [TestMethod]
-        public void VerifySupportsConfigDeviceAll()
-        {
-            var plugin = new PlugIn();
-            Assert.IsTrue(plugin.SupportsConfigDeviceAll);
-            Assert.IsTrue(plugin.SupportsConfigFeature);
         }
 
         [TestMethod]
@@ -191,6 +180,111 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsNotNull(result);
             Assert.IsNotNull(result["views"][0]["value"], errorMessage);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void GetPrecision()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
+                                              35673,
+                                              1.132,
+                                              "1.1 F");
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            var precision1 = plugin.Object.GetFeaturePrecision(feature.Ref);
+            Assert.AreEqual(3, precision1);
+
+            List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.StatusGraphics)).Returns(statusGraphics);
+
+            // invalidate the cache
+            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+
+            var precision2 = plugin.Object.GetFeaturePrecision(feature.Ref);
+            Assert.AreEqual(1, precision2);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void InitFirstTime()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugin.Object.InitIO());
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+
+            mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId));
+            mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId));
+            mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId));
+            mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "dbstats.html", "Database statistics"));
+
+            string dbPath = Path.Combine(mockHsController.Object.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+            Assert.IsTrue(File.Exists(dbPath));
+        }
+
+        [TestMethod]
+        public void IsFeatureTracked()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
+                                              35673,
+                                              1.132,
+                                              "1.1 F");
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref.ToString());
+            Assert.IsTrue(tracked1);
+
+            var data = new PlugExtraData();
+            data.AddNamed("timername", "123");
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.PlugExtraData)).Returns(data);
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.Interface)).Returns(string.Empty);
+
+            // invalidate the cache
+            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+
+            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref.ToString());
+            Assert.IsFalse(tracked2);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void PostBackProcforNonHandled()
+        {
+            var plugin = new PlugIn();
+            Assert.AreEqual(plugin.PostBackProc("Random", "data", "user", 0), string.Empty);
+        }
+
+        [TestMethod]
+        public void VerifyNameAndId()
+        {
+            var plugin = new PlugIn();
+            Assert.AreEqual(PlugInData.PlugInId, plugin.Id);
+            Assert.AreEqual(PlugInData.PlugInName, plugin.Name);
+        }
+
+        [TestMethod]
+        public void VerifySupportsConfigDeviceAll()
+        {
+            var plugin = new PlugIn();
+            Assert.IsTrue(plugin.SupportsConfigDeviceAll);
+            Assert.IsTrue(plugin.SupportsConfigFeature);
         }
     }
 }

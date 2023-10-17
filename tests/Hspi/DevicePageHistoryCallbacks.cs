@@ -13,7 +13,7 @@ using Newtonsoft.Json.Linq;
 namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
-    public class DevicePageCallbacks
+    public class DevicePageHistoryCallbacks
     {
         public static IEnumerable<object[]> GetDatatableCallbacksData()
         {
@@ -277,7 +277,7 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 33434, "333", nowTime.AddSeconds(-1000), 2);
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 334, "333", nowTime.AddSeconds(-2000), 3);
 
-            var records = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString());
+            var records = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref);
             Assert.AreEqual(2000, records[0]);
             Assert.AreEqual(100, records[1]);
 
@@ -329,7 +329,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            Assert.IsTrue(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+            Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId.ToString()));
 
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "DeviceRefId", deviceRefId.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "IsTracked", false.ToString(), PlugInData.SettingFileName));
@@ -343,7 +343,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsFalse(jsonData.ContainsKey("error"));
 
-            Assert.IsFalse(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId.ToString()));
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();

@@ -30,7 +30,6 @@
     <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
     <link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />
     <link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
-	<!-- <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap4.min.css" />	 -->
 </head>
 
 {{
@@ -48,12 +47,13 @@
 	end		
  
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
-	recordTimeSpans=plugin_function 'HistoricalRecords' 'GetEarliestAndOldestRecordTotalSeconds'[finalRefId] 
-	deviceTracked=plugin_function 'HistoricalRecords' 'IsDeviceTracked'[finalRefId] 
-	deviceUnits=plugin_function 'HistoricalRecords' 'GetFeatureUnit'[finalRefId] 
-	
-	oldestRecordTimeSpan=recordTimeSpans[0]
-	earliestRecordTimeSpan=recordTimeSpans[1]
+	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[finalRefId] 
+
+	oldestRecordTimeSpan=devicePageStats[0]
+	earliestRecordTimeSpan=devicePageStats[1]
+	deviceTracked=devicePageStats[2]
+	devicePrecision=devicePageStats[3]
+	deviceUnits=devicePageStats[4]
 		
 	if !deviceDisplayDetails
 		deviceDisplayDetails=[]
@@ -72,15 +72,14 @@
 	end	 
 	
 	
-	if displaySelect != ""
-									 
+	if displaySelect != ""									 
 		rangeOptionsForOthers=[ 
 						 ["Last 6 hours", 21600, "6hr"],
 						 ["Last 24 hours", 86400, "1d"],
 						 ["Last 7 days", 604800, "7d"],
 						 ["Last 30 days", 2592000, "30d"],
 						 ["Last 90 days", 7776000, "90d"],
-						 ["Last 180 days", 15552000, "90d"],
+						 ["Last 180 days", 15552000, "180d"],
 						 ["Last 365 days", 31536000, "365d"],
 					 ]		 
 					 			 
@@ -107,7 +106,7 @@
 		if !rangeOptionFound
 			# find the first option which would display some data
 			for rangeOption in rangeOptions
-				if  rangeOption[1] >= earliestRecordTimeSpan
+				if rangeOption[1]>=earliestRecordTimeSpan
 					displayPeriod=rangeOption[2]
 					rangeOptionFound=true
 					break
@@ -125,8 +124,7 @@
 				durationSeconds=rangeOption[1]
 				break
 			end
-		end				
-	 				
+		end							
 	end
 }}	
 
@@ -159,7 +157,9 @@ function getRangeString(min, max) {
 <!-- oldestRecordTimeSpan={{oldestRecordTimeSpan}}<BR> -->
 <!-- durationSeconds={{durationSeconds}}<BR> -->
 <!-- deviceTracked={{deviceTracked}}<BR> -->
+<!-- devicePrecision={{devicePrecision}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
+
 <header>
 	<nav class="navbar">
 		<form class="form-inline my-0 mx-0" id="mainform" action="/HistoricalRecords/devicehistoricalrecords.html" method="GET" style="width:100%">	
@@ -395,7 +395,8 @@ $(function() {
 });
 
 
-function setupRangePicker() {
+function roundValue(num) {
+	return Math.round(num * 10 ** {{devicePrecision}}) / 10 ** {{devicePrecision}};
 }
 
 {{if needDataTables}}
@@ -441,6 +442,12 @@ function setUpPersistanceTable() {
 			}
 		},
 		{
+			targets: 1,
+			render: function (data, type, full, meta) {
+				return roundValue(data);
+			}
+		},
+		{
 			targets: 3,
 			render: function (data, type, full, meta) {
 				if (data === null) {
@@ -459,7 +466,6 @@ function setUpPersistanceTable() {
 }
 
 $(document).ready(function () {
-	setupRangePicker();
 	setUpPersistanceTable();
 	$('#loading').hide();
 });	
@@ -664,7 +670,6 @@ function chartFunction(reason) {
 }
 
 $(document).ready(function () {
-    setupRangePicker();
 	setUpChart();
 	$('#loading').hide();
 });

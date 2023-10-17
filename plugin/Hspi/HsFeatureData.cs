@@ -18,20 +18,6 @@ namespace Hspi
 
         public int Ref { get; }
 
-        public bool IsCounterOrTimer
-        {
-            get
-            {
-                var plugExtraData = GetPropertyValue<PlugExtraData>(EProperty.PlugExtraData);
-                if (plugExtraData.NamedKeys.Contains("timername") || plugExtraData.NamedKeys.Contains("countername"))
-                {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
         public double Value => GetPropertyValue<double>(EProperty.Value);
         public DateTimeOffset LastChange => GetPropertyValue<DateTime>(EProperty.LastChange);
         public string DisplayedStatus => GetPropertyValue<string>(EProperty.DisplayedStatus);

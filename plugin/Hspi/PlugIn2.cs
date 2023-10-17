@@ -45,10 +45,22 @@ namespace Hspi
             return displays;
         }
 
+        public List<object?> GetDeviceStatsForPage(string refIdString)
+        {
+            int refId = ParseRefId(refIdString);
+            var result = new List<object?>();
+
+            result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
+            result.Add(IsFeatureTracked(refId).WaitAndUnwrapException());
+            result.Add(GetFeaturePrecision(refId));
+            result.Add(GetFeatureUnit(refId));
+
+            return result;
+        }
+
         public List<int> GetDeviceAndFeaturesRefIds(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-
             HashSet<int> featureRefIds;
 
             if (HomeSeerSystem.IsRefDevice(refId))
@@ -68,9 +80,8 @@ namespace Hspi
             return featureRefIds.ToList();
         }
 
-        public IList<long> GetEarliestAndOldestRecordTotalSeconds(string refIdString)
+        public IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
         {
-            int refId = ParseRefId(refIdString);
             var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).WaitAndUnwrapException(ShutdownCancellationToken);
 
             var now = CreateClock().Now;
@@ -81,43 +92,28 @@ namespace Hspi
                 };
         }
 
-        public string? GetFeatureUnit(string refIdString)
+        public int GetFeaturePrecision(int refId)
         {
-            int refId = ParseRefId(refIdString);
-
-            var validUnits = new List<string>()
-            {
-                " Watts", " W",
-                " kWh", " kW Hours",
-                " Volts", " V",
-                " vah",
-                " F", " C", " K", "°F", "°C", "°K",
-                " lux", " lx",
-                " %",
-                " A",
-                " ppm", " ppb",
-                " db", " dbm",
-                " μs", " ms", " s", " min",
-                " g", "kg", " mg", " uq", " oz", " lb",
-            };
-
-            //  an ugly way to get unit, but there is no universal way to get them in HS4
-            var displayStatus = (string)HomeSeerSystem.GetPropertyByRef(refId, EProperty.DisplayedStatus);
-            var unit = validUnits.Find(x => displayStatus.EndsWith(x, StringComparison.OrdinalIgnoreCase));
-            return unit?.Substring(1);
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return hsFeatureCachedDataProvider.GetPrecision(refId).WaitAndUnwrapException();
         }
 
-        public long GetTotalRecords(long refId)
+        public string? GetFeatureUnit(int refId)
+        {
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return hsFeatureCachedDataProvider.GetUnit(refId).WaitAndUnwrapException();
+        }
+
+        public long GetTotalRecords(int refId)
         {
             var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).WaitAndUnwrapException(ShutdownCancellationToken);
             return count;
         }
 
-        public bool IsDeviceTracked(string refIdString)
+        public bool IsFeatureTracked(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-            CheckNotNull(settingsPages);
-            return settingsPages.IsTracked(refId);
+            return IsFeatureTracked(refId).WaitAndUnwrapException();
         }
 
         public override string PostBackProc(string page, string data, string user, int userRights)
@@ -171,6 +167,21 @@ namespace Hspi
             }
         }
 
+        private static string WriteExceptionResultAsJson(Exception ex)
+        {
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
+
+            jsonWriter.WritePropertyName("error");
+            jsonWriter.WriteValue(ex.GetFullMessage());
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+            return stb.ToString();
+        }
+
         private string CreateDeviceConfigPage(AbstractHsDevice device, string iFrameName)
         {
             StringBuilder stb = new();
@@ -197,12 +208,6 @@ namespace Hspi
 
         private async Task<string> HandleGraphRecords(string data)
         {
-            StringBuilder stb = new();
-            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-            using var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
-
             try
             {
                 var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
@@ -226,6 +231,13 @@ namespace Hspi
                                             GroupValues(min.Value / 1000, max.Value / 1000, groupBySeconds, queryData) :
                                             queryData;
 
+                CheckNotNull(hsFeatureCachedDataProvider);
+                StringBuilder stb = new();
+                using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+                using var jsonWriter = new JsonTextWriter(stringWriter);
+                jsonWriter.Formatting = Formatting.Indented;
+                jsonWriter.WriteStartObject();
+
                 jsonWriter.WritePropertyName("result");
                 jsonWriter.WriteStartObject();
                 jsonWriter.WritePropertyName("groupedbyseconds");
@@ -245,16 +257,17 @@ namespace Hspi
 
                 jsonWriter.WriteEndArray();
                 jsonWriter.WriteEndObject();
+
+                jsonWriter.WriteEndObject();
+                jsonWriter.Close();
+
+                return stb.ToString();
             }
             catch (Exception ex)
             {
-                jsonWriter.WritePropertyName("error");
-                jsonWriter.WriteValue(ex.GetFullMessage());
+                Log.Error("Getting graph data failed for {param} with {error}", data, ex.GetFullMessage());
+                return WriteExceptionResultAsJson(ex);
             }
-            jsonWriter.WriteEndObject();
-            jsonWriter.Close();
-
-            return stb.ToString();
 
             static IEnumerable<TimeAndValue> GroupValues(long min, long max, long groupBySeconds, IList<TimeAndValue> data)
             {
@@ -268,14 +281,9 @@ namespace Hspi
         {
             Log.Debug("HandleHistoryRecords {data}", data);
 
-            StringBuilder stb = new();
-            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-            using var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
-
             try
             {
+                StringBuilder stb = new();
                 var parameters = HttpUtility.ParseQueryString(data);
 
                 var refId = ParseParameterAsInt(parameters, "refId");
@@ -311,6 +319,11 @@ namespace Hspi
                                                            length,
                                                            sortOrder).ConfigureAwait(false);
 
+                using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+                using var jsonWriter = new JsonTextWriter(stringWriter);
+                jsonWriter.Formatting = Formatting.Indented;
+                jsonWriter.WriteStartObject();
+
                 jsonWriter.WritePropertyName("draw");
                 jsonWriter.WriteValue(parameters["draw"]);
 
@@ -323,6 +336,7 @@ namespace Hspi
                 jsonWriter.WritePropertyName("data");
                 jsonWriter.WriteStartArray();
 
+                CheckNotNull(hsFeatureCachedDataProvider);
                 foreach (var row in queryData)
                 {
                     jsonWriter.WriteStartArray();
@@ -334,17 +348,15 @@ namespace Hspi
                 }
 
                 jsonWriter.WriteEndArray();
+                jsonWriter.WriteEndObject();
+                jsonWriter.Close();
+                return stb.ToString();
             }
             catch (Exception ex)
             {
                 Log.Error("Getting Records failed for {param} with {error}", data, ex.GetFullMessage());
-                jsonWriter.WritePropertyName("error");
-                jsonWriter.WriteValue(ex.GetFullMessage());
+                return WriteExceptionResultAsJson(ex);
             }
-            jsonWriter.WriteEndObject();
-            jsonWriter.Close();
-
-            return stb.ToString();
 
             static ResultSortBy CalculateSortOrder(string? sortBy, string? sortDir)
             {
@@ -391,6 +403,14 @@ namespace Hspi
             jsonWriter.Close();
 
             return stb.ToString();
+        }
+
+        private async Task<bool> IsFeatureTracked(int refId)
+        {
+            CheckNotNull(settingsPages);
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return settingsPages.IsTracked(refId) &&
+                   await hsFeatureCachedDataProvider.IsMonitored(refId).ConfigureAwait(false);
         }
     }
 }

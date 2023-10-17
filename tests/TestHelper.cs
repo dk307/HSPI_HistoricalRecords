@@ -169,8 +169,6 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.WriteLog(It.IsAny<ELogType>(), It.IsAny<string>(), PlugInData.PlugInName, It.IsAny<string>()));
             mockHsController.Setup(x => x.RegisterDeviceIncPage(PlugInData.PlugInId, It.IsAny<string>(), It.IsAny<string>()));
             mockHsController.Setup(x => x.RegisterFeaturePage(PlugInData.PlugInId, It.IsAny<string>(), It.IsAny<string>()));
-            mockHsController.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, true)).Returns(new List<int>());
-            mockHsController.Setup(x => x.GetNameByRef(It.IsAny<int>())).Returns("Test");
             mockHsController.Setup(x => x.GetAllRefs()).Returns(new List<int>());
             mockHsController.Setup(x => x.RegisterEventCB(It.IsAny<Constants.HSEvent>(), PlugInData.PlugInId));
             return mockHsController;
@@ -186,6 +184,9 @@ namespace HSPI_HistoricalRecordsTest
                 feature.Changes.Add(change.Key, change.Value);
             }
 
+            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.Interface)).Returns("Z-Wave");
+            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.DeviceType)).Returns(new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Feature });
+            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.StatusGraphics)).Returns(new List<StatusGraphic>());
             mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(new PlugExtraData());
             mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Returns(feature);
             return feature;

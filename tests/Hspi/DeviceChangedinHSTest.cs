@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -157,6 +156,7 @@ namespace HSPI_HistoricalRecordsTest
             var data = new PlugExtraData();
             data.AddNamed(plugInExtraKey, "123");
             mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.PlugExtraData)).Returns(data);
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.Interface)).Returns(string.Empty);
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -191,7 +191,7 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), It.IsAny<string>(), It.IsAny<string>(), PlugInData.SettingFileName));
             plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"35673\",\"tracked\":0}", string.Empty, 0);
 
-            Assert.IsFalse(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId.ToString()));
 
             for (var i = 0; i < 100; i++)
             {
