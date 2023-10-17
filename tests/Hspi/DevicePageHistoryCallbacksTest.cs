@@ -329,7 +329,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId.ToString()));
+            Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId));
 
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "DeviceRefId", deviceRefId.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "IsTracked", false.ToString(), PlugInData.SettingFileName));
@@ -343,7 +343,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsFalse(jsonData.ContainsKey("error"));
 
-            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId.ToString()));
+            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId));
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();

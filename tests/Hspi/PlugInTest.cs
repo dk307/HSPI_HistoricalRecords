@@ -271,7 +271,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref.ToString());
+            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
             Assert.IsTrue(tracked1);
 
             var data = new PlugExtraData();
@@ -282,7 +282,7 @@ namespace HSPI_HistoricalRecordsTest
             // invalidate the cache
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
 
-            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref.ToString());
+            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
             Assert.IsFalse(tracked2);
 
             plugin.Object.ShutdownIO();

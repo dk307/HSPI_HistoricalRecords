@@ -80,7 +80,18 @@ namespace Hspi
             return result;
         }
 
-        public IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
+        public override string PostBackProc(string page, string data, string user, int userRights)
+        {
+            return page switch
+            {
+                "historyrecords" => HandleHistoryRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
+                "graphrecords" => HandleGraphRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
+                "updatedevicesettings" => HandleUpdateDeviceSettings(data),
+                _ => base.PostBackProc(page, data, user, userRights),
+            };
+        }
+
+        internal IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
         {
             var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).WaitAndUnwrapException(ShutdownCancellationToken);
 
@@ -92,39 +103,30 @@ namespace Hspi
                 };
         }
 
-        public int GetFeaturePrecision(int refId)
+        internal int GetFeaturePrecision(int refId)
         {
             CheckNotNull(hsFeatureCachedDataProvider);
             return hsFeatureCachedDataProvider.GetPrecision(refId);
         }
 
-        public string? GetFeatureUnit(int refId)
+        internal string? GetFeatureUnit(int refId)
         {
             CheckNotNull(hsFeatureCachedDataProvider);
             return hsFeatureCachedDataProvider.GetUnit(refId);
         }
 
-        public long GetTotalRecords(int refId)
+        internal long GetTotalRecords(int refId)
         {
             var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).WaitAndUnwrapException(ShutdownCancellationToken);
             return count;
         }
 
-        public bool IsFeatureTracked(string refIdString)
+        internal bool IsFeatureTracked(int refId)
         {
-            int refId = ParseRefId(refIdString);
-            return IsFeatureTracked(refId);
-        }
-
-        public override string PostBackProc(string page, string data, string user, int userRights)
-        {
-            return page switch
-            {
-                "historyrecords" => HandleHistoryRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
-                "graphrecords" => HandleGraphRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
-                "updatedevicesettings" => HandleUpdateDeviceSettings(data),
-                _ => base.PostBackProc(page, data, user, userRights),
-            };
+            CheckNotNull(settingsPages);
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return settingsPages.IsTracked(refId) &&
+                     hsFeatureCachedDataProvider.IsMonitoried(refId);
         }
 
         protected virtual ISystemClock CreateClock() => new SystemClock();
@@ -406,14 +408,6 @@ namespace Hspi
                 Log.Error("Updating device setting failed for {param} with {error}", data, ex.GetFullMessage());
                 return WriteExceptionResultAsJson(ex);
             }
-        }
-
-        private bool IsFeatureTracked(int refId)
-        {
-            CheckNotNull(settingsPages);
-            CheckNotNull(hsFeatureCachedDataProvider);
-            return settingsPages.IsTracked(refId) &&
-                     hsFeatureCachedDataProvider.IsMonitoried(refId);
         }
 
         public const int MaxGraphPoints = 256;
