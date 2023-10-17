@@ -159,21 +159,26 @@ namespace Hspi
         {
             if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
             {
-                int deviceRefId = Convert.ToInt32(parameters[4], CultureInfo.InvariantCulture);
+                int deviceRefId = ConvertToInt32(4);
                 await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
             }
             else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
             {
-                int deviceRefId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
+                int deviceRefId = ConvertToInt32(3);
                 await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
             }
             else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 3))
             {
-                if (Convert.ToInt32(parameters[1], CultureInfo.InvariantCulture) == 0) // device changes
+                if (ConvertToInt32(1) == 0) // device changes
                 {
-                    int refId = Convert.ToInt32(parameters[3], CultureInfo.InvariantCulture);
+                    int refId = ConvertToInt32(3);
                     hsFeatureCachedDataProvider?.Invalidate(refId);
                 }
+            }
+
+            int ConvertToInt32(int index)
+            {
+                return Convert.ToInt32(parameters[index], CultureInfo.InvariantCulture);
             }
         }
 

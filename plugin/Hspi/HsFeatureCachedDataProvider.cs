@@ -18,7 +18,58 @@ namespace Hspi.Hspi
             this.homeSeerSystem = hs;
         }
 
-        public async Task<string?> GetFeatureUnit(int refId)
+        public async Task<int> GetPrecision(int refId)
+        {
+            if (featurePrecisionCache.TryGetValue(refId, out var value))
+            {
+                return value;
+            }
+
+            var typeInfo = GetPropertyValue<TypeInfo>(refId, EProperty.DeviceType);
+
+            int? precision = null;
+            if (typeInfo.ApiType == EApiType.Feature)
+            {
+                UpdateMaxPrecision(refId, ref precision);
+            }
+
+            precision ??= 3;
+            await CacheFeaturePrecision(refId, precision.Value).ConfigureAwait(false);
+            return precision.Value;
+
+            async Task CacheFeaturePrecision(int refId, int value)
+            {
+                using var builderLock = await featurePrecisionCacheBuilderLock.LockAsync().ConfigureAwait(false);
+                var builder = featurePrecisionCache.ToBuilder();
+                builder.Add(refId, value);
+                featurePrecisionCache = builder.ToImmutable();
+            }
+
+            void UpdateMaxPrecision(int refId, ref int? precision)
+            {
+                var graphics = GetPropertyValue<List<StatusGraphic>>(refId, EProperty.StatusGraphics);
+
+                if (graphics != null)
+                {
+                    foreach (StatusGraphic graphic in graphics)
+                    {
+                        if (graphic.IsRange)
+                        {
+                            if (precision == null)
+                            {
+                                precision = graphic.TargetRange.DecimalPlaces;
+                            }
+                            else
+                            {
+                                precision = Math.Max(precision.Value, graphic.TargetRange.DecimalPlaces);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task<string?> GetUnit(int refId)
         {
             if (featureUnitCache.TryGetValue(refId, out var value))
             {
@@ -56,54 +107,6 @@ namespace Hspi.Hspi
                 var builder = featureUnitCache.ToBuilder();
                 builder.Add(refId, unit);
                 featureUnitCache = builder.ToImmutable();
-            }
-        }
-
-        public async Task<int> GetPrecision(int refId)
-        {
-            if (featurePrecisionCache.TryGetValue(refId, out var value))
-            {
-                return value;
-            }
-
-            var typeInfo = GetPropertyValue<TypeInfo>(refId, EProperty.DeviceType);
-
-            int? precision = null;
-            if (typeInfo.ApiType == EApiType.Feature)
-            {
-                var graphics = GetPropertyValue<List<StatusGraphic>>(refId, EProperty.StatusGraphics);
-
-                if (graphics != null)
-                {
-                    foreach (StatusGraphic graphic in graphics)
-                    {
-                        if (graphic.IsRange)
-                        {
-                            if (precision == null)
-                            {
-                                precision = graphic.TargetRange.DecimalPlaces;
-                            }
-                            else
-                            {
-                                precision = Math.Max(precision.Value, graphic.TargetRange.DecimalPlaces);
-                            }
-                        }
-                    }
-                }
-            }
-
-            precision ??= 3;
-
-            await CacheFeaturePrecision(refId, precision.Value).ConfigureAwait(false);
-
-            return precision.Value;
-
-            async Task CacheFeaturePrecision(int refId, int value)
-            {
-                using var builderLock = await featurePrecisionCacheBuilderLock.LockAsync().ConfigureAwait(false);
-                var builder = featurePrecisionCache.ToBuilder();
-                builder.Add(refId, value);
-                featurePrecisionCache = builder.ToImmutable();
             }
         }
 

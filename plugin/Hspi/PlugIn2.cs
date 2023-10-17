@@ -101,7 +101,7 @@ namespace Hspi
         public string? GetFeatureUnit(int refId)
         {
             CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.GetFeatureUnit(refId).WaitAndUnwrapException();
+            return hsFeatureCachedDataProvider.GetUnit(refId).WaitAndUnwrapException();
         }
 
         public long GetTotalRecords(int refId)
