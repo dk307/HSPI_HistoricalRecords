@@ -7,7 +7,7 @@ using Nito.AsyncEx;
 
 namespace Hspi.Hspi
 {
-    public class HsFeatureCachedProperty<T>
+    public sealed class HsFeatureCachedProperty<T>
     {
         public HsFeatureCachedProperty(Func<int, T> propertyGetter)
         {
