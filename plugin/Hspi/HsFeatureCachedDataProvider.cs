@@ -7,7 +7,7 @@ using HomeSeer.PluginSdk.Devices.Identification;
 
 #nullable enable
 
-namespace Hspi.Hspi
+namespace Hspi
 {
     public sealed class HsFeatureCachedDataProvider
     {

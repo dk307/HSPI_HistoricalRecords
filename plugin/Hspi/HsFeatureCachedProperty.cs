@@ -5,7 +5,7 @@ using Nito.AsyncEx;
 
 #nullable enable
 
-namespace Hspi.Hspi
+namespace Hspi
 {
     public sealed class HsFeatureCachedProperty<T>
     {
