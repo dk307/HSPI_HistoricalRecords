@@ -117,7 +117,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            var unit1 = plugin.Object.GetFeatureUnit(feature.Ref.ToString());
+            var unit1 = plugin.Object.GetFeatureUnit(feature.Ref);
             Assert.AreEqual("F", unit1);
 
             mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.DisplayedStatus)).Returns("1.1 C");
@@ -125,7 +125,7 @@ namespace HSPI_HistoricalRecordsTest
             // invalidate the cache
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
 
-            var unit2 = plugin.Object.GetFeatureUnit(feature.Ref.ToString());
+            var unit2 = plugin.Object.GetFeatureUnit(feature.Ref);
             Assert.AreEqual("C", unit2);
 
             plugin.Object.ShutdownIO();
@@ -198,7 +198,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            var precision1 = plugin.Object.GetFeaturePrecision(feature.Ref.ToString());
+            var precision1 = plugin.Object.GetFeaturePrecision(feature.Ref);
             Assert.AreEqual(3, precision1);
 
             List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
@@ -207,7 +207,7 @@ namespace HSPI_HistoricalRecordsTest
             // invalidate the cache
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
 
-            var precision2 = plugin.Object.GetFeaturePrecision(feature.Ref.ToString());
+            var precision2 = plugin.Object.GetFeaturePrecision(feature.Ref);
             Assert.AreEqual(1, precision2);
 
             plugin.Object.ShutdownIO();
@@ -246,7 +246,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            var tracked1 = plugin.Object.IsDeviceTracked(feature.Ref.ToString());
+            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref.ToString());
             Assert.IsTrue(tracked1);
 
             var data = new PlugExtraData();
@@ -257,7 +257,7 @@ namespace HSPI_HistoricalRecordsTest
             // invalidate the cache
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
 
-            var tracked2 = plugin.Object.IsDeviceTracked(feature.Ref.ToString());
+            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref.ToString());
             Assert.IsFalse(tracked2);
 
             plugin.Object.ShutdownIO();

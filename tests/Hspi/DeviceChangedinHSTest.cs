@@ -191,7 +191,7 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), It.IsAny<string>(), It.IsAny<string>(), PlugInData.SettingFileName));
             plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"35673\",\"tracked\":0}", string.Empty, 0);
 
-            Assert.IsFalse(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId.ToString()));
 
             for (var i = 0; i < 100; i++)
             {

@@ -47,12 +47,13 @@
 	end		
  
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
-	recordTimeSpans=plugin_function 'HistoricalRecords' 'GetEarliestAndOldestRecordTotalSeconds'[finalRefId] 
-	deviceTracked=plugin_function 'HistoricalRecords' 'IsDeviceTracked'[finalRefId] 
-	deviceUnits=plugin_function 'HistoricalRecords' 'GetFeatureUnit'[finalRefId] 
-	
-	oldestRecordTimeSpan=recordTimeSpans[0]
-	earliestRecordTimeSpan=recordTimeSpans[1]
+	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[finalRefId] 
+
+	oldestRecordTimeSpan=devicePageStats[0]
+	earliestRecordTimeSpan=devicePageStats[1]
+	deviceTracked=devicePageStats[2]
+	devicePrecision=devicePageStats[3]
+	deviceUnits=devicePageStats[4]
 		
 	if !deviceDisplayDetails
 		deviceDisplayDetails=[]
@@ -123,8 +124,7 @@
 				durationSeconds=rangeOption[1]
 				break
 			end
-		end				
-	 				
+		end							
 	end
 }}	
 
@@ -157,6 +157,7 @@ function getRangeString(min, max) {
 <!-- oldestRecordTimeSpan={{oldestRecordTimeSpan}}<BR> -->
 <!-- durationSeconds={{durationSeconds}}<BR> -->
 <!-- deviceTracked={{deviceTracked}}<BR> -->
+<!-- devicePrecision={{devicePrecision}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
 
 <header>
@@ -394,7 +395,8 @@ $(function() {
 });
 
 
-function setupRangePicker() {
+function roundValue(num) {
+	return Math.round(num * 10 ** {{devicePrecision}}) / 10 ** {{devicePrecision}};
 }
 
 {{if needDataTables}}
@@ -440,6 +442,12 @@ function setUpPersistanceTable() {
 			}
 		},
 		{
+			targets: 1,
+			render: function (data, type, full, meta) {
+				return roundValue(data);
+			}
+		},
+		{
 			targets: 3,
 			render: function (data, type, full, meta) {
 				if (data === null) {
@@ -458,7 +466,6 @@ function setUpPersistanceTable() {
 }
 
 $(document).ready(function () {
-	setupRangePicker();
 	setUpPersistanceTable();
 	$('#loading').hide();
 });	
@@ -663,7 +670,6 @@ function chartFunction(reason) {
 }
 
 $(document).ready(function () {
-    setupRangePicker();
 	setUpChart();
 	$('#loading').hide();
 });

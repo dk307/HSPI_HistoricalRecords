@@ -45,10 +45,22 @@ namespace Hspi
             return displays;
         }
 
+        public List<object?> GetDeviceStatsForPage(string refIdString)
+        {
+            int refId = ParseRefId(refIdString);
+            var result = new List<object?>();
+
+            result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
+            result.Add(IsFeatureTracked(refId).WaitAndUnwrapException());
+            result.Add(GetFeaturePrecision(refId));
+            result.Add(GetFeatureUnit(refId));
+
+            return result;
+        }
+
         public List<int> GetDeviceAndFeaturesRefIds(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-
             HashSet<int> featureRefIds;
 
             if (HomeSeerSystem.IsRefDevice(refId))
@@ -68,9 +80,8 @@ namespace Hspi
             return featureRefIds.ToList();
         }
 
-        public IList<long> GetEarliestAndOldestRecordTotalSeconds(string refIdString)
+        public IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
         {
-            int refId = ParseRefId(refIdString);
             var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).WaitAndUnwrapException(ShutdownCancellationToken);
 
             var now = CreateClock().Now;
@@ -81,27 +92,25 @@ namespace Hspi
                 };
         }
 
-        public int GetFeaturePrecision(string refIdString)
+        public int GetFeaturePrecision(int refId)
         {
-            int refId = ParseRefId(refIdString);
             CheckNotNull(hsFeatureCachedDataProvider);
             return hsFeatureCachedDataProvider.GetPrecision(refId).WaitAndUnwrapException();
         }
 
-        public string? GetFeatureUnit(string refIdString)
+        public string? GetFeatureUnit(int refId)
         {
-            int refId = ParseRefId(refIdString);
             CheckNotNull(hsFeatureCachedDataProvider);
             return hsFeatureCachedDataProvider.GetFeatureUnit(refId).WaitAndUnwrapException();
         }
 
-        public long GetTotalRecords(long refId)
+        public long GetTotalRecords(int refId)
         {
             var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).WaitAndUnwrapException(ShutdownCancellationToken);
             return count;
         }
 
-        public bool IsDeviceTracked(string refIdString)
+        public bool IsFeatureTracked(string refIdString)
         {
             int refId = ParseRefId(refIdString);
             return IsFeatureTracked(refId).WaitAndUnwrapException();
@@ -223,7 +232,6 @@ namespace Hspi
                                             queryData;
 
                 CheckNotNull(hsFeatureCachedDataProvider);
-                var precision = await hsFeatureCachedDataProvider.GetPrecision((int)refId).ConfigureAwait(false);
                 StringBuilder stb = new();
                 using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
                 using var jsonWriter = new JsonTextWriter(stringWriter);
@@ -243,7 +251,7 @@ namespace Hspi
                     jsonWriter.WritePropertyName("x");
                     jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
                     jsonWriter.WritePropertyName("y");
-                    jsonWriter.WriteValue(Math.Round(row.DeviceValue, precision));
+                    jsonWriter.WriteValue(row.DeviceValue);
                     jsonWriter.WriteEndObject();
                 }
 
@@ -329,12 +337,11 @@ namespace Hspi
                 jsonWriter.WriteStartArray();
 
                 CheckNotNull(hsFeatureCachedDataProvider);
-                var precision = await hsFeatureCachedDataProvider.GetPrecision((int)refId).ConfigureAwait(false);
                 foreach (var row in queryData)
                 {
                     jsonWriter.WriteStartArray();
                     jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
-                    jsonWriter.WriteValue(Math.Round(row.DeviceValue, precision));
+                    jsonWriter.WriteValue(row.DeviceValue);
                     jsonWriter.WriteValue(row.DeviceString);
                     jsonWriter.WriteValue(row.DurationSeconds);
                     jsonWriter.WriteEndArray();

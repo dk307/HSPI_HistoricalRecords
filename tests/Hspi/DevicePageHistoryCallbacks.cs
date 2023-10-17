@@ -277,7 +277,7 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 33434, "333", nowTime.AddSeconds(-1000), 2);
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 334, "333", nowTime.AddSeconds(-2000), 3);
 
-            var records = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref.ToString());
+            var records = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref);
             Assert.AreEqual(2000, records[0]);
             Assert.AreEqual(100, records[1]);
 
@@ -329,7 +329,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            Assert.IsTrue(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+            Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId.ToString()));
 
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "DeviceRefId", deviceRefId.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "IsTracked", false.ToString(), PlugInData.SettingFileName));
@@ -343,7 +343,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsFalse(jsonData.ContainsKey("error"));
 
-            Assert.IsFalse(plugin.Object.IsDeviceTracked(deviceRefId.ToString()));
+            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId.ToString()));
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -368,39 +368,6 @@ namespace HSPI_HistoricalRecordsTest
 
             var errorMessage = jsonData["error"].Value<string>();
             Assert.IsNotNull(errorMessage);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
-        }
-
-        [TestMethod]
-        public void ReturnedValuesAreRounded()
-        {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
-
-            DateTime time = DateTime.Now;
-
-            var feature = TestHelper.SetupHsFeature(mockHsController,
-                                     35673,
-                                     1.1029847263452,
-                                     displayString: "1.1",
-                                     lastChange: time);
-
-            Assert.IsTrue(plugin.Object.InitIO());
-
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
-
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
-
-            List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.StatusGraphics)).Returns(statusGraphics);
-
-            var records = TestHelper.GetHistoryRecords(plugin, feature.Ref);
-            Assert.IsNotNull(records);
-            Assert.AreEqual(1, records.Count);
-
-            Assert.AreEqual(records[0].DeviceValue, Math.Round(feature.Value, 1));
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
