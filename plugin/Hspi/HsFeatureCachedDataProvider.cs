@@ -90,7 +90,7 @@ namespace Hspi
                 return match.Groups[1].Value;
             }
 
-            return string.Empty;
+            return null;
         }
 
         private T GetPropertyValue<T>(int refId, EProperty prop)
@@ -124,6 +124,6 @@ namespace Hspi
         private readonly HsFeatureCachedProperty<string?> featureUnitCache;
         private readonly IHsController homeSeerSystem;
         private readonly HsFeatureCachedProperty<bool> monitoredFeatureCache;
-        private readonly Regex unitExtractionRegEx = new Regex(@"^\s*-?\d+(?:\.\d+)?(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private readonly Regex unitExtractionRegEx = new(@"^\s*-?\d+(?:\.\d+)?\s*(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     }
 }

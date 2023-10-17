@@ -214,6 +214,30 @@ namespace HSPI_HistoricalRecordsTest
             plugin.Object.Dispose();
         }
 
+        [DataTestMethod]
+        [DataRow("96%", "%")]
+        [DataRow("96 %", "%")]
+        [DataRow("-96 W", "W")]
+        [DataRow("96 K Watts", "K Watts")]
+        [DataRow("96 F", "F")]
+        [DataRow("96234857", "")]
+        [DataRow("apple", null)]
+        public void GetFeatureUnitForDifferentTypes(string displayStatus, string unit)
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            mockHsController.Setup(x => x.GetPropertyByRef(100, EProperty.DisplayedStatus)).Returns(displayStatus);
+
+            var unitFound = plugin.Object.GetFeatureUnit(100);
+            Assert.AreEqual(unit, unitFound);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
         [TestMethod]
         public void InitFirstTime()
         {
