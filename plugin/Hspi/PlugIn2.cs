@@ -81,11 +81,18 @@ namespace Hspi
                 };
         }
 
+        public int GetFeaturePrecision(string refIdString)
+        {
+            int refId = ParseRefId(refIdString);
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return hsFeatureCachedDataProvider.GetPrecision(refId).WaitAndUnwrapException();
+        }
+
         public string? GetFeatureUnit(string refIdString)
         {
             int refId = ParseRefId(refIdString);
             CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.GetFeatureUnit(refId);
+            return hsFeatureCachedDataProvider.GetFeatureUnit(refId).WaitAndUnwrapException();
         }
 
         public long GetTotalRecords(long refId)
@@ -97,8 +104,7 @@ namespace Hspi
         public bool IsDeviceTracked(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-            CheckNotNull(settingsPages);
-            return settingsPages.IsTracked(refId);
+            return IsFeatureTracked(refId).WaitAndUnwrapException();
         }
 
         public override string PostBackProc(string page, string data, string user, int userRights)
@@ -216,7 +222,8 @@ namespace Hspi
                                             GroupValues(min.Value / 1000, max.Value / 1000, groupBySeconds, queryData) :
                                             queryData;
 
-                var precision = hsFeatureCachedDataProvider.GetPrecision((int)refId);
+                CheckNotNull(hsFeatureCachedDataProvider);
+                var precision = await hsFeatureCachedDataProvider.GetPrecision((int)refId).ConfigureAwait(false);
                 StringBuilder stb = new();
                 using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
                 using var jsonWriter = new JsonTextWriter(stringWriter);
@@ -322,7 +329,7 @@ namespace Hspi
                 jsonWriter.WriteStartArray();
 
                 CheckNotNull(hsFeatureCachedDataProvider);
-                var precision = hsFeatureCachedDataProvider.GetPrecision((int)refId);
+                var precision = await hsFeatureCachedDataProvider.GetPrecision((int)refId).ConfigureAwait(false);
                 foreach (var row in queryData)
                 {
                     jsonWriter.WriteStartArray();
@@ -389,6 +396,14 @@ namespace Hspi
             jsonWriter.Close();
 
             return stb.ToString();
+        }
+
+        private async Task<bool> IsFeatureTracked(int refId)
+        {
+            CheckNotNull(settingsPages);
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return settingsPages.IsTracked(refId) &&
+                   await hsFeatureCachedDataProvider.IsMonitored(refId).ConfigureAwait(false);
         }
     }
 }

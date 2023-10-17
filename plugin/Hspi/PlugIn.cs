@@ -189,14 +189,10 @@ namespace Hspi
 
         private async Task RecordDeviceValue(int deviceRefId)
         {
-            if (settingsPages != null && settingsPages.IsTracked(deviceRefId))
+            if (await IsFeatureTracked(deviceRefId).ConfigureAwait(false))
             {
-                CheckNotNull(hsFeatureCachedDataProvider);
-                if (hsFeatureCachedDataProvider.IsMonitored(deviceRefId))
-                {
-                    var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
-                    await RecordDeviceValue(feature).ConfigureAwait(false);
-                }
+                var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
+                await RecordDeviceValue(feature).ConfigureAwait(false);
             }
             else
             {
