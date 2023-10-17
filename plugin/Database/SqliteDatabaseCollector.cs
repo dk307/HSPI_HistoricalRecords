@@ -320,12 +320,13 @@ namespace Hspi.Database
 
             ugly.exec(sqliteConnection, "PRAGMA page_size=4096");
             ugly.exec(sqliteConnection, "PRAGMA journal_mode=WAL");
-            ugly.exec(sqliteConnection, "PRAGMA wal_autocheckpoint=100");
             ugly.exec(sqliteConnection, "PRAGMA synchronous=normal");
             ugly.exec(sqliteConnection, "PRAGMA locking_mode=EXCLUSIVE");
             ugly.exec(sqliteConnection, "PRAGMA temp_store=MEMORY");
             ugly.exec(sqliteConnection, "PRAGMA auto_vacuum=INCREMENTAL");
             ugly.exec(sqliteConnection, "PRAGMA integrity_check");
+
+            ugly.wal_autocheckpoint(sqliteConnection, 100);
 
             ugly.exec(sqliteConnection, "BEGIN TRANSACTION");
 

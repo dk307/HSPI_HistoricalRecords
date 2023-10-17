@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
@@ -80,28 +81,16 @@ namespace Hspi
 
         private string? GetFeatureUnit(int refId)
         {
-            var validUnits = new List<string>()
-            {
-                " Watts", " W",
-                " kWh", " kW Hours",
-                " Volts", " V",
-                " vah",
-                " F", " C", " K", "°F", "°C", "°K",
-                " lux", " lx",
-                " %",
-                " A",
-                " ppm", " ppb",
-                " db", " dbm",
-                " μs", " ms", " s", " min",
-                " g", "kg", " mg", " uq", " oz", " lb",
-            };
-
             //  an ugly way to get unit, but there is no universal way to get them in HS4
             var displayStatus = GetPropertyValue<string>(refId, EProperty.DisplayedStatus);
-            var unitFound = validUnits.Find(x => displayStatus.EndsWith(x, StringComparison.OrdinalIgnoreCase));
-            var unit = unitFound?.Substring(1);
+            var match = unitExtractionRegEx.Match(displayStatus);
 
-            return unit;
+            if (match.Success)
+            {
+                return match.Groups[1].Value;
+            }
+
+            return string.Empty;
         }
 
         private T GetPropertyValue<T>(int refId, EProperty prop)
@@ -135,5 +124,6 @@ namespace Hspi
         private readonly HsFeatureCachedProperty<string?> featureUnitCache;
         private readonly IHsController homeSeerSystem;
         private readonly HsFeatureCachedProperty<bool> monitoredFeatureCache;
+        private readonly Regex unitExtractionRegEx = new Regex(@"^\s*-?\d+(?:\.\d+)?(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     }
 }

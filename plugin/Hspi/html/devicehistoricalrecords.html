@@ -64,7 +64,7 @@
 		displaySelect=""
 	else if !(deviceDisplayDetails | array.contains displaySelect)
 		# select default value to chart if current value is not select
-		if array.contains deviceDisplayDetails "chart"
+		if deviceUnits != "" && (array.contains deviceDisplayDetails "chart")
 			displaySelect="chart"
 		else
 			displaySelect="table"	
