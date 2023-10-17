@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
-using Hspi.Hspi;
 using Hspi.Utils;
 using Nito.AsyncEx.Synchronous;
 using Serilog;
