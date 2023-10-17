@@ -13,7 +13,7 @@ using Newtonsoft.Json.Linq;
 namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
-    public class DevicePageHistoryCallbacks
+    public class DevicePageHistoryCallbacksTest
     {
         public static IEnumerable<object[]> GetDatatableCallbacksData()
         {
