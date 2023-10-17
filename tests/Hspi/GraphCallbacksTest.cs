@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using HomeSeer.PluginSdk;
+using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -42,12 +43,61 @@ namespace HSPI_HistoricalRecordsTest
 
             var result = (JArray)jsonData["result"]["data"];
             Assert.AreEqual(0, (int)jsonData["result"]["groupedbyseconds"]);
+            Assert.AreEqual(100, result.Count);
 
             for (var i = 0; i < 100; i++)
             {
                 long ts = ((DateTimeOffset)time.AddSeconds(i * 5)).ToUnixTimeSeconds() * 1000;
                 Assert.AreEqual(ts, (long)result[i]["x"]);
                 Assert.AreEqual((double)i, (double)result[i]["y"]);
+            }
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void GetRecordsWithGrouping()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            DateTime time = DateTime.Now;
+
+            int deviceRefId = 35673;
+            var feature = TestHelper.SetupHsFeature(mockHsController,
+                                     deviceRefId,
+                                     1.1,
+                                     displayString: "1.1",
+                                     lastChange: time);
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            for (var i = 0; i < PlugIn.MaxGraphPoints * 2; i++)
+            {
+                TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                        feature, i, "33", time.AddSeconds(i * 5), i + 1);
+            }
+
+            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange.AddSeconds(4)).ToUnixTimeMilliseconds()}}}";
+            string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
+            Assert.IsNotNull(data);
+
+            var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+            Assert.IsNotNull(jsonData);
+
+            var result = (JArray)jsonData["result"]["data"];
+            Assert.AreEqual(10, (int)jsonData["result"]["groupedbyseconds"]);
+
+            Assert.AreEqual(PlugIn.MaxGraphPoints, result.Count);
+
+            for (var i = 0; i < PlugIn.MaxGraphPoints; i++)
+            {
+                long ts = ((DateTimeOffset)time.AddSeconds(i * 10)).ToUnixTimeSeconds() * 1000;
+                Assert.AreEqual(ts, (long)result[i]["x"]);
+
+                var value = (i * 2D + (i * 2) + 1D) / 2D;
+                Assert.AreEqual(value, (double)result[i]["y"]);
             }
 
             plugin.Object.ShutdownIO();

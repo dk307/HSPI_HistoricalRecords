@@ -132,7 +132,7 @@ namespace Hspi
         private static TimeSpan GetDefaultGroupInterval(TimeSpan duration)
         {
             // aim for 256 points on graph
-            return TimeSpan.FromSeconds(duration.TotalSeconds / 256);
+            return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
         }
 
         private static long ParseInt(string argumentName, string? refIdString)
@@ -415,5 +415,7 @@ namespace Hspi
             return settingsPages.IsTracked(refId) &&
                    await hsFeatureCachedDataProvider.IsMonitored(refId).ConfigureAwait(false);
         }
+
+        public const int MaxGraphPoints = 256;
     }
 }
