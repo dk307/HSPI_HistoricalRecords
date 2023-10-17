@@ -192,7 +192,7 @@ namespace Hspi
 
         private async Task RecordDeviceValue(int deviceRefId)
         {
-            if (await IsFeatureTracked(deviceRefId).ConfigureAwait(false))
+            if (IsFeatureTracked(deviceRefId))
             {
                 var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
                 await RecordDeviceValue(feature).ConfigureAwait(false);

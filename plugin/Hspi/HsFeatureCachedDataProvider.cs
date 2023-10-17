@@ -21,26 +21,26 @@ namespace Hspi
             featurePrecisionCache = new HsFeatureCachedProperty<int>(x => GetFeaturePrecision(x));
         }
 
-        public async Task<int> GetPrecision(int refId)
+        public int GetPrecision(int refId)
         {
-            return await featurePrecisionCache.Get(refId).ConfigureAwait(false);
+            return featurePrecisionCache.Get(refId);
         }
 
-        public async Task<string?> GetUnit(int refId)
+        public string? GetUnit(int refId)
         {
-            return await featureUnitCache.Get(refId).ConfigureAwait(false);
+            return featureUnitCache.Get(refId);
         }
 
-        public async Task Invalidate(int refId)
+        public void Invalidate(int refId)
         {
-            await featureUnitCache.Invalidate(refId).ConfigureAwait(false);
-            await monitoredFeatureCache.Invalidate(refId).ConfigureAwait(false);
-            await featurePrecisionCache.Invalidate(refId).ConfigureAwait(false);
+            featureUnitCache.Invalidate(refId);
+            monitoredFeatureCache.Invalidate(refId);
+            featurePrecisionCache.Invalidate(refId);
         }
 
-        public async Task<bool> IsMonitored(int refId)
+        public bool IsMonitoried(int refId)
         {
-            return await monitoredFeatureCache.Get(refId).ConfigureAwait(false);
+            return monitoredFeatureCache.Get(refId);
         }
 
         private static ImmutableSortedSet<string> CreateFeatureUnitsSet()

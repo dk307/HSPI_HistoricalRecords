@@ -73,7 +73,7 @@ namespace Hspi
             var result = new List<object?>();
 
             result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
-            result.Add(IsFeatureTracked(refId).WaitAndUnwrapException());
+            result.Add(IsFeatureTracked(refId));
             result.Add(GetFeaturePrecision(refId));
             result.Add(GetFeatureUnit(refId) ?? string.Empty);
 
@@ -95,13 +95,13 @@ namespace Hspi
         public int GetFeaturePrecision(int refId)
         {
             CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.GetPrecision(refId).WaitAndUnwrapException();
+            return hsFeatureCachedDataProvider.GetPrecision(refId);
         }
 
         public string? GetFeatureUnit(int refId)
         {
             CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.GetUnit(refId).WaitAndUnwrapException();
+            return hsFeatureCachedDataProvider.GetUnit(refId);
         }
 
         public long GetTotalRecords(int refId)
@@ -113,7 +113,7 @@ namespace Hspi
         public bool IsFeatureTracked(string refIdString)
         {
             int refId = ParseRefId(refIdString);
-            return IsFeatureTracked(refId).WaitAndUnwrapException();
+            return IsFeatureTracked(refId);
         }
 
         public override string PostBackProc(string page, string data, string user, int userRights)
@@ -408,12 +408,12 @@ namespace Hspi
             }
         }
 
-        private async Task<bool> IsFeatureTracked(int refId)
+        private bool IsFeatureTracked(int refId)
         {
             CheckNotNull(settingsPages);
             CheckNotNull(hsFeatureCachedDataProvider);
             return settingsPages.IsTracked(refId) &&
-                   await hsFeatureCachedDataProvider.IsMonitored(refId).ConfigureAwait(false);
+                     hsFeatureCachedDataProvider.IsMonitoried(refId);
         }
 
         public const int MaxGraphPoints = 256;
