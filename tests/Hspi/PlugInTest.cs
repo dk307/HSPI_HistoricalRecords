@@ -219,9 +219,9 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("96 %", "%")]
         [DataRow("-96 W", "W")]
         [DataRow("93dkfe6 W", null)]
-        [DataRow("96 K Watts", "K Watts")]
+        [DataRow("96 kW hours", "kW hours")]
         [DataRow("96 F", "F")]
-        [DataRow("96234857", "")]
+        [DataRow("96234857", null)]
         [DataRow("apple", null)]
         public void GetFeatureUnitForDifferentTypes(string displayStatus, string unit)
         {

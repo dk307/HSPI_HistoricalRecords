@@ -75,7 +75,7 @@ namespace Hspi
             result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
             result.Add(IsFeatureTracked(refId).WaitAndUnwrapException());
             result.Add(GetFeaturePrecision(refId));
-            result.Add(GetFeatureUnit(refId));
+            result.Add(GetFeatureUnit(refId) ?? string.Empty);
 
             return result;
         }

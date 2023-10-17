@@ -47,18 +47,18 @@ namespace Hspi
         {
             var list = new List<string>()
             {
-                " Watts", " W",
-                " kWh", " kW Hours",
-                " Volts", " V",
-                " vah",
-                " F", " C", " K", "°F", "°C", "°K",
-                " lux", " lx",
-                " %",
-                " A",
-                " ppm", " ppb",
-                " db", " dbm",
-                " μs", " ms", " s", " min",
-                " g", "kg", " mg", " uq", " oz", " lb",
+                "Watts", "W",
+                "kWh", "kW Hours",
+                "Volts", "V",
+                "vah",
+                "F", "C", "K", "°F", "°C", "°K",
+                "lux", "lx",
+                "%",
+                "A",
+                "ppm", "ppb",
+                "db", "dbm",
+                "μs", "ms", "s", "min",
+                "g", "kg", "mg", "uq", "oz", "lb",
             };
 
             return list.ToImmutableSortedSet(StringComparer.OrdinalIgnoreCase);
