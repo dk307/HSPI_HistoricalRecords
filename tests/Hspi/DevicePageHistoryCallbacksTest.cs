@@ -259,6 +259,37 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void GetDeviceStatsForPage()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
+            plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
+            DateTime nowTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+            mockClock.Setup(x => x.Now).Returns(nowTime);
+
+            var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1F", lastChange: nowTime.AddSeconds(-50));
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 3333, "3333F", nowTime.AddSeconds(-100), 1);
+            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 33434, "333F", nowTime.AddSeconds(-1000), 2);
+            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 334, "333F", nowTime.AddSeconds(-2000), 3);
+
+            var records = plugin.Object.GetDeviceStatsForPage(feature.Ref.ToString());
+
+            Assert.AreEqual((long)2000, records[0]);
+            Assert.AreEqual((long)100, records[1]);
+            Assert.AreEqual(true, records[2]);
+            Assert.AreEqual(3, records[3]);
+            Assert.AreEqual("F", records[4]);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
         public void GetEarliestAndOldestRecordTimeDate()
         {
             var plugin = TestHelper.CreatePlugInMock();
