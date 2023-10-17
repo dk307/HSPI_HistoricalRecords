@@ -218,6 +218,7 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("96%", "%")]
         [DataRow("96 %", "%")]
         [DataRow("-96 W", "W")]
+        [DataRow("93dkfe6 W", null)]
         [DataRow("96 K Watts", "K Watts")]
         [DataRow("96 F", "F")]
         [DataRow("96234857", "")]

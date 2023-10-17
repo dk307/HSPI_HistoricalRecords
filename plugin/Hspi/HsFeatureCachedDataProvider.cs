@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
@@ -40,6 +41,27 @@ namespace Hspi
         public async Task<bool> IsMonitored(int refId)
         {
             return await monitoredFeatureCache.Get(refId).ConfigureAwait(false);
+        }
+
+        private static ImmutableSortedSet<string> CreateFeatureUnitsSet()
+        {
+            var list = new List<string>()
+            {
+                " Watts", " W",
+                " kWh", " kW Hours",
+                " Volts", " V",
+                " vah",
+                " F", " C", " K", "°F", "°C", "°K",
+                " lux", " lx",
+                " %",
+                " A",
+                " ppm", " ppb",
+                " db", " dbm",
+                " μs", " ms", " s", " min",
+                " g", "kg", " mg", " uq", " oz", " lb",
+            };
+
+            return list.ToImmutableSortedSet(StringComparer.OrdinalIgnoreCase);
         }
 
         private int GetFeaturePrecision(int refId)
@@ -87,7 +109,11 @@ namespace Hspi
 
             if (match.Success)
             {
-                return match.Groups[1].Value;
+                var unit = match.Groups[1].Value;
+                if (validUnits.Contains(unit))
+                {
+                    return unit;
+                }
             }
 
             return null;
@@ -120,10 +146,11 @@ namespace Hspi
             }
         }
 
+        private static readonly Regex unitExtractionRegEx = new(@"^\s*-?\d+(?:\.\d+)?\s*(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly ImmutableSortedSet<string> validUnits = CreateFeatureUnitsSet();
         private readonly HsFeatureCachedProperty<int> featurePrecisionCache;
         private readonly HsFeatureCachedProperty<string?> featureUnitCache;
         private readonly IHsController homeSeerSystem;
         private readonly HsFeatureCachedProperty<bool> monitoredFeatureCache;
-        private readonly Regex unitExtractionRegEx = new(@"^\s*-?\d+(?:\.\d+)?\s*(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     }
 }
