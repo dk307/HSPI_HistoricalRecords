@@ -135,6 +135,19 @@ namespace Hspi
             return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
         }
 
+        private static T GetJsonValue<T>(JObject? json, string tokenStr)
+        {
+            try
+            {
+                var token = (json?.SelectToken(tokenStr)) ?? throw new ArgumentException(tokenStr + " is not correct");
+                return token.Value<T?>() ?? throw new ArgumentException(tokenStr + " is not correct");
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException(tokenStr + " is not correct", ex);
+            }
+        }
+
         private static long ParseInt(string argumentName, string? refIdString)
         {
             if (long.TryParse(refIdString,
@@ -182,13 +195,13 @@ namespace Hspi
             return stb.ToString();
         }
 
-        private string CreateDeviceConfigPage(AbstractHsDevice device, string iFrameName)
+        private string CreateDeviceConfigPage(int devOrFeatRef, string iFrameName)
         {
             StringBuilder stb = new();
 
             stb.Append("<script> $('#save_device_config').hide(); </script>");
 
-            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?refId={device.Ref}");
+            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?refId={devOrFeatRef}");
 
             // iframeSizer.min.js
             stb.Append($"<script type=\"text/javascript\" src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
@@ -203,19 +216,6 @@ namespace Hspi
             string CreatePlugInUrl(string fileName)
             {
                 return "/" + Id + "/" + fileName;
-            }
-        }
-
-        private T GetJsonValue<T>(JObject? json, string tokenStr)
-        {
-            try
-            {
-                var token = (json?.SelectToken(tokenStr)) ?? throw new ArgumentException(tokenStr + " is not correct");
-                return token.Value<T?>() ?? throw new ArgumentException(tokenStr + " is not correct");
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException(tokenStr + " is not correct", ex);
             }
         }
 

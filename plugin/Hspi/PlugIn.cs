@@ -43,8 +43,7 @@ namespace Hspi
         {
             try
             {
-                var device = HomeSeerSystem.GetFeatureByRef(devOrFeatRef);
-                return CreateDeviceConfigPage(device, "devicehistoricalrecords.html");
+                return CreateDeviceConfigPage(devOrFeatRef, "devicehistoricalrecords.html");
             }
             catch (Exception ex)
             {

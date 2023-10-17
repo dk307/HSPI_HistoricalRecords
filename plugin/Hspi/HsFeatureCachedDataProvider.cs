@@ -146,7 +146,10 @@ namespace Hspi
             }
         }
 
-        private static readonly Regex unitExtractionRegEx = new(@"^\s*-?\d+(?:\.\d+)?\s*(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        private static readonly Regex unitExtractionRegEx = new(@"^\s*-?\d+(?:\.\d+)?\s*(.*)$",
+                                                                RegexOptions.Compiled | RegexOptions.CultureInvariant,
+                                                                TimeSpan.FromSeconds(5));
+
         private static readonly ImmutableSortedSet<string> validUnits = CreateFeatureUnitsSet();
         private readonly HsFeatureCachedProperty<int> featurePrecisionCache;
         private readonly HsFeatureCachedProperty<string?> featureUnitCache;
