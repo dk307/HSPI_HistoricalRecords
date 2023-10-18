@@ -309,6 +309,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
             Assert.IsTrue(tracked1);
+            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
 
             var data = new PlugExtraData();
             data.AddNamed("timername", "123");
@@ -320,6 +321,8 @@ namespace HSPI_HistoricalRecordsTest
 
             var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
             Assert.IsFalse(tracked2);
+
+            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
