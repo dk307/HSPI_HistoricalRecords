@@ -48,7 +48,7 @@
 	earliestRecordTimeSpan=devicePageStats[1]
 	deviceTracked=devicePageStats[2]
 	devicePrecision=devicePageStats[3]
-	deviceUnits=devicePageStats[4]
+	deviceUnits=devicePageStats[4] ?? ""
 		
 	if deviceDisplayDetails.empty? 
 		# there is no valid displays
@@ -129,8 +129,9 @@
 		end
 		
 		# add root if not added
-		if !(childrenRefIds | array.contains refId)
-			childrenRefIds = childrenRefIds | array.add refId
+		refIdInt=string.to_int refId
+		if !(childrenRefIds | array.contains refIdInt)
+			childrenRefIds = childrenRefIds | array.add refIdInt
 		end
 	end
 }}	
@@ -166,6 +167,7 @@ function getRangeString(min, max) {
 <!-- deviceTracked={{deviceTracked}}<BR> -->
 <!-- devicePrecision={{devicePrecision}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
+<!-- childrenRefIds={{childrenRefIds}}<BR> -->
 
 <header>
 	<nav class="navbar">
@@ -255,7 +257,7 @@ function getRangeString(min, max) {
 				<thead>
 					<tr>
 						<th>Time</th>
-						<th>Value{{if deviceUnits}}({{deviceUnits}}){{end}}</th>
+						<th>Value{{if deviceUnits != ""}}({{deviceUnits}}){{end}}</th>
 						<th>Status</th>						 
 						<th>Duration</th>						 
 					</tr>
