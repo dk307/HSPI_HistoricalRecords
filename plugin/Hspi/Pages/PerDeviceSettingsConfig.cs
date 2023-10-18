@@ -30,10 +30,7 @@ namespace Hspi
         {
             string id = device.DeviceRefId.ToString(CultureInfo.InvariantCulture);
 
-            ImmutableDictionary<long, PerDeviceSettings>.Builder builder = deviceSettings.ToBuilder();
-            builder.Remove(device.DeviceRefId);
-            builder.Add(device.DeviceRefId, device);
-            deviceSettings = builder.ToImmutableDictionary();
+            ImmutableInterlocked.AddOrUpdate(ref deviceSettings, device.DeviceRefId, (x) => device, (x, y) => device);
 
             SetValue(DeviceRefIdKey, device.DeviceRefId, id);
             SetValue(IsTrackedTag, device.IsTracked, id);
@@ -43,11 +40,7 @@ namespace Hspi
 
         public void Remove(long deviceRefId)
         {
-            string id = deviceRefId.ToString(CultureInfo.InvariantCulture);
-
-            ImmutableDictionary<long, PerDeviceSettings>.Builder builder = deviceSettings.ToBuilder();
-            builder.Remove(deviceRefId);
-            deviceSettings = builder.ToImmutableDictionary();
+            ImmutableInterlocked.TryRemove(ref deviceSettings, deviceRefId, out var _);
 
             if (deviceSettings.Count > 0)
             {
@@ -59,6 +52,7 @@ namespace Hspi
                 SetValue(DeviceSettingsTag, string.Empty);
             }
 
+            string id = deviceRefId.ToString(CultureInfo.InvariantCulture);
             ClearSection(id);
         }
 

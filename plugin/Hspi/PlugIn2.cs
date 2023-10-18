@@ -27,7 +27,6 @@ namespace Hspi
         public IList<string> GetAllowedDisplays(string? refIdString)
         {
             var displays = new List<string>();
-
             if (string.IsNullOrWhiteSpace(refIdString))
             {
                 return displays;
@@ -45,75 +44,17 @@ namespace Hspi
             return displays;
         }
 
-        public List<int> GetDeviceAndFeaturesRefIds(string refIdString)
-        {
-            int refId = ParseRefId(refIdString);
-            HashSet<int> featureRefIds;
-
-            if (HomeSeerSystem.IsRefDevice(refId))
-            {
-                featureRefIds = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
-            }
-            else
-            {
-                featureRefIds = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
-
-                var first = featureRefIds.First();
-                featureRefIds = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(first, EProperty.AssociatedDevices);
-            }
-
-            featureRefIds.Add(refId);
-
-            return featureRefIds.ToList();
-        }
-
         public List<object?> GetDeviceStatsForPage(string refIdString)
         {
             int refId = ParseRefId(refIdString);
             var result = new List<object?>();
 
             result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
-            result.Add(IsFeatureTracked(refId).WaitAndUnwrapException());
+            result.Add(IsFeatureTracked(refId));
             result.Add(GetFeaturePrecision(refId));
-            result.Add(GetFeatureUnit(refId));
+            result.Add(GetFeatureUnit(refId) ?? string.Empty);
 
             return result;
-        }
-
-        public IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
-        {
-            var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).WaitAndUnwrapException(ShutdownCancellationToken);
-
-            var now = CreateClock().Now;
-
-            return new List<long>() {
-                (long)Math.Round((now - data.Item1).TotalSeconds),
-                (long)Math.Round((now - data.Item2).TotalSeconds)
-                };
-        }
-
-        public int GetFeaturePrecision(int refId)
-        {
-            CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.GetPrecision(refId).WaitAndUnwrapException();
-        }
-
-        public string? GetFeatureUnit(int refId)
-        {
-            CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.GetUnit(refId).WaitAndUnwrapException();
-        }
-
-        public long GetTotalRecords(int refId)
-        {
-            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).WaitAndUnwrapException(ShutdownCancellationToken);
-            return count;
-        }
-
-        public bool IsFeatureTracked(string refIdString)
-        {
-            int refId = ParseRefId(refIdString);
-            return IsFeatureTracked(refId).WaitAndUnwrapException();
         }
 
         public override string PostBackProc(string page, string data, string user, int userRights)
@@ -127,12 +68,63 @@ namespace Hspi
             };
         }
 
+        internal IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
+        {
+            var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).WaitAndUnwrapException(ShutdownCancellationToken);
+
+            var now = CreateClock().Now;
+
+            return new List<long>() {
+                (long)Math.Round((now - data.Item1).TotalSeconds),
+                (long)Math.Round((now - data.Item2).TotalSeconds)
+                };
+        }
+
+        internal int GetFeaturePrecision(int refId)
+        {
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return hsFeatureCachedDataProvider.GetPrecision(refId);
+        }
+
+        internal string? GetFeatureUnit(int refId)
+        {
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return hsFeatureCachedDataProvider.GetUnit(refId);
+        }
+
+        internal long GetTotalRecords(int refId)
+        {
+            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).WaitAndUnwrapException(ShutdownCancellationToken);
+            return count;
+        }
+
+        internal bool IsFeatureTracked(int refId)
+        {
+            CheckNotNull(settingsPages);
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return settingsPages.IsTracked(refId) &&
+                     hsFeatureCachedDataProvider.IsMonitoried(refId);
+        }
+
         protected virtual ISystemClock CreateClock() => new SystemClock();
 
         private static TimeSpan GetDefaultGroupInterval(TimeSpan duration)
         {
             // aim for 256 points on graph
             return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
+        }
+
+        private static T GetJsonValue<T>(JObject? json, string tokenStr)
+        {
+            try
+            {
+                var token = (json?.SelectToken(tokenStr)) ?? throw new ArgumentException(tokenStr + " is not correct");
+                return token.Value<T?>() ?? throw new ArgumentException(tokenStr + " is not correct");
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException(tokenStr + " is not correct", ex);
+            }
         }
 
         private static long ParseInt(string argumentName, string? refIdString)
@@ -182,18 +174,21 @@ namespace Hspi
             return stb.ToString();
         }
 
-        private string CreateDeviceConfigPage(AbstractHsDevice device, string iFrameName)
+        private string CreateDeviceConfigPage(int devOrFeatRef, string iFrameName)
         {
+            GetRefAndFeatureIds(devOrFeatRef, out var @ref, out var feature);
+
             StringBuilder stb = new();
+            stb.Append("<script>$('#save_device_config').hide();</script>");
 
-            stb.Append("<script> $('#save_device_config').hide(); </script>");
+            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?ref={@ref}");
 
-            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?refId={device.Ref}");
+            iFrameUrl += $"&feature={feature}";
 
             // iframeSizer.min.js
             stb.Append($"<script type=\"text/javascript\" src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
             stb.Append(@"<style>iframe{width: 1px;min-width: 100%;min-height: 40rem; border: 0px;}</style>");
-            stb.Append(Invariant($"<iframe id=\"historicalRecordsiFrame\" src=\"{iFrameUrl}\"></iframe>"));
+            stb.Append(Invariant($"<iframe id=\"historicalrecordsiframeid\" src=\"{iFrameUrl}\"></iframe>"));
             stb.Append(Invariant($"<script>iFrameResize({{heightCalculationMethod: 'max', log: true, inPageLinks: true }}, '#historicalRecordsiFrame');</script>"));
 
             var page = PageFactory.CreateDeviceConfigPage(Id, "Device").WithLabel("id", stb.ToString());
@@ -204,18 +199,21 @@ namespace Hspi
             {
                 return "/" + Id + "/" + fileName;
             }
-        }
 
-        private T GetJsonValue<T>(JObject? json, string tokenStr)
-        {
-            try
+            void GetRefAndFeatureIds(int devOrFeatRef, out int @ref, out int feature)
             {
-                var token = (json?.SelectToken(tokenStr)) ?? throw new ArgumentException(tokenStr + " is not correct");
-                return token.Value<T?>() ?? throw new ArgumentException(tokenStr + " is not correct");
-            }
-            catch (Exception ex)
-            {
-                throw new ArgumentException(tokenStr + " is not correct", ex);
+                bool isDevice = HomeSeerSystem.IsRefDevice(devOrFeatRef);
+
+                if (isDevice)
+                {
+                    @ref = devOrFeatRef;
+                    feature = devOrFeatRef;
+                }
+                else
+                {
+                    @ref = ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).First();
+                    feature = devOrFeatRef;
+                }
             }
         }
 
@@ -406,14 +404,6 @@ namespace Hspi
                 Log.Error("Updating device setting failed for {param} with {error}", data, ex.GetFullMessage());
                 return WriteExceptionResultAsJson(ex);
             }
-        }
-
-        private async Task<bool> IsFeatureTracked(int refId)
-        {
-            CheckNotNull(settingsPages);
-            CheckNotNull(hsFeatureCachedDataProvider);
-            return settingsPages.IsTracked(refId) &&
-                   await hsFeatureCachedDataProvider.IsMonitored(refId).ConfigureAwait(false);
         }
 
         public const int MaxGraphPoints = 256;

@@ -133,7 +133,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void GetJuiDeviceConfigPage()
+        public void GetJuiDeviceConfigPageForDevice()
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -142,7 +142,7 @@ namespace HSPI_HistoricalRecordsTest
 
             int devOrFeatRef = 10;
 
-            TestHelper.SetupHsFeature(mockHsController, devOrFeatRef, 100);
+            mockHsController.Setup(x => x.IsRefDevice(devOrFeatRef)).Returns(true);
 
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
@@ -154,8 +154,44 @@ namespace HSPI_HistoricalRecordsTest
 
             string labelHtml = data["views"][0]["name"].Value<string>();
 
-            TestHelper.VerifyHtmlValid(labelHtml);
-            StringAssert.Contains(labelHtml, "iframe");
+            var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
+            var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
+
+            var iFrameSource = iFrameElement.Attributes["src"].Value;
+            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/devicehistoricalrecords.html?ref={devOrFeatRef}&feature={devOrFeatRef}");
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void GetJuiDeviceConfigPageForFeature()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            int devOrFeatRef = 10;
+
+            mockHsController.Setup(x => x.IsRefDevice(devOrFeatRef)).Returns(false);
+            mockHsController.Setup(x => x.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).Returns(new HashSet<int>() { 9 });
+
+            string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
+
+            var data = (JObject)JsonConvert.DeserializeObject(pageJson);
+            Assert.IsNotNull(data);
+            Assert.AreEqual(PlugInData.PlugInId, data["id"].Value<string>());
+            Assert.AreEqual("Device", data["name"].Value<string>());
+            Assert.AreEqual(5, data["type"].Value<int>());
+
+            string labelHtml = data["views"][0]["name"].Value<string>();
+
+            var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
+            var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
+
+            var iFrameSource = iFrameElement.Attributes["src"].Value;
+            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/devicehistoricalrecords.html?ref={9}&feature={devOrFeatRef}");
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
@@ -214,6 +250,31 @@ namespace HSPI_HistoricalRecordsTest
             plugin.Object.Dispose();
         }
 
+        [DataTestMethod]
+        [DataRow("96%", "%")]
+        [DataRow("96 %", "%")]
+        [DataRow("-96 W", "W")]
+        [DataRow("93dkfe6 W", null)]
+        [DataRow("96 kW hours", "kW hours")]
+        [DataRow("96 F", "F")]
+        [DataRow("96234857", null)]
+        [DataRow("apple", null)]
+        public void GetFeatureUnitForDifferentTypes(string displayStatus, string unit)
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            mockHsController.Setup(x => x.GetPropertyByRef(100, EProperty.DisplayedStatus)).Returns(displayStatus);
+
+            var unitFound = plugin.Object.GetFeatureUnit(100);
+            Assert.AreEqual(unit, unitFound);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
         [TestMethod]
         public void InitFirstTime()
         {
@@ -246,7 +307,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.InitIO());
 
-            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref.ToString());
+            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
             Assert.IsTrue(tracked1);
 
             var data = new PlugExtraData();
@@ -257,7 +318,7 @@ namespace HSPI_HistoricalRecordsTest
             // invalidate the cache
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
 
-            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref.ToString());
+            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
             Assert.IsFalse(tracked2);
 
             plugin.Object.ShutdownIO();

@@ -14,7 +14,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Schema;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -225,11 +224,12 @@ namespace HSPI_HistoricalRecordsTest
             return TimedWaitTillTrue(func, TimeSpan.FromSeconds(30));
         }
 
-        public static void VerifyHtmlValid(string html)
+        public static HtmlAgilityPack.HtmlDocument VerifyHtmlValid(string html)
         {
             HtmlAgilityPack.HtmlDocument htmlDocument = new();
             htmlDocument.LoadHtml(html);
             Assert.AreEqual(0, htmlDocument.ParseErrors.Count());
+            return htmlDocument;
         }
 
         public static bool WaitTillTotalRecords(Mock<PlugIn> plugin, int refId, long count)

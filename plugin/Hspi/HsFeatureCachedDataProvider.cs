@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
@@ -19,26 +21,47 @@ namespace Hspi
             featurePrecisionCache = new HsFeatureCachedProperty<int>(x => GetFeaturePrecision(x));
         }
 
-        public async Task<int> GetPrecision(int refId)
+        public int GetPrecision(int refId)
         {
-            return await featurePrecisionCache.Get(refId).ConfigureAwait(false);
+            return featurePrecisionCache.Get(refId);
         }
 
-        public async Task<string?> GetUnit(int refId)
+        public string? GetUnit(int refId)
         {
-            return await featureUnitCache.Get(refId).ConfigureAwait(false);
+            return featureUnitCache.Get(refId);
         }
 
-        public async Task Invalidate(int refId)
+        public void Invalidate(int refId)
         {
-            await featureUnitCache.Invalidate(refId).ConfigureAwait(false);
-            await monitoredFeatureCache.Invalidate(refId).ConfigureAwait(false);
-            await featurePrecisionCache.Invalidate(refId).ConfigureAwait(false);
+            featureUnitCache.Invalidate(refId);
+            monitoredFeatureCache.Invalidate(refId);
+            featurePrecisionCache.Invalidate(refId);
         }
 
-        public async Task<bool> IsMonitored(int refId)
+        public bool IsMonitoried(int refId)
         {
-            return await monitoredFeatureCache.Get(refId).ConfigureAwait(false);
+            return monitoredFeatureCache.Get(refId);
+        }
+
+        private static ImmutableSortedSet<string> CreateFeatureUnitsSet()
+        {
+            var list = new List<string>()
+            {
+                "Watts", "W",
+                "kWh", "kW Hours",
+                "Volts", "V",
+                "vah",
+                "F", "C", "K", "°F", "°C", "°K",
+                "lux", "lx",
+                "%",
+                "A",
+                "ppm", "ppb",
+                "db", "dbm",
+                "μs", "ms", "s", "min",
+                "g", "kg", "mg", "uq", "oz", "lb",
+            };
+
+            return list.ToImmutableSortedSet(StringComparer.OrdinalIgnoreCase);
         }
 
         private int GetFeaturePrecision(int refId)
@@ -80,28 +103,20 @@ namespace Hspi
 
         private string? GetFeatureUnit(int refId)
         {
-            var validUnits = new List<string>()
-            {
-                " Watts", " W",
-                " kWh", " kW Hours",
-                " Volts", " V",
-                " vah",
-                " F", " C", " K", "°F", "°C", "°K",
-                " lux", " lx",
-                " %",
-                " A",
-                " ppm", " ppb",
-                " db", " dbm",
-                " μs", " ms", " s", " min",
-                " g", "kg", " mg", " uq", " oz", " lb",
-            };
-
             //  an ugly way to get unit, but there is no universal way to get them in HS4
             var displayStatus = GetPropertyValue<string>(refId, EProperty.DisplayedStatus);
-            var unitFound = validUnits.Find(x => displayStatus.EndsWith(x, StringComparison.OrdinalIgnoreCase));
-            var unit = unitFound?.Substring(1);
+            var match = unitExtractionRegEx.Match(displayStatus);
 
-            return unit;
+            if (match.Success)
+            {
+                var unit = match.Groups[1].Value;
+                if (validUnits.Contains(unit))
+                {
+                    return unit;
+                }
+            }
+
+            return null;
         }
 
         private T GetPropertyValue<T>(int refId, EProperty prop)
@@ -131,6 +146,11 @@ namespace Hspi
             }
         }
 
+        private static readonly Regex unitExtractionRegEx = new(@"^\s*-?\d+(?:\.\d+)?\s*(.*)$",
+                                                                RegexOptions.Compiled | RegexOptions.CultureInvariant,
+                                                                TimeSpan.FromSeconds(5));
+
+        private static readonly ImmutableSortedSet<string> validUnits = CreateFeatureUnitsSet();
         private readonly HsFeatureCachedProperty<int> featurePrecisionCache;
         private readonly HsFeatureCachedProperty<string?> featureUnitCache;
         private readonly IHsController homeSeerSystem;
