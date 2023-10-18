@@ -133,7 +133,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void GetJuiDeviceConfigPage()
+        public void GetJuiDeviceConfigPageForDevice()
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -142,7 +142,7 @@ namespace HSPI_HistoricalRecordsTest
 
             int devOrFeatRef = 10;
 
-            TestHelper.SetupHsFeature(mockHsController, devOrFeatRef, 100);
+            mockHsController.Setup(x => x.IsRefDevice(devOrFeatRef)).Returns(true);
 
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
@@ -154,8 +154,44 @@ namespace HSPI_HistoricalRecordsTest
 
             string labelHtml = data["views"][0]["name"].Value<string>();
 
-            TestHelper.VerifyHtmlValid(labelHtml);
-            StringAssert.Contains(labelHtml, "iframe");
+            var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
+            var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
+
+            var iFrameSource = iFrameElement.Attributes["src"].Value;
+            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/devicehistoricalrecords.html?ref={devOrFeatRef}&feature={devOrFeatRef}");
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void GetJuiDeviceConfigPageForFeature()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            int devOrFeatRef = 10;
+
+            mockHsController.Setup(x => x.IsRefDevice(devOrFeatRef)).Returns(false);
+            mockHsController.Setup(x => x.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).Returns(new HashSet<int>() { 9 });
+
+            string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
+
+            var data = (JObject)JsonConvert.DeserializeObject(pageJson);
+            Assert.IsNotNull(data);
+            Assert.AreEqual(PlugInData.PlugInId, data["id"].Value<string>());
+            Assert.AreEqual("Device", data["name"].Value<string>());
+            Assert.AreEqual(5, data["type"].Value<int>());
+
+            string labelHtml = data["views"][0]["name"].Value<string>();
+
+            var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
+            var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
+
+            var iFrameSource = iFrameElement.Attributes["src"].Value;
+            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/devicehistoricalrecords.html?ref={9}&feature={devOrFeatRef}");
 
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();

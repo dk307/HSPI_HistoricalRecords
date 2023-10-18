@@ -315,7 +315,7 @@ namespace Hspi.Database
 
             if (sqlite3_threadsafe() == 0)
             {
-                throw new SystemException("Sqlite is not thread safe");
+                throw new SystemException(@"Sqlite is not thread safe");
             }
 
             ugly.exec(sqliteConnection, "PRAGMA page_size=4096");

@@ -27,7 +27,6 @@ namespace Hspi
         public IList<string> GetAllowedDisplays(string? refIdString)
         {
             var displays = new List<string>();
-
             if (string.IsNullOrWhiteSpace(refIdString))
             {
                 return displays;
@@ -43,28 +42,6 @@ namespace Hspi
             }
 
             return displays;
-        }
-
-        public List<int> GetDeviceAndFeaturesRefIds(string refIdString)
-        {
-            int refId = ParseRefId(refIdString);
-            HashSet<int> featureRefIds;
-
-            if (HomeSeerSystem.IsRefDevice(refId))
-            {
-                featureRefIds = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
-            }
-            else
-            {
-                featureRefIds = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
-
-                var first = featureRefIds.First();
-                featureRefIds = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(first, EProperty.AssociatedDevices);
-            }
-
-            featureRefIds.Add(refId);
-
-            return featureRefIds.ToList();
         }
 
         public List<object?> GetDeviceStatsForPage(string refIdString)
@@ -199,16 +176,19 @@ namespace Hspi
 
         private string CreateDeviceConfigPage(int devOrFeatRef, string iFrameName)
         {
+            GetRefAndFeatureIds(devOrFeatRef, out var @ref, out var feature);
+
             StringBuilder stb = new();
+            stb.Append("<script>$('#save_device_config').hide();</script>");
 
-            stb.Append("<script> $('#save_device_config').hide(); </script>");
+            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?ref={@ref}");
 
-            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?refId={devOrFeatRef}");
+            iFrameUrl += $"&feature={feature}";
 
             // iframeSizer.min.js
             stb.Append($"<script type=\"text/javascript\" src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
             stb.Append(@"<style>iframe{width: 1px;min-width: 100%;min-height: 40rem; border: 0px;}</style>");
-            stb.Append(Invariant($"<iframe id=\"historicalRecordsiFrame\" src=\"{iFrameUrl}\"></iframe>"));
+            stb.Append(Invariant($"<iframe id=\"historicalrecordsiframeid\" src=\"{iFrameUrl}\"></iframe>"));
             stb.Append(Invariant($"<script>iFrameResize({{heightCalculationMethod: 'max', log: true, inPageLinks: true }}, '#historicalRecordsiFrame');</script>"));
 
             var page = PageFactory.CreateDeviceConfigPage(Id, "Device").WithLabel("id", stb.ToString());
@@ -218,6 +198,22 @@ namespace Hspi
             string CreatePlugInUrl(string fileName)
             {
                 return "/" + Id + "/" + fileName;
+            }
+
+            void GetRefAndFeatureIds(int devOrFeatRef, out int @ref, out int feature)
+            {
+                bool isDevice = HomeSeerSystem.IsRefDevice(devOrFeatRef);
+
+                if (isDevice)
+                {
+                    @ref = devOrFeatRef;
+                    feature = devOrFeatRef;
+                }
+                else
+                {
+                    @ref = ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).First();
+                    feature = devOrFeatRef;
+                }
             }
         }
 

@@ -33,21 +33,15 @@
 </head>
 
 {{
-	refId=queries['refId'] ?? ""
-	displayDeviceRefId=queries['displayDeviceRefId'] ?? ""
+	refId=queries['ref'] ?? ""
+	featureId=queries['feature'] ?? refId
 	displaySelect=queries['displaySelect'] ?? ""
 	displayMin=queries['displayMin'] ?? ""
 	displayMax=queries['displayMax'] ?? ""
 	displayPeriod=queries['displayPeriod'] ?? ""
-	
-	if displayDeviceRefId != ""
-		finalRefId=displayDeviceRefId
-	else
-		finalRefId=refId
-	end		
- 
-	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[finalRefId] 
-	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[finalRefId] 
+		
+	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[featureId] ?? []
+	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[featureId] 
 
 	oldestRecordTimeSpan=devicePageStats[0]
 	earliestRecordTimeSpan=devicePageStats[1]
@@ -55,10 +49,6 @@
 	devicePrecision=devicePageStats[3]
 	deviceUnits=devicePageStats[4]
 		
-	if !deviceDisplayDetails
-		deviceDisplayDetails=[]
-	end
-	
 	if deviceDisplayDetails.empty? 
 		# there is no valid displays
 		displaySelect=""
@@ -126,6 +116,22 @@
 			end
 		end							
 	end
+	
+	
+	# get list of features for devices in order
+	childrenRefIds=[]
+	
+	device=device_by_ref refId
+	featureList=device.display_priority ?? device.children
+	
+	for child in featureList
+		childrenRefIds = childrenRefIds | array.add child.ref
+	end
+	
+	# add root if not added
+	if !(childrenRefIds | array.contains refId)
+		childrenRefIds = childrenRefIds | array.add refId
+	end
 }}	
 
 <script>
@@ -147,7 +153,7 @@ function getRangeString(min, max) {
 <body class="body homeseer-skin ml-0 mr-0" style="min-height: 4rem" aria-busy="true">	
  
 <!-- refId={{refId}}<BR> -->
-<!-- finalRefId={{finalRefId}}<BR> -->
+<!-- featureId={{featureId}}<BR> -->
 <!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
 <!-- displaySelect={{displaySelect}}<BR> -->
 <!-- displayMin={{displayMin}}<BR> -->
@@ -159,29 +165,24 @@ function getRangeString(min, max) {
 <!-- deviceTracked={{deviceTracked}}<BR> -->
 <!-- devicePrecision={{devicePrecision}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
+<!-- displayDeviceRefId={{childrenRefIds}}<BR> -->
 
 <header>
 	<nav class="navbar">
 		<form class="form-inline my-0 mx-0" id="mainform" action="/HistoricalRecords/devicehistoricalrecords.html" method="GET" style="width:100%">	
-			<input type="hidden" id="refId" name="refId" value="{{refId}}"> 
+			<input type="hidden" id="ref" name="ref" value="{{refId}}"> 
 			<input type="hidden" id="displayMin" name="displayMin" value="{{displayMin}}"> 
 			<input type="hidden" id="displayMax" name="displayMax" value="{{displayMax}}"> 
 			<input type="hidden" id="displayLabel" name="displayLabel" value="{{displayLabel}}"> 
 
-			{{device=plugin_function 'HistoricalRecords' 'GetDeviceAndFeaturesRefIds'[refId] }}
-			{{if device}}
-				<div class="md-form my-0 mr-3" style="width:100%">
-					<select id="displayDeviceRefId" class="mdb-select md-form  dropdown-primary colorful-select" name="displayDeviceRefId" >
-						{{for refId in device}}
-							<option value="{{refId}}" {{if refId==finalRefId;}}selected{{end}} >{{device_name_full refId  | html.escape}}</option>	
-						{{end}}			
-					</select> 
-					<label class="mdb-main-label" for="displayDeviceRefId">Feature</label>
-				</div>
-				
-			{{else}}
-				{{refId}} Device not found {{device}}
-			{{end}}
+			<div class="md-form my-0 mr-3" style="width:100%">
+				<select id="feature" class="mdb-select md-form dropdown-primary colorful-select" name="feature" >
+					{{for id in childrenRefIds}}
+						<option value="{{id}}" {{if id==featureId}}selected{{end}} >{{device_name_full id  | html.escape}}</option>	
+					{{end}}			
+				</select> 
+				<label class="mdb-main-label" for="feature">Feature</label>
+			</div>
 			
 			{{if displaySelect != ""}}
 				<div class="md-form my-0 mr-3">
@@ -296,7 +297,7 @@ function getRangeString(min, max) {
 						<th>Value</th> 
 					</tr>
 				</thead> 
-				{{plugin_function 'HistoricalRecords' 'BuildAverageStatsData' [finalRefId, duration, grouping] }}
+				{{plugin_function 'HistoricalRecords' 'BuildAverageStatsData' [featureId, duration, grouping] }}
 			<table>		
 			{{needDataTables=true}}	
 		{{else if displaySelect=="histogram"}}
@@ -308,7 +309,7 @@ function getRangeString(min, max) {
 						<th>Percentage</th> 
 					</tr>
 				</thead> 
-				{{plugin_function 'HistoricalRecords' 'BuildHistogramData' [finalRefId, duration] }}
+				{{plugin_function 'HistoricalRecords' 'BuildHistogramData' [featureId, duration] }}
 			<table>		
 			{{needDataTables=true}}	
 		{{end}}		
@@ -325,7 +326,7 @@ function getRangeString(min, max) {
 			</div>
 			<div class="modal-body">
 				<form>
-					<input type="hidden" id="ref" value="{{finalRefId}}"/>
+					<input type="hidden" id="ref" value="{{featureId}}"/>
 					<div class="row mt-1 mb-1 no-gutters">
 						<div class="form-check form-switch">
 						<div class="custom-control custom-switch">
@@ -361,7 +362,7 @@ function getRangeString(min, max) {
 
 <script>
 $(function() {
-    $('#displayDeviceRefId').change(function() {
+    $('#feature').change(function() {
         this.form.submit();
     });  
 
@@ -429,7 +430,7 @@ function setUpPersistanceTable() {
         url: '../HistoricalRecords/historyrecords',
         type: 'POST',
 		data: function (d) {
-            d.refId = {{finalRefId}};	 
+            d.refId = {{featureId}};	 
 			d.min = displayStartDate;
 			d.max = displayEndDate;	 
         }
@@ -487,7 +488,7 @@ $(document).ready(function () {
 	function startFetchWithMinMax(chart, min, max) {
 		console.log('Fetching data between ' + min + ' and ' + max);
 		const formObject = {
-		   refId : {{finalRefId}},
+		   refId : {{featureId}},
 		   min: min,
 		   max: max
 		};
@@ -614,7 +615,7 @@ $(document).ready(function () {
 				title: {
 					display: true,
 					position: 'top',
-					text: '{{device_name_full finalRefId | html.escape}}'
+					text: '{{device_name_full featureId | html.escape}}'
 				},
 				legend: {
 					display: false
