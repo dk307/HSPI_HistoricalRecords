@@ -78,29 +78,29 @@ namespace Hspi
                                  - Math.Max(indexV, list[marker].UnixTimeSeconds);
                 return duration;
             }
-        }
 
-        private static ResultType GetOrCreate(IDictionary<long, ResultType> dict, long key)
+            static ResultType GetOrCreate(IDictionary<long, ResultType> dict, long key)
 
-        {
-            if (!dict.TryGetValue(key, out var val))
             {
-                val = new ResultType();
-                dict.Add(key, val);
+                if (!dict.TryGetValue(key, out var val))
+                {
+                    val = new ResultType();
+                    dict.Add(key, val);
+                }
+
+                return val;
             }
 
-            return val;
-        }
-
-        private long GetFinishTimeForTimePoint(int index)
-        {
-            if (list.IsValidIndex(index + 1))
+            long GetFinishTimeForTimePoint(int index)
             {
-                return Math.Min(list[index + 1].UnixTimeSeconds, maxUnixTimeSeconds);
-            }
-            else
-            {
-                return Math.Max(maxUnixTimeSeconds, list[index].UnixTimeSeconds);
+                if (list.IsValidIndex(index + 1))
+                {
+                    return Math.Min(list[index + 1].UnixTimeSeconds, maxUnixTimeSeconds);
+                }
+                else
+                {
+                    return Math.Max(maxUnixTimeSeconds, list[index].UnixTimeSeconds);
+                }
             }
         }
 
