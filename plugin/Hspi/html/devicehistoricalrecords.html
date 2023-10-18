@@ -41,8 +41,9 @@
 	displayPeriod=queries['displayPeriod'] ?? ""
 		
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[featureId] ?? []
-	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[featureId] 
+	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[featureId]
 
+	devicePageStats=devicePageStats ?? [0,0,false,0,""]
 	oldestRecordTimeSpan=devicePageStats[0]
 	earliestRecordTimeSpan=devicePageStats[1]
 	deviceTracked=devicePageStats[2]
@@ -61,7 +62,8 @@
 		end	
 	end	 
 	
-	
+	rangeOptions=[]	
+	durationSeconds = ""
 	if displaySelect != ""									 
 		rangeOptionsForOthers=[ 
 						 ["Last 6 hours", 21600, "6hr"],
@@ -73,7 +75,7 @@
 						 ["Last 365 days", 31536000, "365d"],
 					 ]		 
 					 			 
-		rangeOptions=[]		
+			
 
 		for rangeOption in rangeOptionsForOthers
 			if  rangeOption[1] <= oldestRecordTimeSpan
@@ -107,8 +109,7 @@
 		if !rangeOptionFound			
 			displayPeriod=rangeOptions[0][2]
 		end	
-		
-		durationSeconds = ""
+			
 		for rangeOption in rangeOptions
 			if  rangeOption[1] != "" && displayPeriod == rangeOption[2]
 				durationSeconds=rangeOption[1]
@@ -116,21 +117,21 @@
 			end
 		end							
 	end
-	
-	
+		
 	# get list of features for devices in order
 	childrenRefIds=[]
-	
 	device=device_by_ref refId
-	featureList=device.display_priority ?? device.children
-	
-	for child in featureList
-		childrenRefIds = childrenRefIds | array.add child.ref
-	end
-	
-	# add root if not added
-	if !(childrenRefIds | array.contains refId)
-		childrenRefIds = childrenRefIds | array.add refId
+	if device
+		featureList=device.display_priority ?? device.children
+		
+		for child in featureList
+			childrenRefIds = childrenRefIds | array.add child.ref
+		end
+		
+		# add root if not added
+		if !(childrenRefIds | array.contains refId)
+			childrenRefIds = childrenRefIds | array.add refId
+		end
 	end
 }}	
 
@@ -165,7 +166,6 @@ function getRangeString(min, max) {
 <!-- deviceTracked={{deviceTracked}}<BR> -->
 <!-- devicePrecision={{devicePrecision}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
-<!-- displayDeviceRefId={{childrenRefIds}}<BR> -->
 
 <header>
 	<nav class="navbar">
@@ -175,6 +175,8 @@ function getRangeString(min, max) {
 			<input type="hidden" id="displayMax" name="displayMax" value="{{displayMax}}"> 
 			<input type="hidden" id="displayLabel" name="displayLabel" value="{{displayLabel}}"> 
 
+			
+			{{if displaySelect != ""}}
 			<div class="md-form my-0 mr-3" style="width:100%">
 				<select id="feature" class="mdb-select md-form dropdown-primary colorful-select" name="feature" >
 					{{for id in childrenRefIds}}
@@ -183,49 +185,45 @@ function getRangeString(min, max) {
 				</select> 
 				<label class="mdb-main-label" for="feature">Feature</label>
 			</div>
-			
-			{{if displaySelect != ""}}
-				<div class="md-form my-0 mr-3">
-					<select id="displaySelect" class="mdb-select md-form colorful-select" name="displaySelect">
-						{{ for displayType in deviceDisplayDetails }}									
-							<option value="{{displayType | html.escape}}" {{if displayType==displaySelect;}}selected{{end}}>
-							{{
-							case displayType
-								when "table"
-									"Table"
-								when "chart"
-									"Chart"
-								when "averageStats"
-									"Average Stats"
-								when "histogram"
-									"Histogram"
-								else
-									"Unknown"
-							end														
-							}}</option>								
-						{{ end }}
-					</select> 
-					<label class="mdb-main-label" for="displaySelect">View Type</label>
-				</div>	
+			<div class="md-form my-0 mr-3">
+				<select id="displaySelect" class="mdb-select md-form colorful-select" name="displaySelect">
+					{{ for displayType in deviceDisplayDetails }}									
+						<option value="{{displayType | html.escape}}" {{if displayType==displaySelect;}}selected{{end}}>
+						{{
+						case displayType
+							when "table"
+								"Table"
+							when "chart"
+								"Chart"
+							when "averageStats"
+								"Average Stats"
+							when "histogram"
+								"Histogram"
+							else
+								"Unknown"
+						end														
+						}}</option>								
+					{{ end }}
+				</select> 
+				<label class="mdb-main-label" for="displaySelect">View Type</label>
+			</div>	
 				
 
-				<div class="md-form my-0 mr-3">
-					<select id="displayPeriod" class="mdb-select md-form colorful-select" name="displayPeriod">
-						{{for rangeOption in rangeOptions}}
-							<option value="{{rangeOption[2]}}" {{if rangeOption[2]==displayPeriod;}}selected{{end}}>{{rangeOption[0] | html.escape}}</option>	
-						{{end}}			
-					</select> 
-					<label class="mdb-main-label" for="displayPeriod">Period</label>
-				</div>
-			{{end}}
-			{{if displaySelect != ""}}
-				<ul class="navbar-nav ml-auto nav-flex-icons nav-right"  >
-				  <li class="nav-item">	  
-					<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change tracking options for device" id="idModalEditLink"  href="#">
-					  <i class="fa fa-edit"></i>
-					</a>
-				  </li>
-				</ul>
+			<div class="md-form my-0 mr-3">
+				<select id="displayPeriod" class="mdb-select md-form colorful-select" name="displayPeriod">
+					{{for rangeOption in rangeOptions}}
+						<option value="{{rangeOption[2]}}" {{if rangeOption[2]==displayPeriod;}}selected{{end}}>{{rangeOption[0] | html.escape}}</option>	
+					{{end}}			
+				</select> 
+				<label class="mdb-main-label" for="displayPeriod">Period</label>
+			</div>
+			<ul class="navbar-nav ml-auto nav-flex-icons nav-right"  >
+			  <li class="nav-item">	  
+				<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change tracking options for device" id="idModalEditLink"  href="#">
+				  <i class="fa fa-edit"></i>
+				</a>
+			  </li>
+			</ul>
 			{{end}}		
 		</form>
 	</nav>	
@@ -242,8 +240,7 @@ function getRangeString(min, max) {
 
 	{{if displaySelect != ""}}
 		{{			
-			duration = ""
-		 
+			duration = ""		 
 			for rangeOption in rangeOptions
 				if rangeOption[2]==displayPeriod
 					duration=rangeOption[1]
@@ -263,7 +260,7 @@ function getRangeString(min, max) {
 						<th>Duration</th>						 
 					</tr>
 				</thead>			
-			<table>	
+			</table>	
 			{{needDataTables=true}}
 		{{else if displaySelect=="chart"}}
 			<div class="btn-group mt-2 mx-auto" role="group" aria-label="Graph options">
@@ -288,7 +285,6 @@ function getRangeString(min, max) {
 			<div class="chart-container">
 				<canvas id="myLineChart"></canvas>
 			</div>
-
 		{{else if displaySelect=="averageStats"}}
 			<table id="dt-persistence" class="table table-sm mb-0"cellspacing="0" width="100%">
 				<thead>
@@ -338,12 +334,11 @@ function getRangeString(min, max) {
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-				<button type="button" class="btn btn-primary" id="btnOk" favorite-key="">Save</button>
+				<button type="button" class="btn btn-primary" id="btnOk">Save</button>
 			</div>
 		</div>
 	</div>
 </div>
-
 
 {{includefile 'bootstrap/js/page_common.js'}}
 <script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
@@ -515,7 +510,6 @@ $(document).ready(function () {
 		});
 	}
 	
-	
 	function startFetch({chart}) {
 	  const {min, max} = chart.scales.x;
 	  startFetchWithMinMax(chart, min, max);
@@ -561,9 +555,7 @@ $(document).ready(function () {
 		  autoSkip: true,
 		  autoSkipPadding: 50,
 		  maxRotation: 0
-		},
-		
-		
+		},	
 	  },
 	  y: {
 		type: 'linear',
