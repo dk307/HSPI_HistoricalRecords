@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Reflection;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
@@ -9,6 +10,7 @@ using Hspi.Database;
 using Hspi.Utils;
 using Nito.AsyncEx.Synchronous;
 using Serilog;
+using Serilog.Core;
 using Constants = HomeSeer.PluginSdk.Constants;
 
 #nullable enable
@@ -60,6 +62,12 @@ namespace Hspi
         public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
         {
             return Collector.GetTop10RecordsStats();
+        }
+
+        public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
+        {
+            CheckNotNull(hsFeatureCachedDataProvider);
+            return hsFeatureCachedDataProvider.IsMonitoried(devOrFeatRef);
         }
 
         public override void HsEvent(Constants.HSEvent eventType, object[] @params)
