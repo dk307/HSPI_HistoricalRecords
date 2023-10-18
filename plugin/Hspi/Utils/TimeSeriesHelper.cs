@@ -40,6 +40,7 @@ namespace Hspi
             int listMarker = 0;
             for (var index = minUnixTimeSeconds; index < maxUnixTimeSeconds; index += intervalUnixTimeSeconds)
             {
+                // skip initial missing values
                 if (list.IsValidIndex(listMarker) && (list[listMarker].UnixTimeSeconds > index) &&
                                                      (list[listMarker].UnixTimeSeconds >= index + intervalUnixTimeSeconds))
                 {
