@@ -191,8 +191,13 @@ namespace Hspi
             stb.Append(Invariant($"<iframe id=\"historicalrecordsiframeid\" src=\"{iFrameUrl}\"></iframe>"));
             stb.Append(Invariant($"<script>iFrameResize({{heightCalculationMethod: 'max', log: true, inPageLinks: true }}, '#historicalRecordsiFrame');</script>"));
 
-            var page = PageFactory.CreateDeviceConfigPage(Id, "Device").WithLabel("id", stb.ToString());
+            LabelView labelView = new("id", stb.ToString())
+            {
+                LabelType = HomeSeer.Jui.Types.ELabelType.Preformatted
+            };
 
+            var page = PageFactory.CreateDeviceConfigPage(Id, "Device");
+            page.Page.AddView(labelView);
             return page.Page.ToJsonString();
 
             string CreatePlugInUrl(string fileName)
