@@ -119,6 +119,20 @@ namespace Hspi.Database
             }
         }
 
+        public async Task<Tuple<DateTimeOffset, DateTimeOffset>> GetEarliestAndOldestRecordTimeDate(int refId)
+        {
+            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+            var stmt = getEarliestAndOldestRecordCommand;
+
+            ugly.reset(stmt);
+            ugly.bind_int(stmt, 1, refId);
+            ugly.step(stmt);
+
+            return new Tuple<DateTimeOffset, DateTimeOffset>(
+                        DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(0)),
+                        DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(1)));
+        }
+
         /// <summary>
         /// Returns the values between the range and one above and below the range
         /// </summary>
@@ -145,20 +159,6 @@ namespace Hspi.Database
             }
 
             return records;
-        }
-
-        public async Task<Tuple<DateTimeOffset, DateTimeOffset>> GetEarliestAndOldestRecordTimeDate(int refId)
-        {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-            var stmt = getEarliestAndOldestRecordCommand;
-
-            ugly.reset(stmt);
-            ugly.bind_int(stmt, 1, refId);
-            ugly.step(stmt);
-
-            return new Tuple<DateTimeOffset, DateTimeOffset>(
-                        DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(0)),
-                        DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(1)));
         }
 
         public async Task<IList<RecordDataAndDuration>> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
@@ -313,19 +313,7 @@ namespace Hspi.Database
         {
             Log.Information("Connecting to database: {dbPath}", settings.DBPath);
 
-            if (sqlite3_threadsafe() == 0)
-            {
-                throw new SystemException(@"Sqlite is not thread safe");
-            }
-
-            if (Version.TryParse(sqlite3_libversion().utf8_to_string(), out var version))
-            {
-                var minSupportedVersion = new Version(3, 37);
-                if (version < minSupportedVersion)
-                {
-                    throw new SystemException("sqlite version on machine is too old. Need 3.37+");
-                }
-            }
+            CheckSqliteValid();
 
             ugly.exec(sqliteConnection, "PRAGMA page_size=4096");
             ugly.exec(sqliteConnection, "PRAGMA journal_mode=WAL");
@@ -353,6 +341,23 @@ namespace Hspi.Database
             {
                 ugly.exec(sqliteConnection, "ROLLBACK");
                 throw;
+            }
+
+            static void CheckSqliteValid()
+            {
+                if (sqlite3_threadsafe() == 0)
+                {
+                    throw new SystemException(@"Sqlite is not thread safe");
+                }
+
+                if (Version.TryParse(sqlite3_libversion().utf8_to_string(), out var version))
+                {
+                    var minSupportedVersion = new Version(3, 37);
+                    if (version < minSupportedVersion)
+                    {
+                        throw new SystemException("sqlite version on machine is too old. Need 3.37+");
+                    }
+                }
             }
         }
 
@@ -385,6 +390,8 @@ namespace Hspi.Database
 
         private const string DeleteOldRecordByRefSql = "DELETE from history where ref=$ref and ts<$time AND ts NOT IN ( SELECT ts FROM history WHERE ref=$ref ORDER BY ts DESC LIMIT $limit)";
 
+        private const string EarliestAndOldestRecordSql = "SELECT MIN(ts), MAX(ts) FROM history WHERE ref=?";
+
         // 1 record before the time range and one after
         private const string GetTimeValueSql =
             @"SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts<$min ORDER BY ts DESC LIMIT 1) UNION
@@ -392,7 +399,6 @@ namespace Hspi.Database
               SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
 
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
-        private const string EarliestAndOldestRecordSql = "SELECT MIN(ts), MAX(ts) FROM history WHERE ref=?";
         private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
 
         private const string RecordsHistorySql = @"
@@ -412,8 +418,8 @@ namespace Hspi.Database
         private readonly sqlite3_stmt allRefOldestRecordsCommand;
         private readonly AsyncLock connectionLock = new();
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
-        private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getEarliestAndOldestRecordCommand;
+        private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;
