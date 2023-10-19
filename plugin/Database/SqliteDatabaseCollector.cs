@@ -332,16 +332,17 @@ namespace Hspi.Database
 
             try
             {
-                ugly.exec(sqliteConnection, "CREATE TABLE IF NOT EXISTS history(ts NUMERIC NOT NULL, ref INT NOT NULL, value DOUBLE NOT NULL, str VARCHAR(1024), PRIMARY KEY(ts,ref));");
+                ugly.exec(sqliteConnection, "CREATE TABLE IF NOT EXISTS history(ts INT NOT NULL, ref INT NOT NULL, value REAL NOT NULL, str TEXT, PRIMARY KEY(ts,ref)) STRICT");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_index ON history (ts);");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_ref_index ON history (ref);");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_ref_index ON history (ts, ref);");
                 ugly.exec(sqliteConnection, "CREATE VIEW IF NOT EXISTS history_with_duration as select ts, value, str, (lag(ts, 1) OVER ( PARTITION BY ref ORDER BY ts desc) - ts) as duration, ref from history order by ref, ts desc");
+                ugly.exec(sqliteConnection, "PRAGMA user_version=1");
                 ugly.exec(sqliteConnection, "COMMIT");
             }
             catch (Exception)
             {
-                ugly.exec(sqliteConnection, "ABORT");
+                ugly.exec(sqliteConnection, "ROLLBACK");
                 throw;
             }
         }
