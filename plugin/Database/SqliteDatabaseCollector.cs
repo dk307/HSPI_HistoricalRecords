@@ -318,6 +318,15 @@ namespace Hspi.Database
                 throw new SystemException(@"Sqlite is not thread safe");
             }
 
+            if (Version.TryParse(sqlite3_libversion().utf8_to_string(), out var version))
+            {
+                var minSupportedVersion = new Version(3, 37);
+                if (version < minSupportedVersion)
+                {
+                    throw new SystemException("sqlite version on machine is too old. Need 3.37+");
+                }
+            }
+
             ugly.exec(sqliteConnection, "PRAGMA page_size=4096");
             ugly.exec(sqliteConnection, "PRAGMA journal_mode=WAL");
             ugly.exec(sqliteConnection, "PRAGMA synchronous=normal");
