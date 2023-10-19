@@ -12,6 +12,7 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
 using Hspi.Database;
 using Hspi.Utils;
+using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Nito.AsyncEx.Synchronous;
@@ -231,10 +232,13 @@ namespace Hspi
                 var refId = GetJsonValue<int>(jsonData, "refId");
                 var min = GetJsonValue<long>(jsonData, "min");
                 var max = GetJsonValue<long>(jsonData, "max");
+
                 if (max < min)
                 {
                     throw new ArgumentException("max < min");
                 }
+
+                var fillStrategy = GetFillStrategy(jsonData);
 
                 long groupBySeconds = (long)Math.Round(GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max - min)).TotalSeconds);
                 bool shouldGroup = groupBySeconds >= 5;
@@ -244,7 +248,7 @@ namespace Hspi
                                                                max / 1000).ConfigureAwait(false);
 
                 var queryDataGrouped = shouldGroup ?
-                                            GroupValues(min / 1000, max / 1000, groupBySeconds, queryData) :
+                                            GroupValues(min / 1000, max / 1000, groupBySeconds, fillStrategy, queryData) :
                                             queryData;
 
                 CheckNotNull(hsFeatureCachedDataProvider);
@@ -285,11 +289,24 @@ namespace Hspi
                 return WriteExceptionResultAsJson(ex);
             }
 
-            static IEnumerable<TimeAndValue> GroupValues(long min, long max, long groupBySeconds, IList<TimeAndValue> data)
+            static IEnumerable<TimeAndValue> GroupValues(long min, long max, long groupBySeconds, FillStrategy fillStrategy, IList<TimeAndValue> data)
             {
                 var list = new TimeAndValueList(data);
                 TimeSeriesHelper helper = new(min, max, groupBySeconds, list);
-                return helper.ReduceSeriesWithAverageAndPreviousFill();
+                return helper.ReduceSeriesWithAverage(fillStrategy);
+            }
+
+            static FillStrategy GetFillStrategy(JObject? jsonData)
+            {
+                try
+                {
+                    var fillStrategyStr = GetJsonValue<string>(jsonData, "fill");
+                    return fillStrategyStr.DehumanizeTo<FillStrategy>();
+                }
+                catch (NoMatchFoundException ex)
+                {
+                    throw new ArgumentException("fill is not correct", ex);
+                }
             }
         }
 
