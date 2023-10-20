@@ -10,25 +10,24 @@ namespace Hspi
 {
     internal sealed class TimeSeriesHelper
     {
-        public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                long intervalUnixTimeSeconds, IEnumerable<TimeAndValue> timeAndValues)
+        public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds, IEnumerable<TimeAndValue> timeAndValues)
         {
-            if (intervalUnixTimeSeconds <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(intervalUnixTimeSeconds));
-            }
             if (minUnixTimeSeconds > maxUnixTimeSeconds)
             {
                 throw new ArgumentOutOfRangeException(nameof(minUnixTimeSeconds));
             }
             this.minUnixTimeSeconds = minUnixTimeSeconds;
             this.maxUnixTimeSeconds = maxUnixTimeSeconds + 1; // make max inclusive
-            this.intervalUnixTimeSeconds = intervalUnixTimeSeconds;
             this.timeAndValues = timeAndValues;
         }
 
-        public IList<TimeAndValue> ReduceSeriesWithAverage(FillStrategy fillStrategy)
+        public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(long intervalUnixTimeSeconds, FillStrategy fillStrategy)
         {
+            if (intervalUnixTimeSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(intervalUnixTimeSeconds));
+            }
+
             var listIterator = new TimeAndValueIterator(timeAndValues, this.maxUnixTimeSeconds);
             var result = new SortedDictionary<long, ResultType>();
 
@@ -83,7 +82,7 @@ namespace Hspi
                 }
             }
 
-            return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds)).ToList();
+            return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds));
         }
 
         private static ResultType GetOrCreate(IDictionary<long, ResultType> dict, long key)
@@ -118,7 +117,6 @@ namespace Hspi
             public double WeighedValue;
         }
 
-        private readonly long intervalUnixTimeSeconds;
         private readonly IEnumerable<TimeAndValue> timeAndValues;
         private readonly long maxUnixTimeSeconds;
         private readonly long minUnixTimeSeconds;

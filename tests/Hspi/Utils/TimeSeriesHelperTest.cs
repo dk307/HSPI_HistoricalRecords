@@ -20,25 +20,24 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(21, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 30, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 30, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
             CollectionAssert.AreEqual(dbValues, result);
         }
 
         [TestMethod]
-        public void ConstructorThrowsExceptionWhenIntervalIsZero()
+        public void ThrowsExceptionWhenIntervalIsZero()
         {
             // Arrange
             long minUnixTimeSeconds = 0;
             long maxUnixTimeSeconds = 100;
-            long intervalUnixTimeSeconds = 0;
             IList<TimeAndValue> list = new List<TimeAndValue>();
 
-            // Act & Assert
             Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
             {
-                new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, intervalUnixTimeSeconds, list);
+                var ts = new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, list);
+                ts.ReduceSeriesWithAverage(0, FillStrategy.LOCF);
             });
         }
 
@@ -47,14 +46,13 @@ namespace HSPI_HistoricalRecordsTest
         {
             // Arrange
             long minUnixTimeSeconds = 100;
-            long maxUnixTimeSeconds = 0;
-            long intervalUnixTimeSeconds = 10;
+            long maxUnixTimeSeconds = 10;
             IList<TimeAndValue> list = new List<TimeAndValue>();
 
             // Act & Assert
             Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
             {
-                new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, intervalUnixTimeSeconds, list);
+                new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, list);
             });
         }
 
@@ -67,8 +65,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(11, 200),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 30, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 30, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -89,8 +87,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(11, 200),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 30, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 30, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -115,8 +113,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(51, 600),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 60, 20, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 60, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(20, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -141,8 +139,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(51, 600),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 60, 20, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 60, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(20, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -163,8 +161,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(21, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 30, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 30, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -184,8 +182,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(21, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 30, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 30, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
             CollectionAssert.AreEqual(dbValues, result);
         }
@@ -200,8 +198,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(26, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 100, 1000, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(1000, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -221,8 +219,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(26, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 100, 1000, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(1000, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -240,8 +238,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(115, 200),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 125, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 125, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -260,8 +258,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(115, 200),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 125, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 125, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -283,8 +281,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(151, 930),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 180, 30, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 180, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(30, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -310,8 +308,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(151, 900),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 180, 30, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 180, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(30, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -335,8 +333,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(41, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 60, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 60, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -362,8 +360,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(50, 445),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(15, 49, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(15, 49, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -387,8 +385,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(50, 500),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(15, 49, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(15, 49, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -411,8 +409,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(26, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(6, 35, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(6, 35, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -434,8 +432,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(26, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(6, 35, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(6, 35, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -459,8 +457,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(41, 500),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 60, 20, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 60, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(20, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -483,8 +481,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(31, 400),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 30, 10, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.Linear).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 30, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.Linear).ToArray();
 
             List<TimeAndValue> expected = new()
             {
@@ -507,8 +505,8 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(10, 400),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 15, 1, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(1, 15, dbValues);
+            var result = timeSeriesHelper.ReduceSeriesWithAverage(1, FillStrategy.LOCF).ToArray();
 
             List<TimeAndValue> expected = new()
             {
