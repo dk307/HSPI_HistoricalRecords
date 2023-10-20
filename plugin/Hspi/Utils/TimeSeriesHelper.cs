@@ -8,26 +8,10 @@ using Hspi.Database;
 
 namespace Hspi
 {
-    public enum FillStrategy
-    {
-        /// <summary>
-        /// Last observation carried forward
-        /// </summary>
-        LOCF,
-
-        Linear
-    }
-
     internal sealed class TimeSeriesHelper
     {
         public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                long intervalUnixTimeSeconds, IList<TimeAndValue> list) :
-            this(minUnixTimeSeconds, maxUnixTimeSeconds, intervalUnixTimeSeconds, new TimeAndValueList(list))
-        {
-        }
-
-        public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                long intervalUnixTimeSeconds, ITimeAndValueList list)
+                                long intervalUnixTimeSeconds, IList<TimeAndValue> list)
         {
             if (intervalUnixTimeSeconds <= 0)
             {
@@ -40,14 +24,13 @@ namespace Hspi
             this.minUnixTimeSeconds = minUnixTimeSeconds;
             this.maxUnixTimeSeconds = maxUnixTimeSeconds + 1; // make max inclusive
             this.intervalUnixTimeSeconds = intervalUnixTimeSeconds;
-            this.list = list;
+            this.listIterator = new(list, this.maxUnixTimeSeconds);
         }
 
         public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(FillStrategy fillStrategy)
         {
             var result = new SortedDictionary<long, ResultType>();
 
-            ListIterator listIterator = new(list, maxUnixTimeSeconds);
             for (var index = minUnixTimeSeconds; index < maxUnixTimeSeconds; index += intervalUnixTimeSeconds)
             {
                 // skip initial missing values
@@ -116,7 +99,7 @@ namespace Hspi
 
         private sealed class ListIterator
         {
-            public ListIterator(ITimeAndValueList list, long maxUnixTimeSeconds)
+            public ListIterator(IList<TimeAndValue> list, long maxUnixTimeSeconds)
             {
                 this.list = list;
                 this.maxUnixTimeSeconds = maxUnixTimeSeconds;
@@ -140,8 +123,8 @@ namespace Hspi
                 }
             }
 
-            public bool IsCurrentValid => list.IsValidIndex(marker);
-            public bool IsNextValid => list.IsValidIndex(marker + 1);
+            public bool IsCurrentValid => IsValidIndex(marker);
+            public bool IsNextValid => IsValidIndex(marker + 1);
             public TimeAndValue Next => list[marker + 1];
 
             public void MoveNext()
@@ -149,7 +132,12 @@ namespace Hspi
                 marker++;
             }
 
-            private readonly ITimeAndValueList list;
+            private bool IsValidIndex(int index)
+            {
+                return index >= 0 && index < list.Count;
+            }
+
+            private readonly IList<TimeAndValue> list;
             private readonly long maxUnixTimeSeconds;
             private int marker;
         }
@@ -175,7 +163,7 @@ namespace Hspi
         }
 
         private readonly long intervalUnixTimeSeconds;
-        private readonly ITimeAndValueList list;
+        private readonly ListIterator listIterator;
         private readonly long maxUnixTimeSeconds;
         private readonly long minUnixTimeSeconds;
     }
