@@ -102,12 +102,6 @@ namespace Hspi
             return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds));
         }
 
-        /// <summary>
-        /// LOCF
-        /// </summary>
-        /// <returns></returns>
-        public IEnumerable<TimeAndValue> ReduceSeriesWithAverageAndPreviousFill() => ReduceSeriesWithAverage(FillStrategy.LOCF);
-
         private static ResultType GetOrCreate(IDictionary<long, ResultType> dict, long key)
 
         {
