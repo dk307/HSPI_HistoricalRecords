@@ -142,8 +142,8 @@ namespace Hspi.Database
         /// <returns></returns>
         public async Task<IList<TimeAndValue>> GetGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
-            List<TimeAndValue> records = null;
-            await IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, (x) => records = new List<TimeAndValue>(x)).ConfigureAwait(false);
+            List<TimeAndValue> records = new();
+            await IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, (x) => records.AddRange(x)).ConfigureAwait(false);
             return records;
         }
 

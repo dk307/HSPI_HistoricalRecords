@@ -27,7 +27,7 @@ namespace Hspi
             this.timeAndValues = timeAndValues;
         }
 
-        public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(FillStrategy fillStrategy)
+        public IList<TimeAndValue> ReduceSeriesWithAverage(FillStrategy fillStrategy)
         {
             var listIterator = new TimeAndValueIterator(timeAndValues, this.maxUnixTimeSeconds);
             var result = new SortedDictionary<long, ResultType>();
@@ -83,7 +83,7 @@ namespace Hspi
                 }
             }
 
-            return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds));
+            return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds)).ToList();
         }
 
         private static ResultType GetOrCreate(IDictionary<long, ResultType> dict, long key)
