@@ -65,9 +65,11 @@ namespace Hspi
                             double t1 = listIterator.Current.UnixTimeSeconds;
                             double t2 = listIterator.Next.UnixTimeSeconds;
 
-                            var p2 = v1 + ((v2 - v1) * ((intervalMax - t1) / (t2 - t1)));
-                            var p1 = v1 + ((v2 - v1) * ((intervalMin - t1) / (t2 - t1)));
-                            var area = ((p1 + p2) / 2) * (intervalMax - intervalMin);
+                            //var p2 = v1 + ((v2 - v1) * ((intervalMax - t1) / (t2 - t1)));
+                            //var p1 = v1 + ((v2 - v1) * ((intervalMin - t1) / (t2 - t1)));
+                            //var area = ((p1 + p2) / 2) * (intervalMax - intervalMin);
+
+                            var area = ((((v2 - v1) * (intervalMin + intervalMax - 2 * t1)) / (2 * (t2 - t1))) + v1) * (intervalMax - intervalMin);
 
                             GetOrCreate(result, index).AddArea(area, intervalMax - intervalMin);
                         }
