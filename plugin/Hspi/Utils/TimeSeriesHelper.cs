@@ -97,51 +97,6 @@ namespace Hspi
             return val;
         }
 
-        private sealed class ListIterator
-        {
-            public ListIterator(IList<TimeAndValue> list, long maxUnixTimeSeconds)
-            {
-                this.list = list;
-                this.maxUnixTimeSeconds = maxUnixTimeSeconds;
-                this.marker = 0;
-            }
-
-            public TimeAndValue Current => list[marker];
-
-            public long FinishTimeForCurrentTimePoint
-            {
-                get
-                {
-                    if (IsNextValid)
-                    {
-                        return Math.Min(Next.UnixTimeSeconds, maxUnixTimeSeconds);
-                    }
-                    else
-                    {
-                        return Math.Max(maxUnixTimeSeconds, Current.UnixTimeSeconds);
-                    }
-                }
-            }
-
-            public bool IsCurrentValid => IsValidIndex(marker);
-            public bool IsNextValid => IsValidIndex(marker + 1);
-            public TimeAndValue Next => list[marker + 1];
-
-            public void MoveNext()
-            {
-                marker++;
-            }
-
-            private bool IsValidIndex(int index)
-            {
-                return index >= 0 && index < list.Count;
-            }
-
-            private readonly IList<TimeAndValue> list;
-            private readonly long maxUnixTimeSeconds;
-            private int marker;
-        }
-
         private sealed class ResultType
         {
             public void AddArea(double area, long duration)
@@ -163,7 +118,7 @@ namespace Hspi
         }
 
         private readonly long intervalUnixTimeSeconds;
-        private readonly ListIterator listIterator;
+        private readonly TimeAndValueIterator listIterator;
         private readonly long maxUnixTimeSeconds;
         private readonly long minUnixTimeSeconds;
     }
