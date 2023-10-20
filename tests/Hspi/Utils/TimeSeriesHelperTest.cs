@@ -27,18 +27,19 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void ThrowsExceptionWhenIntervalIsZero()
+        public void AverageForLinear()
         {
-            // Arrange
-            long minUnixTimeSeconds = 0;
-            long maxUnixTimeSeconds = 100;
-            IList<TimeAndValue> list = new List<TimeAndValue>();
-
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            List<TimeAndValue> dbValues = new()
             {
-                var ts = new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, list);
-                ts.ReduceSeriesWithAverage(0, FillStrategy.LOCF);
-            });
+                new TimeAndValue(1, 100),
+                new TimeAndValue(16, 200),
+                new TimeAndValue(26, 300),
+            };
+
+            TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
+            var result = timeSeriesHelper.Average(FillStrategy.Linear);
+
+            Assert.AreEqual(((150D * 15) + (10 * 250) + (75 * 300)) / 100D, result);
         }
 
         [TestMethod]
@@ -189,7 +190,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void IntervalLargerThanSeriesForLinear()
+        public void AverageForLOCF()
         {
             List<TimeAndValue> dbValues = new()
             {
@@ -199,18 +200,13 @@ namespace HSPI_HistoricalRecordsTest
             };
 
             TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(1000, FillStrategy.Linear).ToArray();
+            var result = timeSeriesHelper.Average(FillStrategy.LOCF);
 
-            List<TimeAndValue> expected = new()
-            {
-                new TimeAndValue(1, ((150D * 15) + (10* 250) + (75 * 300)) /100D),
-            };
-
-            CollectionAssert.AreEqual(result, expected);
+            Assert.AreEqual(((100D * 15) + (10 * 200) + (75 * 300)) / 100D, result);
         }
 
         [TestMethod]
-        public void IntervalLargerThanSeriesForLOCF()
+        public void AverageStartsLaterForLOCF()
         {
             List<TimeAndValue> dbValues = new()
             {
@@ -219,15 +215,10 @@ namespace HSPI_HistoricalRecordsTest
                 new TimeAndValue(26, 300),
             };
 
-            TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
-            var result = timeSeriesHelper.ReduceSeriesWithAverage(1000, FillStrategy.LOCF).ToArray();
+            TimeSeriesHelper timeSeriesHelper = new(6, 100, dbValues);
+            var result = timeSeriesHelper.Average(FillStrategy.LOCF);
 
-            List<TimeAndValue> expected = new()
-            {
-                new TimeAndValue(1, ((100D * 15) + (10* 200) + (75 * 300)) /100D),
-            };
-
-            CollectionAssert.AreEqual(result, expected);
+            Assert.AreEqual(((100D * 10) + (10 * 200) + (75 * 300)) / 95D, result);
         }
 
         [TestMethod]
@@ -492,6 +483,21 @@ namespace HSPI_HistoricalRecordsTest
             };
 
             CollectionAssert.AreEqual(expected, result);
+        }
+
+        [TestMethod]
+        public void ThrowsExceptionWhenIntervalIsZero()
+        {
+            // Arrange
+            long minUnixTimeSeconds = 0;
+            long maxUnixTimeSeconds = 100;
+            IList<TimeAndValue> list = new List<TimeAndValue>();
+
+            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            {
+                var ts = new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, list);
+                ts.ReduceSeriesWithAverage(0, FillStrategy.LOCF);
+            });
         }
 
         [TestMethod]

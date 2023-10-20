@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading.Tasks;
 using Hspi.Database;
 
@@ -30,26 +29,25 @@ namespace Hspi
             }
         }
 
-        //public static async Task<double> Average(SqliteDatabaseCollector collector,
-        //                                         int refId,
-        //                                         long minUnixTimeSeconds,
-        //                                         long maxUnixTimeSeconds,
-        //                                         FillStrategy fillStrategy)
-        //{
-        //    IList<TimeAndValue>? result = null;
+        public static async Task<double> Average(SqliteDatabaseCollector collector,
+                                                 int refId,
+                                                 long minUnixTimeSeconds,
+                                                 long maxUnixTimeSeconds,
+                                                 FillStrategy fillStrategy)
+        {
+            double? result = null;
 
-        //    await collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup).ConfigureAwait(false);
+            await collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup).ConfigureAwait(false);
 
-        //    Debug.Assert(result != null);
-        //    Debug.Assert(result!.Count == 1);
-        //    return result[0].DeviceValue;
+            Debug.Assert(result != null);
+            return result!.Value;
 
-        //    // this is called under db lock
-        //    void CollectAndGroup(IEnumerable<TimeAndValue> x)
-        //    {
-        //        var timeSeriesHelper = new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, , x);
-        //        result = timeSeriesHelper.ReduceSeriesWithAverage(fillStrategy, ).ToList();
-        //    }
-        //}
+            // this is called under db lock
+            void CollectAndGroup(IEnumerable<TimeAndValue> x)
+            {
+                var timeSeriesHelper = new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, x);
+                result = timeSeriesHelper.Average(fillStrategy);
+            }
+        }
     }
 }

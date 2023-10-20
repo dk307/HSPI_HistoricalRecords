@@ -21,6 +21,13 @@ namespace Hspi
             this.timeAndValues = timeAndValues;
         }
 
+        public double Average(FillStrategy fillStrategy)
+        {
+            var res = ReduceSeriesWithAverage(maxUnixTimeSeconds - minUnixTimeSeconds, fillStrategy).ToList();
+            Debug.Assert(res.Count == 1);
+            return res[0].DeviceValue;
+        }
+
         public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(long intervalUnixTimeSeconds, FillStrategy fillStrategy)
         {
             if (intervalUnixTimeSeconds <= 0)
@@ -117,8 +124,8 @@ namespace Hspi
             public double WeighedValue;
         }
 
-        private readonly IEnumerable<TimeAndValue> timeAndValues;
         private readonly long maxUnixTimeSeconds;
         private readonly long minUnixTimeSeconds;
+        private readonly IEnumerable<TimeAndValue> timeAndValues;
     }
 }
