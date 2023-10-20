@@ -173,13 +173,10 @@ namespace Hspi
                 int deviceRefId = ConvertToInt32(3);
                 await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
             }
-            else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 3))
+            else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 3) && ConvertToInt32(1) == 0)
             {
-                if (ConvertToInt32(1) == 0) // device changes
-                {
-                    int refId = ConvertToInt32(3);
-                    hsFeatureCachedDataProvider?.Invalidate(refId);
-                }
+                int refId = ConvertToInt32(3);
+                hsFeatureCachedDataProvider?.Invalidate(refId);
             }
 
             int ConvertToInt32(int index)

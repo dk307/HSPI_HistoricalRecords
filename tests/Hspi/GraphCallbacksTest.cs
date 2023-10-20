@@ -11,8 +11,10 @@ namespace HSPI_HistoricalRecordsTest
     [TestClass]
     public class GraphCallbacksTest
     {
-        [TestMethod]
-        public void GetRecordsWithoutGrouping()
+        [DataTestMethod]
+        [DataRow(FillStrategy.LOCF)]
+        [DataRow(FillStrategy.Linear)]
+        public void GetRecordsWithoutGrouping(FillStrategy fillStrategy)
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -34,7 +36,7 @@ namespace HSPI_HistoricalRecordsTest
                                         feature, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange).ToUnixTimeMilliseconds()}}}";
+            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange).ToUnixTimeMilliseconds()}, fill:'{fillStrategy.ToString()}'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
@@ -57,7 +59,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void GetRecordsWithGrouping()
+        public void GetRecordsWithGroupingAndLOCF()
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -79,7 +81,7 @@ namespace HSPI_HistoricalRecordsTest
                                         feature, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange.AddSeconds(4)).ToUnixTimeMilliseconds()}}}";
+            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange.AddSeconds(4)).ToUnixTimeMilliseconds()}, fill:'locf'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
@@ -113,6 +115,8 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("{{ refId:{0}, min:33, max:'abc' }}", "max is not correct")]
         [DataRow("{{refId:{0}}}", "min is not correct")]
         [DataRow("{{refId1:{0}}}", "refId is not correct")]
+        [DataRow("{{ refId:{0}, min:11, max:99}}", "fill is not correct")]
+        [DataRow("{{ refId:{0}, min:11, max:99, fill:'rt'}}", "fill is not correct")]
         public void GraphCallbackArgumentChecks(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();

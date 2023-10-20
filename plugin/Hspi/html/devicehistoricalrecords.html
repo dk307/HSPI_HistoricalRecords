@@ -487,7 +487,8 @@ $(document).ready(function () {
 		const formObject = {
 		   refId : {{featureId}},
 		   min: min,
-		   max: max
+		   max: max,
+		   fill: chart.data.datasets[0].stepped ? "locf" : 'linear',
 		};
 		
 		ajaxPostPlugIn("graphrecords", formObject, function (result) {	 
@@ -643,11 +644,13 @@ function chartFunction(reason) {
 		chart.data.datasets[0].stepped = 'before';
 		chart.data.datasets[0].tension = 0;
 		chart.update();
+		startFetch({chart});
 		break;
 		case 2:
 		chart.data.datasets[0].stepped = false;
 		chart.data.datasets[0].tension = defaultTension;
 		chart.update();
+		startFetch({chart});
 		break;	
 		case 3:
 		chart.data.datasets[0].pointStyle = false;
