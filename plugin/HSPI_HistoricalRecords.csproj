@@ -102,6 +102,7 @@
     <Compile Include="Hspi\PlugIn2.cs" />
     <Compile Include="Hspi\Utils\FillStrategy.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIterator.cs" />
+    <Compile Include="Hspi\Utils\TimeAndValueQueryHelper.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesHelper.cs" />
     <Compile Include="Hspi\HSPI.cs" />
     <Compile Include="Hspi\Pages\SettingsPages.cs" />

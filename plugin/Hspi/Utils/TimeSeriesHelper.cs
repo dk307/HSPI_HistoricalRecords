@@ -11,13 +11,7 @@ namespace Hspi
     internal sealed class TimeSeriesHelper
     {
         public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                long intervalUnixTimeSeconds, IList<TimeAndValue> list)
-            : this(minUnixTimeSeconds, maxUnixTimeSeconds, intervalUnixTimeSeconds, (x, y) => new(list, maxUnixTimeSeconds + 1))
-        {
-        }
-
-        public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                long intervalUnixTimeSeconds, Func<long, long, TimeAndValueIterator> listIteratorFactory)
+                                long intervalUnixTimeSeconds, IEnumerable<TimeAndValue> timeAndValues)
         {
             if (intervalUnixTimeSeconds <= 0)
             {
@@ -30,12 +24,12 @@ namespace Hspi
             this.minUnixTimeSeconds = minUnixTimeSeconds;
             this.maxUnixTimeSeconds = maxUnixTimeSeconds + 1; // make max inclusive
             this.intervalUnixTimeSeconds = intervalUnixTimeSeconds;
-            this.listIteratorFactory = listIteratorFactory;
+            this.timeAndValues = timeAndValues;
         }
 
         public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(FillStrategy fillStrategy)
         {
-            var listIterator = listIteratorFactory(this.minUnixTimeSeconds, this.maxUnixTimeSeconds);
+            var listIterator = new TimeAndValueIterator(timeAndValues, this.maxUnixTimeSeconds);
             var result = new SortedDictionary<long, ResultType>();
 
             for (var index = minUnixTimeSeconds; index < maxUnixTimeSeconds; index += intervalUnixTimeSeconds)
@@ -125,7 +119,7 @@ namespace Hspi
         }
 
         private readonly long intervalUnixTimeSeconds;
-        private readonly Func<long, long, TimeAndValueIterator> listIteratorFactory;
+        private readonly IEnumerable<TimeAndValue> timeAndValues;
         private readonly long maxUnixTimeSeconds;
         private readonly long minUnixTimeSeconds;
     }

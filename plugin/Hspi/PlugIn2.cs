@@ -243,13 +243,9 @@ namespace Hspi
                 long groupBySeconds = (long)Math.Round(GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max - min)).TotalSeconds);
                 bool shouldGroup = groupBySeconds >= 5;
 
-                var queryData = await Collector.GetGraphValues(refId,
-                                                               min / 1000,
-                                                               max / 1000).ConfigureAwait(false);
-
-                var queryDataGrouped = shouldGroup ?
-                                            GroupValues(min / 1000, max / 1000, groupBySeconds, fillStrategy, queryData) :
-                                            queryData;
+                var queryData = shouldGroup ?
+                                await TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy).ConfigureAwait(false) :
+                                await Collector.GetGraphValues(refId, min / 1000, max / 1000).ConfigureAwait(false);
 
                 CheckNotNull(hsFeatureCachedDataProvider);
                 StringBuilder stb = new();
@@ -265,7 +261,7 @@ namespace Hspi
                 jsonWriter.WritePropertyName("data");
                 jsonWriter.WriteStartArray();
 
-                foreach (var row in queryDataGrouped)
+                foreach (var row in queryData)
                 {
                     jsonWriter.WriteStartObject();
                     jsonWriter.WritePropertyName("x");
@@ -288,24 +284,18 @@ namespace Hspi
                 Log.Error("Getting graph data failed for {param} with {error}", data, ex.GetFullMessage());
                 return WriteExceptionResultAsJson(ex);
             }
+        }
 
-            static IEnumerable<TimeAndValue> GroupValues(long min, long max, long groupBySeconds, FillStrategy fillStrategy, IList<TimeAndValue> data)
+        private static FillStrategy GetFillStrategy(JObject? jsonData)
+        {
+            try
             {
-                TimeSeriesHelper helper = new(min, max, groupBySeconds, data);
-                return helper.ReduceSeriesWithAverage(fillStrategy);
+                var fillStrategyStr = GetJsonValue<string>(jsonData, "fill");
+                return fillStrategyStr.DehumanizeTo<FillStrategy>();
             }
-
-            static FillStrategy GetFillStrategy(JObject? jsonData)
+            catch (NoMatchFoundException ex)
             {
-                try
-                {
-                    var fillStrategyStr = GetJsonValue<string>(jsonData, "fill");
-                    return fillStrategyStr.DehumanizeTo<FillStrategy>();
-                }
-                catch (NoMatchFoundException ex)
-                {
-                    throw new ArgumentException("fill is not correct", ex);
-                }
+                throw new ArgumentException("fill is not correct", ex);
             }
         }
 

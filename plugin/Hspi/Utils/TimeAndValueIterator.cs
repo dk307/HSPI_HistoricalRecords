@@ -6,10 +6,6 @@ using Hspi.Database;
 
 namespace Hspi
 {
-    internal class TimeAndValueQueryHelper
-    {
-    }
-
     internal sealed class TimeAndValueIterator
     {
         public TimeAndValueIterator(IEnumerable<TimeAndValue> list, long maxUnixTimeSeconds)

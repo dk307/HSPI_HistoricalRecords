@@ -142,6 +142,21 @@ namespace Hspi.Database
         /// <returns></returns>
         public async Task<IList<TimeAndValue>> GetGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
+            List<TimeAndValue> records = null;
+            await IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, (x) => records = new List<TimeAndValue>(x)).ConfigureAwait(false);
+            return records;
+        }
+
+        /// <summary>
+        /// Iterates the values between the range and one above and below the range
+        /// </summary>
+        /// <param name="refId"></param>
+        /// <param name="minUnixTimeSeconds"></param>
+        /// <param name="maxUnixTimeSeconds"></param>
+        /// <returns></returns>
+        public async Task IterateGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
+                                            Action<IEnumerable<TimeAndValue>> iterator)
+        {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
 
             var stmt = getTimeAndValueCommand;
@@ -150,15 +165,17 @@ namespace Hspi.Database
             ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
             ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
 
-            List<TimeAndValue> records = new();
-            while (ugly.step(stmt) != SQLITE_DONE)
-            {
-                // order: SELECT (time, value) FROM history
-                var record = new TimeAndValue(ugly.column_int64(stmt, 0), ugly.column_double(stmt, 1));
-                records.Add(record);
-            }
+            iterator(Iterate(stmt));
 
-            return records;
+            static IEnumerable<TimeAndValue> Iterate(sqlite3_stmt stmt)
+            {
+                while (ugly.step(stmt) != SQLITE_DONE)
+                {
+                    // order: SELECT (time, value) FROM history
+                    var record = new TimeAndValue(ugly.column_int64(stmt, 0), ugly.column_double(stmt, 1));
+                    yield return record;
+                }
+            }
         }
 
         public async Task<IList<RecordDataAndDuration>> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
