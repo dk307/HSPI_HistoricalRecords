@@ -47,33 +47,33 @@ namespace Hspi
         {
             var result = new SortedDictionary<long, ResultType>();
 
-            int listMarker = 0;
+            ListIterator listIterator = new(list, maxUnixTimeSeconds);
             for (var index = minUnixTimeSeconds; index < maxUnixTimeSeconds; index += intervalUnixTimeSeconds)
             {
                 // skip initial missing values
-                if (list.IsValidIndex(listMarker) && (list[listMarker].UnixTimeSeconds > index) &&
-                                                     (list[listMarker].UnixTimeSeconds >= index + intervalUnixTimeSeconds))
+                if (listIterator.IsCurrentValid && (listIterator.Current.UnixTimeSeconds > index) &&
+                                                     (listIterator.Current.UnixTimeSeconds >= index + intervalUnixTimeSeconds))
                 {
                     continue;
                 }
 
                 // consume all the points inside the interval
                 // all points which start before the end of current index
-                while (list.IsValidIndex(listMarker) &&
-                       (list[listMarker].UnixTimeSeconds < Math.Min(maxUnixTimeSeconds, index + intervalUnixTimeSeconds)))
+                while (listIterator.IsCurrentValid &&
+                       (listIterator.Current.UnixTimeSeconds < Math.Min(maxUnixTimeSeconds, index + intervalUnixTimeSeconds)))
                 {
-                    if (GetFinishTimeForTimePoint(listMarker) >= index)
+                    if (listIterator.FinishTimeForCurrentTimePoint >= index)
                     {
                         // duration is time of listMarker item between current index and its end
-                        var intervalMax = Math.Min(GetFinishTimeForTimePoint(listMarker), index + intervalUnixTimeSeconds);
-                        var intervalMin = Math.Max(index, list[listMarker].UnixTimeSeconds);
+                        var intervalMax = Math.Min(listIterator.FinishTimeForCurrentTimePoint, index + intervalUnixTimeSeconds);
+                        var intervalMin = Math.Max(index, listIterator.Current.UnixTimeSeconds);
 
-                        if (fillStrategy == FillStrategy.Linear && list.IsValidIndex(listMarker + 1))
+                        if (fillStrategy == FillStrategy.Linear && listIterator.IsNextValid)
                         {
-                            double v1 = list[listMarker].DeviceValue;
-                            double v2 = list[listMarker + 1].DeviceValue;
-                            double t1 = list[listMarker].UnixTimeSeconds;
-                            double t2 = list[listMarker + 1].UnixTimeSeconds;
+                            double v1 = listIterator.Current.DeviceValue;
+                            double v2 = listIterator.Next.DeviceValue;
+                            double t1 = listIterator.Current.UnixTimeSeconds;
+                            double t2 = listIterator.Next.UnixTimeSeconds;
 
                             var p2 = v1 + ((v2 - v1) * ((intervalMax - t1) / (t2 - t1)));
                             var p1 = v1 + ((v2 - v1) * ((intervalMin - t1) / (t2 - t1)));
@@ -83,14 +83,14 @@ namespace Hspi
                         }
                         else
                         {
-                            GetOrCreate(result, index).AddLOCF(list[listMarker].DeviceValue, intervalMax - intervalMin);
+                            GetOrCreate(result, index).AddLOCF(listIterator.Current.DeviceValue, intervalMax - intervalMin);
                         }
                     }
 
                     // if current timepoint goes beyond current index, move to next index
-                    if (GetFinishTimeForTimePoint(listMarker) < index + intervalUnixTimeSeconds)
+                    if (listIterator.FinishTimeForCurrentTimePoint < index + intervalUnixTimeSeconds)
                     {
-                        listMarker++;
+                        listIterator.MoveNext();
                     }
                     else
                     {
@@ -114,16 +114,44 @@ namespace Hspi
             return val;
         }
 
-        private long GetFinishTimeForTimePoint(int index)
+        private sealed class ListIterator
         {
-            if (list.IsValidIndex(index + 1))
+            public ListIterator(ITimeAndValueList list, long maxUnixTimeSeconds)
             {
-                return Math.Min(list[index + 1].UnixTimeSeconds, maxUnixTimeSeconds);
+                this.list = list;
+                this.maxUnixTimeSeconds = maxUnixTimeSeconds;
+                this.marker = 0;
             }
-            else
+
+            public TimeAndValue Current => list[marker];
+
+            public long FinishTimeForCurrentTimePoint
             {
-                return Math.Max(maxUnixTimeSeconds, list[index].UnixTimeSeconds);
+                get
+                {
+                    if (IsNextValid)
+                    {
+                        return Math.Min(Next.UnixTimeSeconds, maxUnixTimeSeconds);
+                    }
+                    else
+                    {
+                        return Math.Max(maxUnixTimeSeconds, Current.UnixTimeSeconds);
+                    }
+                }
             }
+
+            public bool IsCurrentValid => list.IsValidIndex(marker);
+            public bool IsNextValid => list.IsValidIndex(marker + 1);
+            public TimeAndValue Next => list[marker + 1];
+
+            public void MoveNext()
+            {
+                marker++;
+            }
+
+            private readonly ITimeAndValueList list;
+            private readonly long maxUnixTimeSeconds;
+            private int marker;
         }
 
         private sealed class ResultType
