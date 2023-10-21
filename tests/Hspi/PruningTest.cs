@@ -51,6 +51,54 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void PruningAccountsForPerDevicePruningDuration()
+        {
+            int deviceRefId = 3;
+            TimeSpan pruningTimePeriod = TimeSpan.FromSeconds(5);
+
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin,
+                new Dictionary<string, string>() { { "GlobalRetentionPeriod", pruningTimePeriod.ToString() } });
+
+            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
+            plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(10));
+
+            var feature = TestHelper.SetupHsFeature(mockHsController, deviceRefId, 100);
+
+            //set device retention to 10s
+            mockHsController.Setup(x => x.GetINISetting("Settings", "DeviceSettings", null, PlugInData.SettingFileName)).Returns(deviceRefId.ToString());
+            mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "DeviceRefId", null, PlugInData.SettingFileName)).Returns(deviceRefId.ToString());
+            mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "IsTracked", null, PlugInData.SettingFileName)).Returns(true.ToString());
+            mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "RetentionPeriod", null, PlugInData.SettingFileName)).Returns(TimeSpan.FromSeconds(2).ToString("c"));
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId));
+
+            int addedRecordCount = SettingsPages.MinRecordsToKeepDefault + 20;
+
+            var added = new List<RecordData>();
+            for (int i = 0; i < addedRecordCount; i++)
+            {
+                added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                                         feature, i, i.ToString(), aTime.AddSeconds(i), i + 1));
+            }
+
+            Assert.AreEqual(plugin.Object.GetTotalRecords(feature.Ref), addedRecordCount);
+
+            plugin.Object.PruneDatabase();
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 112));
+
+            Assert.AreEqual(10 - 8, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref)[0]);
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
         public void PruningPreservesMinRecords()
         {
             TimeSpan pruningTimePeriod = TimeSpan.FromSeconds(1);

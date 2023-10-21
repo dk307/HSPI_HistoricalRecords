@@ -101,10 +101,37 @@ namespace HSPI_HistoricalRecordsTest
             }
             Assert.AreEqual(new TimeSpan(1, 0, 10, 0).ToString("c"), plugExtraData["durationInterval"]);
             Assert.AreEqual(new TimeSpan(0, 0, 1, 30).ToString("c"), plugExtraData["refreshInterval"]);
- 
+
             CollectionAssert.AreEqual(trackedFeature.StatusGraphics.Values,
                                      ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values);
             plugIn.Object.ShutdownIO();
+        }
+
+        [DataTestMethod]
+        [DataRow("{\"trackedref\":1000,\"function\":\"average\",\"daysDuration\":1,\"hoursDuration\":0,\"minutesDuration\":10,\"secondsDuration\":0,\"daysRefresh\":0,\"hoursRefresh\":0,\"minutesRefresh\":1,\"secondsRefresh\":30}", "function is not correct")]     
+        [DataRow("{\"trackedref\":1000,\"function\":\"averagelinear\",\"hoursDuration\":0,\"minutesDuration\":10,\"secondsDuration\":0,\"daysRefresh\":0,\"hoursRefresh\":0,\"minutesRefresh\":1,\"secondsRefresh\":30}", "daysDuration is not correct")]     
+        [DataRow("", "trackedref is not correct")]     
+        public void AddDeviceErrorChecking(string format, string exception)
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+
+            TestHelper.SetupHsControllerAndSettings(plugIn, new Dictionary<string, string>());
+
+            Assert.IsTrue(plugIn.Object.InitIO());
+
+            //add
+            string data = plugIn.Object.PostBackProc("devicecreate", format, string.Empty, 0);
+            Assert.IsNotNull(data);
+
+            var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+            Assert.IsNotNull(jsonData);
+
+            var errorMessage = jsonData["error"].Value<string>();
+            Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
+            StringAssert.Contains(errorMessage, exception);
+
+            plugIn.Object.ShutdownIO();
+            plugIn.Object.Dispose();
         }
     }
 }
