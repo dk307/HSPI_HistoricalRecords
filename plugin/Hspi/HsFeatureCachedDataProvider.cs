@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Identification;
@@ -126,7 +125,9 @@ namespace Hspi
 
         private bool IsMonitoredFeature(int refId)
         {
-            bool monitored = !IsTimerOrCounter(refId);
+            bool monitored = !IsTimerOrCounter(refId) &&
+                             !IsHS4RootDevice(refId) &&
+                             !IsSameDeviceInterface(refId);
 
             return monitored;
 
@@ -143,6 +144,18 @@ namespace Hspi
                 }
 
                 return false;
+            }
+
+            bool IsSameDeviceInterface(int refId)
+            {
+                var featureInterface = GetPropertyValue<string>(refId, EProperty.Interface);
+                return featureInterface == PlugInData.PlugInId;
+            }
+
+            bool IsHS4RootDevice(int refId)
+            {
+                var typeInfo = GetPropertyValue<TypeInfo>(refId, EProperty.DeviceType);
+                return (typeInfo.ApiType == EApiType.Device);
             }
         }
 

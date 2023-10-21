@@ -141,6 +141,8 @@
 			end
 		end							
 	end
+	
+	show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
 }}	
 
 <script>
@@ -175,6 +177,7 @@ function getRangeString(min, max) {
 <!-- devicePrecision={{devicePrecision}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
 <!-- childrenRefIds={{childrenRefIds}}<BR> -->
+<!-- test={{get_setting_bool 'gEnableDeviceRefColumn'}}<BR> -->
 
 <header>
 	<nav class="navbar">
@@ -189,7 +192,7 @@ function getRangeString(min, max) {
 			<div class="md-form my-0 mr-3" style="width:100%">
 				<select id="feature" class="mdb-select md-form dropdown-primary colorful-select" name="feature" >
 					{{for id in childrenRefIds}}
-						<option value="{{id}}" {{if id==featureId}}selected{{end}} >{{device_name_full id  | html.escape}}</option>	
+						<option value="{{id}}" {{if id==featureId}}selected{{end}} >{{device_name_full id  | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>	
 					{{end}}			
 				</select> 
 				<label class="mdb-main-label" for="feature">Feature</label>
