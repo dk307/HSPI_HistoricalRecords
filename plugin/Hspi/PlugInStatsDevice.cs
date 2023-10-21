@@ -3,8 +3,11 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
+using System.IO;
 using System.Linq;
-using Humanizer;
+using System.Text;
+using Hspi.DeviceData;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -45,7 +48,22 @@ namespace Hspi
             var durationInterval = GetDuration(daysDuration, hoursDuration, minutesDuration, secondsDuration);
             var refreshInterval = GetDuration(daysRefresh, hoursRefresh, minutesRefresh, secondsRefresh);
 
-            return "{}";
+            var refId = HsHomeKitDeviceFactory.CreateDevice(HomeSeerSystem, trackedref, function, durationInterval, refreshInterval);
+
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
+            jsonWriter.WritePropertyName("result");
+            jsonWriter.WriteStartObject();
+            jsonWriter.WritePropertyName("ref");
+            jsonWriter.WriteValue(refId);
+            jsonWriter.WriteEndObject();
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+
+            return stb.ToString();
 
             static TimeSpan GetDuration(int days, int hours, int minutes, int seconds)
             {
@@ -55,16 +73,19 @@ namespace Hspi
 
             static StatisticsFunction GetStatisticsFunction(JObject? jsonData)
             {
-                try
-                {
-                    var str = GetJsonValue<string>(jsonData, "function");
-                    return str.DehumanizeTo<StatisticsFunction>();
-                }
-                catch (NoMatchFoundException ex)
-                {
-                    throw new ArgumentException("function is not correct", ex);
-                }
+                var str = GetJsonValue<string>(jsonData, "function");
+                return GetStatisticsFunctionFromString(str);
             }
+        }
+
+        private static StatisticsFunction GetStatisticsFunctionFromString(string str)
+        {
+            return str switch
+            {
+                "averagestep" => StatisticsFunction.AverageStep,
+                "averagelinear" => StatisticsFunction.AverageLinear,
+                _ => throw new ArgumentException("function is not correct"),
+            };
         }
     }
 }

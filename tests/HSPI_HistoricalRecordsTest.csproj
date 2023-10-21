@@ -50,6 +50,7 @@
     <Compile Include="..\plugin\shared\tests\ExceptionHelperTest.cs">
       <Link>shared\ExceptionHelperTest.cs</Link>
     </Compile>
+    <Compile Include="Hspi\AddDeviceTest.cs" />
     <Compile Include="Hspi\GraphCallbacksTest.cs" />
     <Compile Include="Hspi\PruningTest.cs" />
     <Compile Include="Hspi\DevicePageHistoryCallbacksTest.cs" />
