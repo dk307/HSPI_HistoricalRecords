@@ -10,25 +10,31 @@ namespace Hspi
 {
     internal sealed class TimeSeriesHelper
     {
-        public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                long intervalUnixTimeSeconds, IEnumerable<TimeAndValue> timeAndValues)
+        public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds, IEnumerable<TimeAndValue> timeAndValues)
         {
-            if (intervalUnixTimeSeconds <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(intervalUnixTimeSeconds));
-            }
             if (minUnixTimeSeconds > maxUnixTimeSeconds)
             {
                 throw new ArgumentOutOfRangeException(nameof(minUnixTimeSeconds));
             }
             this.minUnixTimeSeconds = minUnixTimeSeconds;
             this.maxUnixTimeSeconds = maxUnixTimeSeconds + 1; // make max inclusive
-            this.intervalUnixTimeSeconds = intervalUnixTimeSeconds;
             this.timeAndValues = timeAndValues;
         }
 
-        public IList<TimeAndValue> ReduceSeriesWithAverage(FillStrategy fillStrategy)
+        public double Average(FillStrategy fillStrategy)
         {
+            var res = ReduceSeriesWithAverage(maxUnixTimeSeconds - minUnixTimeSeconds, fillStrategy).ToList();
+            Debug.Assert(res.Count == 1);
+            return res[0].DeviceValue;
+        }
+
+        public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(long intervalUnixTimeSeconds, FillStrategy fillStrategy)
+        {
+            if (intervalUnixTimeSeconds <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(intervalUnixTimeSeconds));
+            }
+
             var listIterator = new TimeAndValueIterator(timeAndValues, this.maxUnixTimeSeconds);
             var result = new SortedDictionary<long, ResultType>();
 
@@ -59,9 +65,11 @@ namespace Hspi
                             double t1 = listIterator.Current.UnixTimeSeconds;
                             double t2 = listIterator.Next.UnixTimeSeconds;
 
-                            var p2 = v1 + ((v2 - v1) * ((intervalMax - t1) / (t2 - t1)));
-                            var p1 = v1 + ((v2 - v1) * ((intervalMin - t1) / (t2 - t1)));
-                            var area = ((p1 + p2) / 2) * (intervalMax - intervalMin);
+                            //var p2 = v1 + ((v2 - v1) * ((intervalMax - t1) / (t2 - t1)));
+                            //var p1 = v1 + ((v2 - v1) * ((intervalMin - t1) / (t2 - t1)));
+                            //var area = ((p1 + p2) / 2) * (intervalMax - intervalMin);
+
+                            var area = ((((v2 - v1) * (intervalMin + intervalMax - 2 * t1)) / (2 * (t2 - t1))) + v1) * (intervalMax - intervalMin);
 
                             GetOrCreate(result, index).AddArea(area, intervalMax - intervalMin);
                         }
@@ -83,7 +91,7 @@ namespace Hspi
                 }
             }
 
-            return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds)).ToList();
+            return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds));
         }
 
         private static ResultType GetOrCreate(IDictionary<long, ResultType> dict, long key)
@@ -118,9 +126,8 @@ namespace Hspi
             public double WeighedValue;
         }
 
-        private readonly long intervalUnixTimeSeconds;
-        private readonly IEnumerable<TimeAndValue> timeAndValues;
         private readonly long maxUnixTimeSeconds;
         private readonly long minUnixTimeSeconds;
+        private readonly IEnumerable<TimeAndValue> timeAndValues;
     }
 }

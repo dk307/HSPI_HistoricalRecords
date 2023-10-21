@@ -36,7 +36,7 @@ namespace HSPI_HistoricalRecordsTest
                                         feature, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange).ToUnixTimeMilliseconds()}, fill:'{fillStrategy.ToString()}'}}";
+            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange).ToUnixTimeMilliseconds()}, fill:'{fillStrategy}'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 

@@ -120,6 +120,7 @@ namespace Hspi
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
+                HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a database statistics device");
 
                 RestartProcessing();
 
@@ -217,7 +218,7 @@ namespace Hspi
             var deviceString = feature.DisplayedStatus;
 
             RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-            Log.Debug("Recording {@record}", recordData);
+            Log.Verbose("Recording {@record}", recordData);
 
             await collector.Record(recordData).ConfigureAwait(false);
         }

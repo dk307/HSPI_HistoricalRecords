@@ -134,7 +134,7 @@ namespace Hspi.Database
         }
 
         /// <summary>
-        /// Returns the values between the range and one above and below the range
+        /// Returns the values between the range and one above and below the range.  Order is time stamp ascending.
         /// </summary>
         /// <param name="refId"></param>
         /// <param name="minUnixTimeSeconds"></param>
@@ -148,12 +148,12 @@ namespace Hspi.Database
         }
 
         /// <summary>
-        /// Iterates the values between the range and one above and below the range
+        /// Iterates the values between the range and one above and below the range. Order is time stamp ascending.
         /// </summary>
         /// <param name="refId"></param>
         /// <param name="minUnixTimeSeconds"></param>
         /// <param name="maxUnixTimeSeconds"></param>
-        /// <returns></returns>
+        /// <param name="iterator">Function called for iteration</param>
         public async Task IterateGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
                                             Action<IEnumerable<TimeAndValue>> iterator)
         {
@@ -385,7 +385,7 @@ namespace Hspi.Database
                 var record = await queue.DequeueAsync(shutdownToken).ConfigureAwait(false);
                 try
                 {
-                    Log.Debug("Adding to database: {@record}", record);
+                    Log.Verbose("Adding to database: {@record}", record);
                     await InsertRecord(record).ConfigureAwait(false);
                 }
                 catch (Exception ex)

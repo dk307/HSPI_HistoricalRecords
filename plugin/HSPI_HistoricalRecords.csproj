@@ -98,9 +98,11 @@
     <Compile Include="Hspi\HsFeatureCachedDataProvider.cs" />
     <Compile Include="Hspi\Pages\PerDeviceSettings.cs" />
     <Compile Include="Hspi\Pages\PerDeviceSettingsConfig.cs" />
+    <Compile Include="Hspi\PlugInStatsDevice.cs" />
     <Compile Include="Hspi\SystemClock.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />
     <Compile Include="Hspi\Utils\FillStrategy.cs" />
+    <Compile Include="Hspi\Utils\TypeConverter.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIterator.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueQueryHelper.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesHelper.cs" />
@@ -109,7 +111,7 @@
     <Compile Include="Hspi\PlugIn.cs" />
     <Compile Include="Hspi\PlugInData.cs" />
     <Compile Include="Hspi\Program.cs" />
-    <Compile Include="RecordData.cs" />
+    <Compile Include="Hspi\RecordData.cs" />
     <Compile Include="Database\SqliteDatabaseCollector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resource.Designer.cs">

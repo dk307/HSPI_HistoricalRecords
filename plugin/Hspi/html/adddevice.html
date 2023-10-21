@@ -1,0 +1,196 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!--This maintains the scale of the page based on the scale of the screen-->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!--This liquid tag loads all of the necessary css files for HomeSeer-->
+    {{includefile '/bootstrap/css/page_common.css'}}
+    <link href="../bootstrap/css/addons-pro/steppers.min.css" rel="stylesheet">
+    <title>Add a statistics virtual device</title>
+	
+</head>
+<body class="body homeseer-skin">
+    <!--These liquid tags add the HomeSeer header and navbar to the top of the page when appropriate-->
+    {{includefile 'header.html'}}
+    {{includefile 'navbar.html'}}
+	{{show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'}}
+    <!--Primary container for the page content
+        The .container class ensures the page content is fit and centered to the screen-->
+    <div class="container">
+        <!-- MDB Steppers -->
+        <ul id="process-stepper" class="stepper linear">
+            <li class="step active locked">
+                <div data-step-label="Add device" class="step-title waves-effect waves-dark">Step 1</div>
+                <div class="step-new-content">
+					Select a device to create a statistic device for
+					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetRecordedDeviceList' [] }}
+                    <select class='mdb-select md-form' id='deviceSelect' searchable="Search for a device here..." required>
+						{{ for id in deviceRefIds }}
+						<option value='{{id}}'>{{device_name_full id  | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
+						{{ end }}
+					</select>
+                    <div class="step-actions">                   
+                        <button class="waves-effect waves-dark btn btn-sm btn-primary next-step">SELECT</button>
+                    </div>
+                </div>
+            </li>
+
+            <li class="step">
+                <div data-step-label="Select statistical function" class="step-title waves-effect waves-dark">Step 2</div>
+                <div id="step2" class="step-new-content">
+                     				
+					<div class="row">	
+						<div class="col-5">	
+							<select id="function" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
+								<option value="averagelinear" selected >Average Linear</option>	
+								<option value="averagestep">Average Step</option>	
+							</select> 										 
+						</div>
+						<div class="col-7">		
+							<p>
+							<span>Average Linear</span>
+							<label class="fw-lighter" style="font-size:small">The average value of stored records under consideration of the time distances between them. A linear interpolation is applied per measurement pair. Good suited to observe a source sensor with non-periodic sensor updates and when continuous behavior is represented by the records (e.g. outside temperature).</label> 						 
+							</p>
+							<p>
+							<span>Average Step</span>
+							<label class="fw-lighter" style="font-size:small">The average value of stored measurements under consideration of the time distances between them. LOCF (last observation carried forward weighting) is applied, meaning, that the old value is assumed between two measurements. The resulting step function represents well the behavior of non-continuous behavior, like the set temperature of a boiler.</label> 						 
+							</p>
+						</div>
+					</div>
+					
+                    <div class="step-actions" style="margin-top: 32px;">
+                        <button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
+                        <button class="waves-effect waves-dark btn btn-sm btn-primary next-step">SELECT</button>
+                    </div>
+                </div>
+            </li>
+			
+			<li class="step">
+                <div data-step-label="Select duration of statistical function" class="step-title waves-effect waves-dark">Step 3</div>
+                <div id="step3" class="step-new-content">
+                    <div class="input-group">					 
+						<p>   
+							<div class="md-form mr-1">
+								<input type="number" id="daysDuration" name="days" class="form-control" value="0" required>
+								<label for="daysDuration">Days</label>                                     
+							</div>
+							<div class="md-form mr-1">
+								<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" required>
+								<label for="hoursDuration">Hours</label>                                     
+							</div>
+							<div class="md-form mr-1">
+								<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="10" required>
+								<label for="minutesDuration">Minutes</label>                                     
+							</div>
+							<div class="md-form mr-1">
+								<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" required>
+								<label for="secondsDuration">Seconds</label>                                     
+							</div>
+						</p> 
+					</div>
+					<div class="step-actions" style="margin-top: 32px;">
+						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
+						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step" >NEXT</button>
+					</div>
+				</div>       
+			</li>
+                    
+			
+
+			<li class="step">
+                <div data-step-label="Select refresh interval of statistical function" class="step-title waves-effect waves-dark">Step 4</div>
+                <div id="step4" class="step-new-content">
+                    <div class="input-group">					 
+						<p>   
+							<div class="md-form mr-1">
+								<input type="number" id="daysRefresh" name="days" class="form-control" value="0" required>
+								<label for="daysRefresh">Days</label>                                     
+							</div>
+							<div class="md-form mr-1">
+								<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" required>
+								<label for="hoursRefresh">Hours</label>                                     
+							</div>
+							<div class="md-form mr-1">
+								<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" required>
+								<label for="minutesRefresh">Minutes</label>                                     
+							</div>
+							<div class="md-form mr-1">
+								<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="30" required>
+								<label for="secondsRefresh">Seconds</label>                                     
+							</div>
+						</p> 
+					</div>
+					
+					<div id="error-message-div" class="text-danger">
+                    </div>
+					
+					<div class="step-actions" style="margin-top: 32px;">
+						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
+						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step" data-feedback="createDevice">CREATE</button>
+					</div>            	
+				</div>       
+            </li>
+
+            <li class="step">
+                <div data-step-label="Finish" class="step-title waves-effect waves-dark">Step 5</div>
+                <div id="lastStep" class="step-new-content">
+                    <p id="lastStepText">
+                        The device has been successfully created. Click Finish to go to the devices page.
+                    </p>
+                    <div class="step-actions">
+                        <button class="waves-effect waves-dark btn btn-sm btn-primary m-0 mt-4" onclick="finish()" type="button">FINISH</button>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    {{includefile 'bootstrap/js/page_common.js'}}
+    <script type="text/javascript" src="../bootstrap/js/addons-pro/steppers.min.js"></script>
+	<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+    <script type="text/JavaScript">
+		var refId = null;
+        $(document).ready(function () {
+            $('.stepper').mdbStepper();
+        })
+
+        function createDevice() {			
+			var formObject = {
+			   trackedref: $('#deviceSelect').val(),
+			   'function': $('#function').val(),
+			   daysDuration: $('#daysDuration').val(),
+			   hoursDuration: $('#hoursDuration').val(),
+			   minutesDuration: $('#minutesDuration').val(),
+			   secondsDuration: $('#secondsDuration').val(),
+			   daysRefresh: $('#daysRefresh').val(),
+			   hoursRefresh: $('#hoursRefresh').val(),
+			   minutesRefresh: $('#minutesRefresh').val(),
+			   secondsRefresh: $('#secondsRefresh').val(),		  
+		    };
+			
+			var data = JSON.stringify(formObject);
+			
+			$('#error-message-div').html('');
+			
+			ajaxPostPlugIn("devicecreate", formObject, function (result) {	
+				$('#process-stepper').destroyFeedback();			
+				$('#process-stepper').nextStep();
+				refId = result.ref;
+			}, function (errorMessage) {	
+				$('#process-stepper').destroyFeedback();			
+				$('#error-message-div').html(errorMessage);
+			}
+			);
+        }
+
+        function finish() {
+            var devicesPage = window.location.origin + "/devices.html";
+            window.location.assign(devicesPage);
+        }
+    </script>
+</body>
+</html>
