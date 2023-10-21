@@ -57,7 +57,6 @@
     <Compile Include="Hspi\PlugInTest.cs" />
     <Compile Include="Hspi\SettingsPagesTest.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIteratorTests.cs" />
-    <Compile Include="Hspi\Utils\TimeAndValueQueryHelperTests.cs" />
     <Compile Include="TestHelper.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesHelperTest.cs" />
     <Compile Include="Utils\Initialize.cs" />

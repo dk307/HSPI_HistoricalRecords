@@ -4,6 +4,7 @@ using System.IO;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -295,7 +296,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void IsFeatureTracked()
+        public void IsFeatureTrackedForTimer()
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -318,6 +319,69 @@ namespace HSPI_HistoricalRecordsTest
 
             // invalidate the cache
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+
+            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
+            Assert.IsFalse(tracked2);
+
+            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void IsFeatureTrackedForThisPluginDevices()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
+                                              35673,
+                                              1.132,
+                                              "1.1 F");
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
+            Assert.IsTrue(tracked1);
+            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
+
+            // invalidate the cache
+            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.DeviceType))
+                            .Returns(new TypeInfo() { ApiType = EApiType.Device });
+
+            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
+            Assert.IsFalse(tracked2);
+
+            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
+
+            plugin.Object.ShutdownIO();
+            plugin.Object.Dispose();
+        }
+
+        [TestMethod]
+        public void IsFeatureTrackedForHS4RootDevices()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+
+            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
+                                              35673,
+                                              1.132,
+                                              "1.1 F");
+
+            Assert.IsTrue(plugin.Object.InitIO());
+
+            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
+            Assert.IsTrue(tracked1);
+            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
+
+            // invalidate the cache
+            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+
+            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.Interface)).Returns(PlugInData.PlugInId);
 
             var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
             Assert.IsFalse(tracked2);
