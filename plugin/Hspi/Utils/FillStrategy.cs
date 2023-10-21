@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-namespace Hspi
+namespace Hspi.Utils
 {
     public enum FillStrategy
     {

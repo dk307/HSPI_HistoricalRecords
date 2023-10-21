@@ -4,7 +4,7 @@ using Hspi.Database;
 
 #nullable enable
 
-namespace Hspi
+namespace Hspi.Utils
 {
     internal sealed class TimeAndValueIterator
     {
