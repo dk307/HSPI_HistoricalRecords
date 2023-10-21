@@ -25,17 +25,13 @@ namespace Hspi
 {
     internal partial class PlugIn : HspiBase
     {
-        public IList<string> GetAllowedDisplays(string? refIdString)
+        public IList<string> GetAllowedDisplays(object? refIdString)
         {
-            var displays = new List<string>();
-            if (string.IsNullOrWhiteSpace(refIdString))
-            {
-                return displays;
-            }
+            var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
 
-            var refId = ParseRefId(refIdString);
             var feature = HomeSeerSystem.GetFeatureByRef(refId);
 
+            List<string> displays = new();
             displays.Add("table");
             if (ShouldShowChart(feature))
             {
@@ -45,9 +41,9 @@ namespace Hspi
             return displays;
         }
 
-        public List<object?> GetDeviceStatsForPage(string refIdString)
+        public List<object?> GetDeviceStatsForPage(object? refIdString)
         {
-            int refId = ParseRefId(refIdString);
+            var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
             var result = new List<object?>();
 
             result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
@@ -60,13 +56,23 @@ namespace Hspi
 
         public override string PostBackProc(string page, string data, string user, int userRights)
         {
-            return page switch
+            Log.Debug("PostBackProc for {page} for {param}", page, data);
+            try
             {
-                "historyrecords" => HandleHistoryRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
-                "graphrecords" => HandleGraphRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
-                "updatedevicesettings" => HandleUpdateDeviceSettings(data),
-                _ => base.PostBackProc(page, data, user, userRights),
-            };
+                return page switch
+                {
+                    "historyrecords" => HandleHistoryRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
+                    "graphrecords" => HandleGraphRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
+                    "updatedevicesettings" => HandleUpdateDeviceSettings(data),
+                    "devicecreate" => HandleDeviceCreate(data),
+                    _ => base.PostBackProc(page, data, user, userRights),
+                };
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Error in Page {page} for {param} with {error}", page, data, ex.GetFullMessage());
+                return WriteExceptionResultAsJson(ex);
+            }
         }
 
         internal IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
@@ -125,20 +131,6 @@ namespace Hspi
             catch (Exception ex)
             {
                 throw new ArgumentException(tokenStr + " is not correct", ex);
-            }
-        }
-
-        private static long ParseInt(string argumentName, string? refIdString)
-        {
-            if (long.TryParse(refIdString,
-                             System.Globalization.NumberStyles.Any,
-                             CultureInfo.InvariantCulture, out var result))
-            {
-                return result;
-            }
-            else
-            {
-                throw new ArgumentOutOfRangeException(argumentName);
             }
         }
 
@@ -225,77 +217,69 @@ namespace Hspi
 
         private async Task<string> HandleGraphRecords(string data)
         {
-            try
+            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+
+            var refId = GetJsonValue<int>(jsonData, "refId");
+            var min = GetJsonValue<long>(jsonData, "min");
+            var max = GetJsonValue<long>(jsonData, "max");
+
+            if (max < min)
             {
-                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+                throw new ArgumentException("max < min");
+            }
 
-                var refId = GetJsonValue<int>(jsonData, "refId");
-                var min = GetJsonValue<long>(jsonData, "min");
-                var max = GetJsonValue<long>(jsonData, "max");
+            var fillStrategy = GetFillStrategy(jsonData);
 
-                if (max < min)
-                {
-                    throw new ArgumentException("max < min");
-                }
+            long groupBySeconds = (long)Math.Round(GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max - min)).TotalSeconds);
+            bool shouldGroup = groupBySeconds >= 5;
 
-                var fillStrategy = GetFillStrategy(jsonData);
+            var queryData = shouldGroup ?
+                            await TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy).ConfigureAwait(false) :
+                            await Collector.GetGraphValues(refId, min / 1000, max / 1000).ConfigureAwait(false);
 
-                long groupBySeconds = (long)Math.Round(GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max - min)).TotalSeconds);
-                bool shouldGroup = groupBySeconds >= 5;
+            CheckNotNull(hsFeatureCachedDataProvider);
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
 
-                var queryData = shouldGroup ?
-                                await TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy).ConfigureAwait(false) :
-                                await Collector.GetGraphValues(refId, min / 1000, max / 1000).ConfigureAwait(false);
+            jsonWriter.WritePropertyName("result");
+            jsonWriter.WriteStartObject();
+            jsonWriter.WritePropertyName("groupedbyseconds");
+            jsonWriter.WriteValue(shouldGroup ? groupBySeconds : 0);
+            jsonWriter.WritePropertyName("data");
+            jsonWriter.WriteStartArray();
 
-                CheckNotNull(hsFeatureCachedDataProvider);
-                StringBuilder stb = new();
-                using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-                using var jsonWriter = new JsonTextWriter(stringWriter);
-                jsonWriter.Formatting = Formatting.Indented;
+            foreach (var row in queryData)
+            {
                 jsonWriter.WriteStartObject();
+                jsonWriter.WritePropertyName("x");
+                jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
+                jsonWriter.WritePropertyName("y");
+                jsonWriter.WriteValue(row.DeviceValue);
+                jsonWriter.WriteEndObject();
+            }
 
-                jsonWriter.WritePropertyName("result");
-                jsonWriter.WriteStartObject();
-                jsonWriter.WritePropertyName("groupedbyseconds");
-                jsonWriter.WriteValue(shouldGroup ? groupBySeconds : 0);
-                jsonWriter.WritePropertyName("data");
-                jsonWriter.WriteStartArray();
+            jsonWriter.WriteEndArray();
+            jsonWriter.WriteEndObject();
 
-                foreach (var row in queryData)
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+
+            return stb.ToString();
+
+            static FillStrategy GetFillStrategy(JObject? jsonData)
+            {
+                try
                 {
-                    jsonWriter.WriteStartObject();
-                    jsonWriter.WritePropertyName("x");
-                    jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
-                    jsonWriter.WritePropertyName("y");
-                    jsonWriter.WriteValue(row.DeviceValue);
-                    jsonWriter.WriteEndObject();
+                    var fillStrategyStr = GetJsonValue<string>(jsonData, "fill");
+                    return fillStrategyStr.DehumanizeTo<FillStrategy>();
                 }
-
-                jsonWriter.WriteEndArray();
-                jsonWriter.WriteEndObject();
-
-                jsonWriter.WriteEndObject();
-                jsonWriter.Close();
-
-                return stb.ToString();
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Getting graph data failed for {param} with {error}", data, ex.GetFullMessage());
-                return WriteExceptionResultAsJson(ex);
-            }
-        }
-
-        private static FillStrategy GetFillStrategy(JObject? jsonData)
-        {
-            try
-            {
-                var fillStrategyStr = GetJsonValue<string>(jsonData, "fill");
-                return fillStrategyStr.DehumanizeTo<FillStrategy>();
-            }
-            catch (NoMatchFoundException ex)
-            {
-                throw new ArgumentException("fill is not correct", ex);
+                catch (NoMatchFoundException ex)
+                {
+                    throw new ArgumentException("fill is not correct", ex);
+                }
             }
         }
 
@@ -303,82 +287,74 @@ namespace Hspi
         {
             Log.Debug("HandleHistoryRecords {data}", data);
 
-            try
+            StringBuilder stb = new();
+            var parameters = HttpUtility.ParseQueryString(data);
+
+            var refId = ParseParameterAsInt(parameters, "refId");
+            var start = ParseParameterAsInt(parameters, "start");
+            var length = ParseParameterAsInt(parameters, "length");
+            var sortOrder = CalculateSortOrder(parameters["order[0][column]"], parameters["order[0][dir]"]);
+
+            long totalResultsCount = 0;
+
+            long min;
+            long max;
+            if (!string.IsNullOrEmpty(parameters["min"]) && !string.IsNullOrEmpty(parameters["max"]))
             {
-                StringBuilder stb = new();
-                var parameters = HttpUtility.ParseQueryString(data);
+                min = ParseParameterAsInt(parameters, "min") / 1000;
+                max = ParseParameterAsInt(parameters, "max") / 1000;
 
-                var refId = ParseParameterAsInt(parameters, "refId");
-                var start = ParseParameterAsInt(parameters, "start");
-                var length = ParseParameterAsInt(parameters, "length");
-                var sortOrder = CalculateSortOrder(parameters["order[0][column]"], parameters["order[0][dir]"]);
-
-                long totalResultsCount = 0;
-
-                long min;
-                long max;
-                if (!string.IsNullOrEmpty(parameters["min"]) && !string.IsNullOrEmpty(parameters["max"]))
+                if (max < min)
                 {
-                    min = ParseParameterAsInt(parameters, "min") / 1000;
-                    max = ParseParameterAsInt(parameters, "max") / 1000;
-
-                    if (max < min)
-                    {
-                        throw new ArgumentException("max < min");
-                    }
-
-                    totalResultsCount = await Collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
-                }
-                else
-                {
-                    throw new ArgumentException("min/max not specified");
+                    throw new ArgumentException("max < min");
                 }
 
-                var queryData = await Collector.GetRecords(refId,
-                                                           min,
-                                                           max,
-                                                           start,
-                                                           length,
-                                                           sortOrder).ConfigureAwait(false);
+                totalResultsCount = await Collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
+            }
+            else
+            {
+                throw new ArgumentException("min/max not specified");
+            }
 
-                using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-                using var jsonWriter = new JsonTextWriter(stringWriter);
-                jsonWriter.Formatting = Formatting.Indented;
-                jsonWriter.WriteStartObject();
+            var queryData = await Collector.GetRecords(refId,
+                                                       min,
+                                                       max,
+                                                       start,
+                                                       length,
+                                                       sortOrder).ConfigureAwait(false);
 
-                jsonWriter.WritePropertyName("draw");
-                jsonWriter.WriteValue(parameters["draw"]);
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
 
-                jsonWriter.WritePropertyName("recordsTotal");
-                jsonWriter.WriteValue(totalResultsCount);
+            jsonWriter.WritePropertyName("draw");
+            jsonWriter.WriteValue(parameters["draw"]);
 
-                jsonWriter.WritePropertyName("recordsFiltered");
-                jsonWriter.WriteValue(totalResultsCount);
+            jsonWriter.WritePropertyName("recordsTotal");
+            jsonWriter.WriteValue(totalResultsCount);
 
-                jsonWriter.WritePropertyName("data");
+            jsonWriter.WritePropertyName("recordsFiltered");
+            jsonWriter.WriteValue(totalResultsCount);
+
+            jsonWriter.WritePropertyName("data");
+            jsonWriter.WriteStartArray();
+
+            CheckNotNull(hsFeatureCachedDataProvider);
+            foreach (var row in queryData)
+            {
                 jsonWriter.WriteStartArray();
-
-                CheckNotNull(hsFeatureCachedDataProvider);
-                foreach (var row in queryData)
-                {
-                    jsonWriter.WriteStartArray();
-                    jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
-                    jsonWriter.WriteValue(row.DeviceValue);
-                    jsonWriter.WriteValue(row.DeviceString);
-                    jsonWriter.WriteValue(row.DurationSeconds);
-                    jsonWriter.WriteEndArray();
-                }
-
+                jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
+                jsonWriter.WriteValue(row.DeviceValue);
+                jsonWriter.WriteValue(row.DeviceString);
+                jsonWriter.WriteValue(row.DurationSeconds);
                 jsonWriter.WriteEndArray();
-                jsonWriter.WriteEndObject();
-                jsonWriter.Close();
-                return stb.ToString();
             }
-            catch (Exception ex)
-            {
-                Log.Error("Getting Records failed for {param} with {error}", data, ex.GetFullMessage());
-                return WriteExceptionResultAsJson(ex);
-            }
+
+            jsonWriter.WriteEndArray();
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+            return stb.ToString();
 
             static ResultSortBy CalculateSortOrder(string? sortBy, string? sortDir)
             {
@@ -392,29 +368,24 @@ namespace Hspi
                 };
             }
 
-            static long ParseParameterAsInt(NameValueCollection parameters, string name) => ParseInt(name, parameters[name]);
+            static long ParseParameterAsInt(NameValueCollection parameters, string name)
+            {
+                return TypeConverter.TryGetFromObject<long>(parameters[name]) ?? throw new ArgumentException(name + " is invalid");
+            }
         }
 
         private string HandleUpdateDeviceSettings(string data)
         {
-            try
-            {
-                var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
-                var refId = GetJsonValue<int>(jsonData, "refId");
-                var tracked = GetJsonValue<bool>(jsonData, "tracked");
+            var refId = GetJsonValue<int>(jsonData, "refId");
+            var tracked = GetJsonValue<bool>(jsonData, "tracked");
 
-                var deviceSettings = new PerDeviceSettings(refId, tracked, null);
-                CheckNotNull(settingsPages);
-                settingsPages.AddOrUpdate(deviceSettings);
-                Log.Information("Updated Device tracking {record}", deviceSettings);
-                return "{}";
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Updating device setting failed for {param} with {error}", data, ex.GetFullMessage());
-                return WriteExceptionResultAsJson(ex);
-            }
+            var deviceSettings = new PerDeviceSettings(refId, tracked, null);
+            CheckNotNull(settingsPages);
+            settingsPages.AddOrUpdate(deviceSettings);
+            Log.Information("Updated Device tracking {record}", deviceSettings);
+            return "{}";
         }
 
         public const int MaxGraphPoints = 256;

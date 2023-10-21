@@ -1,6 +1,6 @@
 
 
-async function ajaxPostPlugIn(url, data, successCallback) {
+async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback = null) {
     const result = $.ajax({
         type: 'POST',
         async: 'true',
@@ -11,8 +11,12 @@ async function ajaxPostPlugIn(url, data, successCallback) {
 			let result = JSON.parse(response);
 			let errorMessage = result.error;
 
-			if (errorMessage != null) {					
-				alert(errorMessage);
+			if (errorMessage != null) {	
+				if (failureCallback === null) {
+					alert(errorMessage);
+				} else {
+					failureCallback(errorMessage);
+				}
 			} else {
 				if (!(successCallback === null)) {
 					successCallback(result.result); 
@@ -20,7 +24,12 @@ async function ajaxPostPlugIn(url, data, successCallback) {
 			}
         },
         error: function (s) {
-          	alert("Error in operation");
+			const message = "Error in network call";
+          	if (failureCallback === null) {
+				alert(message);
+			} else {
+				failureCallback(message);
+			}
         }
     });
 

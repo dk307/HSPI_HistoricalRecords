@@ -385,7 +385,7 @@ namespace Hspi.Database
                 var record = await queue.DequeueAsync(shutdownToken).ConfigureAwait(false);
                 try
                 {
-                    Log.Debug("Adding to database: {@record}", record);
+                    Log.Verbose("Adding to database: {@record}", record);
                     await InsertRecord(record).ConfigureAwait(false);
                 }
                 catch (Exception ex)
