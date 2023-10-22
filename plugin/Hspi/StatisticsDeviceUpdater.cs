@@ -25,12 +25,14 @@ namespace Hspi.DeviceData
             this.systemClock = systemClock;
             this.cancellationToken = cancellationToken;
 
-            this.devices = GetCurrentDevices().ToImmutableDictionary();
+            var result = GetCurrentDevices();
+            this.allRefIds = result.Item1.ToImmutableList();
+            this.devices = result.Item2.ToImmutableDictionary();
         }
 
-        public bool HasDevice(int refId)
+        public bool HasRefId(int refId)
         {
-            return devices.ContainsKey(refId);
+            return allRefIds.Contains(refId);
         }
 
         public bool UpdateData(int refId)
@@ -43,7 +45,7 @@ namespace Hspi.DeviceData
             return false;
         }
 
-        private Dictionary<int, StatisticsDevice> GetCurrentDevices()
+        private System.Tuple<List<int>, Dictionary<int, StatisticsDevice>> GetCurrentDevices()
         {
             var refIds = HS.GetRefsByInterface(PlugInData.PlugInId);
 
@@ -69,7 +71,7 @@ namespace Hspi.DeviceData
                 }
             }
 
-            return currentChildDevices;
+            return new System.Tuple<List<int>, Dictionary<int, StatisticsDevice>>(refIds, currentChildDevices);
         }
 
         public void Dispose()
@@ -84,6 +86,7 @@ namespace Hspi.DeviceData
         private readonly SqliteDatabaseCollector collector;
         private readonly ISystemClock systemClock;
         private readonly CancellationToken cancellationToken;
+        private readonly ImmutableList<int> allRefIds;
         private readonly ImmutableDictionary<int, StatisticsDevice> devices;
     }
 }

@@ -10,6 +10,7 @@ using System.Text;
 using Hspi.DeviceData;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 
 namespace Hspi
 
@@ -51,8 +52,7 @@ namespace Hspi
             var refId = StatisticsDevice.CreateDevice(HomeSeerSystem,
                                                       new StatisticsDeviceData(trackedref, function, durationInterval, refreshInterval));
 
-            statisticsDeviceUpdater?.Dispose();
-            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), ShutdownCancellationToken);
+            RestartStatisticsDeviceUpdate();
 
             StringBuilder stb = new();
             using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
@@ -80,6 +80,13 @@ namespace Hspi
                 var str = GetJsonValue<string>(jsonData, "function");
                 return GetStatisticsFunctionFromString(str);
             }
+        }
+
+        private void RestartStatisticsDeviceUpdate()
+        {
+            Log.Debug("Restarting statistics device update");
+            statisticsDeviceUpdater?.Dispose();
+            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), ShutdownCancellationToken);
         }
 
         private static StatisticsFunction GetStatisticsFunctionFromString(string str)

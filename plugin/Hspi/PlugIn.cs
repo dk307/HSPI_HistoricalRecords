@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Reflection;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
@@ -11,7 +10,6 @@ using Hspi.DeviceData;
 using Hspi.Utils;
 using Nito.AsyncEx.Synchronous;
 using Serilog;
-using Serilog.Core;
 using Constants = HomeSeer.PluginSdk.Constants;
 
 #nullable enable
@@ -180,6 +178,12 @@ namespace Hspi
             {
                 int refId = ConvertToInt32(3);
                 hsFeatureCachedDataProvider?.Invalidate(refId);
+
+                const int DeleteDevice = 2;
+                if (ConvertToInt32(4) == DeleteDevice && (statisticsDeviceUpdater?.HasRefId(refId) ?? false))
+                {
+                    RestartStatisticsDeviceUpdate();
+                }
             }
 
             int ConvertToInt32(int index)
