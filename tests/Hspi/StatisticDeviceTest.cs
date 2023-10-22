@@ -17,6 +17,11 @@ namespace HSPI_HistoricalRecordsTest
     [TestClass]
     public class StatisticsDeviceTest
     {
+        public StatisticsDeviceTest()
+        {
+            cancellationTokenSource.CancelAfter(30 * 1000);
+        }
+
         [DataTestMethod]
         [DataRow("averagestep")]
         [DataRow("averagelinear")]
@@ -147,37 +152,18 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow(StatisticsFunction.AverageLinear)]
         public async Task DeviceIsUpdated(StatisticsFunction statisticsFunction)
         {
-            CancellationTokenSource cancellationTokenSource = new();
-            cancellationTokenSource.CancelAfter(5 * 1000);
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock =
                 TestHelper.SetupHsControllerAndSettings(plugIn, new Dictionary<string, string>());
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
-            Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
-            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
-
-            int deviceRefId = 1000;
-            hsControllerMock.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, false))
-                            .Returns(new List<int>() { deviceRefId });
-            HsFeature statsFeature = TestHelper.SetupHsFeature(hsControllerMock, deviceRefId, 12.132, featureInterface: PlugInData.PlugInId);
-            HsFeature trackedFeature = TestHelper.SetupHsFeature(hsControllerMock, 19384, 12.132);
-
-            PlugExtraData plugExtraData = new();
-            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeature.Ref},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDuration\":\"0.00:10:00\",\"RefreshInterval\":\"00:01:30\"}}");
-
-            hsControllerMock.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(plugExtraData);
+            int statsDeviceRefId = 1000;
             AsyncManualResetEvent updated = new();
 
-            SortedDictionary<int, Dictionary<EProperty, object>> deviceOrFeatureData = new();
-            TestHelper.SetupEPropertySet(hsControllerMock, deviceOrFeatureData, (refId, type, value) =>
-            {
-                if (type == EProperty.Value)
-                {
-                    updated.Set();
-                }
-            });
+            SetupStatisticsDevice(statisticsFunction, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, updated, out var statsFeature, out var trackedFeature,
+                                  out var deviceOrFeatureData);
 
             Assert.IsTrue(plugIn.Object.InitIO());
 
@@ -188,7 +174,7 @@ namespace HSPI_HistoricalRecordsTest
                                            Constants.HSEvent.VALUE_CHANGE,
                                            trackedFeature, 20, "20", aTime.AddMinutes(-5), 2);
 
-            plugIn.Object.UpdateStatisticsFeature(deviceRefId);
+            plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId);
 
             await updated.WaitAsync(cancellationTokenSource.Token);
 
@@ -210,5 +196,73 @@ namespace HSPI_HistoricalRecordsTest
 
             plugIn.Object.ShutdownIO();
         }
+
+        [TestMethod]
+        public async Task DeviceIsUpdatedRounded()
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock =
+                TestHelper.SetupHsControllerAndSettings(plugIn, new Dictionary<string, string>());
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            int statsDeviceRefId = 1000;
+            AsyncManualResetEvent updated = new();
+
+            SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, updated, out var statsFeature, out var trackedFeature,
+                                  out var deviceOrFeatureData);
+
+            List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
+            hsControllerMock.Setup(x => x.GetPropertyByRef(trackedFeature.Ref, EProperty.StatusGraphics)).Returns(statusGraphics);
+
+            Assert.IsTrue(plugIn.Object.InitIO());
+
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedFeature, 11.85733, "11.2", aTime.AddMinutes(-10), 1);
+
+            plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId);
+
+            await updated.WaitAsync(cancellationTokenSource.Token);
+
+            Assert.AreEqual(false, deviceOrFeatureData[statsFeature.Ref][EProperty.InvalidValue]);
+
+            Assert.AreEqual(11.9D, deviceOrFeatureData[statsFeature.Ref][EProperty.Value]);
+
+            plugIn.Object.ShutdownIO();
+        }
+
+        private static void SetupStatisticsDevice(StatisticsFunction statisticsFunction, Mock<PlugIn> plugIn,
+                                                  Mock<IHsController> hsControllerMock,
+                                                  DateTime aTime,
+                                                  int deviceRefId,
+                                                  AsyncManualResetEvent updated,
+                                                  out HsFeature statsFeature,
+                                                  out HsFeature trackedFeature,
+                                                  out SortedDictionary<int, Dictionary<EProperty, object>> deviceOrFeatureData)
+        {
+            Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
+            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
+
+            hsControllerMock.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, false))
+                            .Returns(new List<int>() { deviceRefId });
+            statsFeature = TestHelper.SetupHsFeature(hsControllerMock, deviceRefId, 12.132, featureInterface: PlugInData.PlugInId);
+            trackedFeature = TestHelper.SetupHsFeature(hsControllerMock, 19384, 12.132);
+            PlugExtraData plugExtraData = new();
+            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeature.Ref},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDuration\":\"0.00:10:00\",\"RefreshInterval\":\"00:01:30\"}}");
+
+            hsControllerMock.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(plugExtraData);
+            deviceOrFeatureData = new();
+            TestHelper.SetupEPropertySet(hsControllerMock, deviceOrFeatureData, (refId, type, value) =>
+            {
+                if (type == EProperty.Value)
+                {
+                    updated.Set();
+                }
+            });
+        }
+
+        private readonly CancellationTokenSource cancellationTokenSource = new();
     }
 }
