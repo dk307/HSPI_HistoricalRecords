@@ -1,18 +1,17 @@
 ﻿using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi.Database;
 using Hspi.Utils;
+using Humanizer;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using Serilog;
 using Serilog.Events;
-using Humanizer;
 using static System.FormattableString;
-using System.Text.RegularExpressions;
-using System.Globalization;
 
 #nullable enable
 
@@ -101,6 +100,16 @@ namespace Hspi
                     _ => throw new NotImplementedException(),
                 };
             }
+        }
+
+        public static StatisticsDeviceData GetFromFeature(IHsController hs, int refId)
+        {
+            return GetPlugExtraData<StatisticsDeviceData>(hs, refId, DataKey);
+        }
+
+        public void Dispose()
+        {
+            combinedToken.Cancel();
         }
 
         public void UpdateNow()
@@ -210,18 +219,13 @@ namespace Hspi
             }
         }
 
-        public void Dispose()
-        {
-            combinedToken.Cancel();
-        }
-
         private const string DataKey = "data";
         private readonly SqliteDatabaseCollector collector;
         private readonly CancellationTokenSource combinedToken;
         private readonly StatisticsDeviceData deviceData;
         private readonly IHsController HS;
-        private readonly ISystemClock systemClock;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
+        private readonly ISystemClock systemClock;
         private readonly AsyncAutoResetEvent updateNowEvent = new(false);
     }
 }

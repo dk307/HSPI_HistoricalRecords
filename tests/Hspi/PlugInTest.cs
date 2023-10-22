@@ -322,33 +322,6 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void IsFeatureTrackedForHS4RootDevices()
-        {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
-
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
-                                              35673,
-                                              1.132,
-                                              "1.1 F");
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-
-            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
-            Assert.IsTrue(tracked1);
-            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
-
-            // invalidate the cache
-            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
-
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.Interface)).Returns(PlugInData.PlugInId);
-
-            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
-            Assert.IsFalse(tracked2);
-
-            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
-        }
-
-        [TestMethod]
         public void PostBackProcforNonHandled()
         {
             var plugin = new PlugIn();

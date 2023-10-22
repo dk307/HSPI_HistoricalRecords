@@ -126,7 +126,6 @@ namespace Hspi
         private bool IsMonitoredFeature(int refId)
         {
             bool monitored = !IsTimerOrCounter(refId) &&
-                             !IsHS4RootDevice(refId) &&
                              !IsSameDeviceInterface(refId);
 
             return monitored;
@@ -150,12 +149,6 @@ namespace Hspi
             {
                 var featureInterface = GetPropertyValue<string>(refId, EProperty.Interface);
                 return featureInterface == PlugInData.PlugInId;
-            }
-
-            bool IsHS4RootDevice(int refId)
-            {
-                var typeInfo = GetPropertyValue<TypeInfo>(refId, EProperty.DeviceType);
-                return (typeInfo.ApiType == EApiType.Device);
             }
         }
 

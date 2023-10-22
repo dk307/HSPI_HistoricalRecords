@@ -44,7 +44,14 @@ namespace Hspi
         {
             try
             {
-                return CreateDeviceConfigPage(devOrFeatRef, "devicehistoricalrecords.html");
+                if (IsThisPlugInFeature(devOrFeatRef))
+                {
+                    return CreateStatisticsDeviceConfigPage(devOrFeatRef);
+                }
+                else
+                {
+                    return CreateTrackedDeviceConfigPage(devOrFeatRef, "devicehistoricalrecords.html");
+                }
             }
             catch (Exception ex)
             {
@@ -66,7 +73,8 @@ namespace Hspi
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
         {
             CheckNotNull(featureCachedDataProvider);
-            return featureCachedDataProvider.IsMonitoried(devOrFeatRef);
+            bool hasPage = featureCachedDataProvider.IsMonitoried(devOrFeatRef) || IsThisPlugInFeature(devOrFeatRef);
+            return hasPage;
         }
 
         public override void HsEvent(Constants.HSEvent eventType, object[] @params)
@@ -193,6 +201,11 @@ namespace Hspi
             {
                 return Convert.ToInt32(parameters[index], CultureInfo.InvariantCulture);
             }
+        }
+
+        private bool IsThisPlugInFeature(int devOrFeatRef)
+        {
+            return (string)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, HomeSeer.PluginSdk.Devices.EProperty.Interface) == this.Id;
         }
 
         private async Task RecordAllDevices()

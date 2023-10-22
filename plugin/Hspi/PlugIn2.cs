@@ -170,22 +170,21 @@ namespace Hspi
             return stb.ToString();
         }
 
-        private string CreateDeviceConfigPage(int devOrFeatRef, string iFrameName)
+        private string CreateTrackedDeviceConfigPage(int devOrFeatRef, string iFrameName)
         {
             GetRefAndFeatureIds(devOrFeatRef, out var @ref, out var feature);
 
             StringBuilder stb = new();
             stb.Append("<script>$('#save_device_config').hide();</script>");
 
-            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?ref={@ref}");
-
-            iFrameUrl += $"&feature={feature}";
+            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?ref={@ref}&feature={feature}");
 
             // iframeSizer.min.js
-            stb.Append($"<script type=\"text/javascript\" src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
+            stb.Append($"<script src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
             stb.Append(@"<style>iframe{width: 1px;min-width: 100%;min-height: 40rem; border: 0px;}</style>");
-            stb.Append(Invariant($"<iframe id=\"historicalrecordsiframeid\" src=\"{iFrameUrl}\"></iframe>"));
-            stb.Append(Invariant($"<script>iFrameResize({{heightCalculationMethod: 'max', log: true, inPageLinks: true }}, '#historicalRecordsiFrame');</script>"));
+            string id = "historicalrecordsiframeid";
+            stb.Append(Invariant($"<iframe id=\"{id}\" src=\"{iFrameUrl}\"></iframe>"));
+            stb.Append(Invariant($"<script>iFrameResize({{log: true, inPageLinks: true }}, '#{id}');</script>"));
 
             LabelView labelView = new("id", stb.ToString())
             {
@@ -215,6 +214,52 @@ namespace Hspi
                     @ref = ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).First();
                     feature = devOrFeatRef;
                 }
+            }
+        }
+
+        private string CreateStatisticsDeviceConfigPage(int devOrFeatRef)
+        {
+            // GetRefAndFeatureIds(devOrFeatRef, out var @ref, out var featureId);
+            //int deviceRefId = GetDeviceIds(devOrFeatRef);
+
+            //var featuresIds = ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(deviceRefId, EProperty.AssociatedDevices));
+
+            var page = PageFactory.CreateDeviceConfigPage(this.Id, "Device");
+
+            //foreach (var featuresId in featuresIds)
+            //{
+            //    var data = StatisticsDevice.GetFromFeature(HomeSeerSystem, featuresId);
+
+            //    var options = EnumHelper.GetValues<StatisticsFunction>().Select(x => EnumHelper.GetDescription(x)).ToList();
+            //    var optionKeys = EnumHelper.GetValues<StatisticsFunction>().Select(x => ((int)x).ToString()).ToList();
+
+            //    var selectListView = new SelectListView(Id(featuresId, "statistical_function"),
+            //                                            "",
+            //                                            options,
+            //                                            optionKeys,
+            //                                            ESelectListType.DropDown,
+            //                                            (int)data.StatisticsFunction);
+            //}
+
+            return page.Page.ToJsonString();
+
+            int GetDeviceIds(int devOrFeatRef)
+            {
+                bool isDevice = HomeSeerSystem.IsRefDevice(devOrFeatRef);
+
+                if (isDevice)
+                {
+                    return devOrFeatRef;
+                }
+                else
+                {
+                    return ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).First();
+                }
+            }
+
+            static string Id(int id, string suffix)
+            {
+                return Invariant($"{id}_{suffix}");
             }
         }
 

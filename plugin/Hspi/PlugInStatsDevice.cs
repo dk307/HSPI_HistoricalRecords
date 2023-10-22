@@ -17,10 +17,10 @@ namespace Hspi
 {
     public enum StatisticsFunction
     {
-        [Description("averagestep")]
+        [Description("Average(Step)")]
         AverageStep = 0,
 
-        [Description("averagelinear")]
+        [Description("Average(Linear)")]
         AverageLinear = 1,
     };
 
