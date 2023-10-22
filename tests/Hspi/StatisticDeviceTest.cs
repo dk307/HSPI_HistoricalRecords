@@ -52,7 +52,7 @@ namespace HSPI_HistoricalRecordsTest
                             .Callback<NewFeatureData>(r => newFeatureData = r)
                             .Returns(2000);
 
-            Assert.IsTrue(plugIn.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
             JObject pairRequest = new()
             {
@@ -117,7 +117,6 @@ namespace HSPI_HistoricalRecordsTest
 
             CollectionAssert.AreEqual(trackedFeature.StatusGraphics.Values,
                                      ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values);
-            plugIn.Object.ShutdownIO();
         }
 
         [DataTestMethod]
@@ -130,7 +129,7 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.SetupHsControllerAndSettings(plugIn, new Dictionary<string, string>());
 
-            Assert.IsTrue(plugIn.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
             //add
             string data = plugIn.Object.PostBackProc("devicecreate", format, string.Empty, 0);
@@ -142,9 +141,6 @@ namespace HSPI_HistoricalRecordsTest
             var errorMessage = jsonData["error"].Value<string>();
             Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
             StringAssert.Contains(errorMessage, exception);
-
-            plugIn.Object.ShutdownIO();
-            plugIn.Object.Dispose();
         }
 
         [DataTestMethod]
@@ -165,7 +161,7 @@ namespace HSPI_HistoricalRecordsTest
                                   statsDeviceRefId, updated, out var statsFeature, out var trackedFeature,
                                   out var deviceOrFeatureData);
 
-            Assert.IsTrue(plugIn.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
@@ -193,8 +189,6 @@ namespace HSPI_HistoricalRecordsTest
             }
 
             Assert.AreEqual(ExpectedValue, deviceOrFeatureData[statsFeature.Ref][EProperty.Value]);
-
-            plugIn.Object.ShutdownIO();
         }
 
         [TestMethod]
@@ -216,7 +210,7 @@ namespace HSPI_HistoricalRecordsTest
             List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
             hsControllerMock.Setup(x => x.GetPropertyByRef(trackedFeature.Ref, EProperty.StatusGraphics)).Returns(statusGraphics);
 
-            Assert.IsTrue(plugIn.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
@@ -229,8 +223,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.AreEqual(false, deviceOrFeatureData[statsFeature.Ref][EProperty.InvalidValue]);
 
             Assert.AreEqual(11.9D, deviceOrFeatureData[statsFeature.Ref][EProperty.Value]);
-
-            plugIn.Object.ShutdownIO();
         }
 
         [TestMethod]
@@ -249,7 +241,7 @@ namespace HSPI_HistoricalRecordsTest
                                   statsDeviceRefId, updated, out var statsFeature, out var trackedFeature,
                                   out var _);
 
-            Assert.IsTrue(plugIn.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
             Assert.IsTrue(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
 
@@ -261,8 +253,6 @@ namespace HSPI_HistoricalRecordsTest
 
             // not more tracking after delete
             Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
-
-            plugIn.Object.ShutdownIO();
         }
 
         private static void SetupStatisticsDevice(StatisticsFunction statisticsFunction, Mock<PlugIn> plugIn,

@@ -29,7 +29,7 @@ namespace HSPI_HistoricalRecordsTest
                                      displayString: "1.1",
                                      lastChange: time);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             for (var i = 0; i < 100; i++)
             {
@@ -54,9 +54,6 @@ namespace HSPI_HistoricalRecordsTest
                 Assert.AreEqual(ts, (long)result[i]["x"]);
                 Assert.AreEqual((double)i, (double)result[i]["y"]);
             }
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -74,7 +71,7 @@ namespace HSPI_HistoricalRecordsTest
                                      displayString: "1.1",
                                      lastChange: time);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             for (var i = 0; i < PlugIn.MaxGraphPoints * 2; i++)
             {
@@ -102,9 +99,6 @@ namespace HSPI_HistoricalRecordsTest
                 var value = (i * 2D + (i * 2) + 1D) / 2D;
                 Assert.AreEqual(value, (double)result[i]["y"]);
             }
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -123,7 +117,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             int devRefId = 1938;
             string paramsForRecord = String.Format(format, devRefId);
@@ -137,9 +131,6 @@ namespace HSPI_HistoricalRecordsTest
             var errorMessage = jsonData["error"].Value<string>();
             Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
             StringAssert.Contains(errorMessage, exception);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
     }
 }

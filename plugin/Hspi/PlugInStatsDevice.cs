@@ -100,9 +100,9 @@ namespace Hspi
         private void RestartStatisticsDeviceUpdate()
         {
             Log.Debug("Restarting statistics device update");
+            CheckNotNull(featureCachedDataProvider);
             statisticsDeviceUpdater?.Dispose();
-            CheckNotNull(hsFeatureCachedDataProvider);
-            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), hsFeatureCachedDataProvider, ShutdownCancellationToken);
+            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
         }
 
         private StatisticsDeviceUpdater? statisticsDeviceUpdater;
