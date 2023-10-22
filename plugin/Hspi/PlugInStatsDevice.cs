@@ -14,7 +14,7 @@ using Newtonsoft.Json.Linq;
 namespace Hspi
 
 {
-    internal enum StatisticsFunction
+    public enum StatisticsFunction
     {
         [Description("averagestep")]
         AverageStep = 0,
@@ -48,7 +48,11 @@ namespace Hspi
             var durationInterval = GetDuration(daysDuration, hoursDuration, minutesDuration, secondsDuration);
             var refreshInterval = GetDuration(daysRefresh, hoursRefresh, minutesRefresh, secondsRefresh);
 
-            var refId = HsHomeKitDeviceFactory.CreateDevice(HomeSeerSystem, trackedref, function, durationInterval, refreshInterval);
+            var refId = StatisticsDevice.CreateDevice(HomeSeerSystem,
+                                                      new StatisticsDeviceData(trackedref, function, durationInterval, refreshInterval));
+
+            statisticsDeviceUpdater?.Dispose();
+            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), ShutdownCancellationToken);
 
             StringBuilder stb = new();
             using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
@@ -87,5 +91,7 @@ namespace Hspi
                 _ => throw new ArgumentException("function is not correct"),
             };
         }
+
+        private StatisticsDeviceUpdater? statisticsDeviceUpdater;
     }
 }

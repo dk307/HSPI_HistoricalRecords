@@ -31,8 +31,11 @@ namespace Hspi
 
             var feature = HomeSeerSystem.GetFeatureByRef(refId);
 
-            List<string> displays = new();
-            displays.Add("table");
+            List<string> displays = new()
+            {
+                "table"
+            };
+
             if (ShouldShowChart(feature))
             {
                 displays.Add("chart");
@@ -295,7 +298,7 @@ namespace Hspi
             var length = ParseParameterAsInt(parameters, "length");
             var sortOrder = CalculateSortOrder(parameters["order[0][column]"], parameters["order[0][dir]"]);
 
-            long totalResultsCount = 0;
+            long totalResultsCount;
 
             long min;
             long max;

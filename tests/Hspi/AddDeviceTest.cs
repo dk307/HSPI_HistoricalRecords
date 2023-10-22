@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
+using Hspi.DeviceData;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
@@ -74,7 +75,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.AreEqual(trackedFeature.Location, newDataForDevice.Device[EProperty.Location]);
             Assert.AreEqual(trackedFeature.Location2, newDataForDevice.Device[EProperty.Location2]);
 
-            Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith(trackedFeature.Name));
+            Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average"));
             Assert.AreEqual(PlugInData.PlugInId, newFeatureData.Feature[EProperty.Interface]);
             CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
             Assert.AreEqual(trackedFeature.Location, newFeatureData.Feature[EProperty.Location]);
@@ -89,18 +90,21 @@ namespace HSPI_HistoricalRecordsTest
 
             var plugExtraData = (PlugExtraData)newFeatureData.Feature[EProperty.PlugExtraData];
 
-            Assert.AreEqual(4, plugExtraData.NamedKeys.Count);
-            Assert.AreEqual(trackedFeature.Ref.ToString(), plugExtraData["trackedRef"]);
+            Assert.AreEqual(1, plugExtraData.NamedKeys.Count);
+
+            var data = JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"]);
+
+            Assert.AreEqual(trackedFeature.Ref, data.TrackedRef);
 
             switch (function)
             {
                 case "averagestep":
-                    Assert.AreEqual(StatisticsFunction.AverageStep.ToString(), plugExtraData["function"]); break;
+                    Assert.AreEqual(StatisticsFunction.AverageStep, data.StatisticsFunction); break;
                 case "averagelinear":
-                    Assert.AreEqual(StatisticsFunction.AverageLinear.ToString(), plugExtraData["function"]); break;
+                    Assert.AreEqual(StatisticsFunction.AverageLinear, data.StatisticsFunction); break;
             }
-            Assert.AreEqual(new TimeSpan(1, 0, 10, 0).ToString("c"), plugExtraData["durationInterval"]);
-            Assert.AreEqual(new TimeSpan(0, 0, 1, 30).ToString("c"), plugExtraData["refreshInterval"]);
+            Assert.AreEqual(new TimeSpan(1, 0, 10, 0), data.FunctionDuration);
+            Assert.AreEqual(new TimeSpan(0, 0, 1, 30), data.RefreshInterval);
 
             CollectionAssert.AreEqual(trackedFeature.StatusGraphics.Values,
                                      ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values);
@@ -108,9 +112,9 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [DataTestMethod]
-        [DataRow("{\"trackedref\":1000,\"function\":\"average\",\"daysDuration\":1,\"hoursDuration\":0,\"minutesDuration\":10,\"secondsDuration\":0,\"daysRefresh\":0,\"hoursRefresh\":0,\"minutesRefresh\":1,\"secondsRefresh\":30}", "function is not correct")]     
-        [DataRow("{\"trackedref\":1000,\"function\":\"averagelinear\",\"hoursDuration\":0,\"minutesDuration\":10,\"secondsDuration\":0,\"daysRefresh\":0,\"hoursRefresh\":0,\"minutesRefresh\":1,\"secondsRefresh\":30}", "daysDuration is not correct")]     
-        [DataRow("", "trackedref is not correct")]     
+        [DataRow("{\"trackedref\":1000,\"function\":\"average\",\"daysDuration\":1,\"hoursDuration\":0,\"minutesDuration\":10,\"secondsDuration\":0,\"daysRefresh\":0,\"hoursRefresh\":0,\"minutesRefresh\":1,\"secondsRefresh\":30}", "function is not correct")]
+        [DataRow("{\"trackedref\":1000,\"function\":\"averagelinear\",\"hoursDuration\":0,\"minutesDuration\":10,\"secondsDuration\":0,\"daysRefresh\":0,\"hoursRefresh\":0,\"minutesRefresh\":1,\"secondsRefresh\":30}", "daysDuration is not correct")]
+        [DataRow("", "trackedref is not correct")]
         public void AddDeviceErrorChecking(string format, string exception)
         {
             var plugIn = TestHelper.CreatePlugInMock();

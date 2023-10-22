@@ -4,9 +4,10 @@
 
 namespace Hspi.Database
 {
-    internal interface IDBSettings
+    public interface IDBSettings
     {
         string DBPath { get; }
+
         TimeSpan GetDeviceRetentionPeriod(long deviceRefId);
 
         long MinRecordsToKeep { get; }

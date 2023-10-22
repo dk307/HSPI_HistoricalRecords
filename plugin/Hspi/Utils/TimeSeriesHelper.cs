@@ -65,6 +65,7 @@ namespace Hspi.Utils
                             double t1 = listIterator.Current.UnixTimeSeconds;
                             double t2 = listIterator.Next.UnixTimeSeconds;
 
+                            // Expanded Code
                             //var p2 = v1 + ((v2 - v1) * ((intervalMax - t1) / (t2 - t1)));
                             //var p1 = v1 + ((v2 - v1) * ((intervalMin - t1) / (t2 - t1)));
                             //var area = ((p1 + p2) / 2) * (intervalMax - intervalMin);

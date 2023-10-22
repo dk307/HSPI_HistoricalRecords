@@ -58,7 +58,9 @@
 			end
 		end
 		
-		if !(childrenRefIds | array.contains refId)
+		featureIdInt=string.to_int featureId
+		if ((childrenRefIds | array.contains featureIdInt))
+		else
 			featureId=childrenRefIds[0]
 		end
 	end
@@ -177,7 +179,7 @@ function getRangeString(min, max) {
 <!-- devicePrecision={{devicePrecision}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
 <!-- childrenRefIds={{childrenRefIds}}<BR> -->
-<!-- test={{get_setting_bool 'gEnableDeviceRefColumn'}}<BR> -->
+ 
 
 <header>
 	<nav class="navbar">

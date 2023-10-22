@@ -4,12 +4,12 @@
 
 namespace Hspi
 {
-    internal interface ISystemClock
+    public interface ISystemClock
     {
         DateTimeOffset Now { get; }
     };
 
-    internal class SystemClock : ISystemClock
+    public class SystemClock : ISystemClock
     {
         public DateTimeOffset Now => DateTimeOffset.UtcNow;
     };

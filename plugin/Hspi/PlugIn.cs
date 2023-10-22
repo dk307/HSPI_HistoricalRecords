@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
+using Hspi.DeviceData;
 using Hspi.Utils;
 using Nito.AsyncEx.Synchronous;
 using Serilog;
@@ -115,6 +116,7 @@ namespace Hspi
 
                 CheckNotNull(settingsPages);
                 collector = new SqliteDatabaseCollector(settingsPages, CreateClock(), ShutdownCancellationToken);
+                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
