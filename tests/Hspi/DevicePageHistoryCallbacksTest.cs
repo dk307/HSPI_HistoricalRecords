@@ -105,7 +105,7 @@ namespace HSPI_HistoricalRecordsTest
              };
         }
 
-        [TestMethod]
+ 
         [DataTestMethod]
         [DataRow("refId={0}&min=1001&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "max < min")]
         [DataRow("refId={0}&min=abc&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min is invalid")]

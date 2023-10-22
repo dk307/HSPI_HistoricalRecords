@@ -6,7 +6,7 @@ using Hspi.Database;
 
 #nullable enable
 
-namespace Hspi
+namespace Hspi.Utils
 {
     internal sealed class TimeSeriesHelper
     {
@@ -21,11 +21,18 @@ namespace Hspi
             this.timeAndValues = timeAndValues;
         }
 
-        public double Average(FillStrategy fillStrategy)
+        public double? Average(FillStrategy fillStrategy)
         {
             var res = ReduceSeriesWithAverage(maxUnixTimeSeconds - minUnixTimeSeconds, fillStrategy).ToList();
-            Debug.Assert(res.Count == 1);
-            return res[0].DeviceValue;
+            if (res.Count == 0)
+            {
+                return null;
+            }
+            else
+            {
+                Debug.Assert(res.Count == 1);
+                return res[0].DeviceValue;
+            }
         }
 
         public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(long intervalUnixTimeSeconds, FillStrategy fillStrategy)
@@ -65,6 +72,7 @@ namespace Hspi
                             double t1 = listIterator.Current.UnixTimeSeconds;
                             double t2 = listIterator.Next.UnixTimeSeconds;
 
+                            // Expanded Code
                             //var p2 = v1 + ((v2 - v1) * ((intervalMax - t1) / (t2 - t1)));
                             //var p1 = v1 + ((v2 - v1) * ((intervalMin - t1) / (t2 - t1)));
                             //var area = ((p1 + p2) / 2) * (intervalMax - intervalMin);

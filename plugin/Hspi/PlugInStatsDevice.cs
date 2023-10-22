@@ -3,15 +3,19 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
+using System.IO;
 using System.Linq;
-using Humanizer;
+using System.Text;
+using Hspi.DeviceData;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 
 namespace Hspi
 
 {
-    internal enum StatisticsFunction
+    public enum StatisticsFunction
     {
         [Description("averagestep")]
         AverageStep = 0,
@@ -25,6 +29,21 @@ namespace Hspi
         public List<int> GetRecordedDeviceList()
         {
             return HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();
+        }
+
+        public bool UpdateStatisticsFeature(int featureRefId)
+        {
+            return statisticsDeviceUpdater?.UpdateData(featureRefId) ?? false;
+        }
+
+        private static StatisticsFunction GetStatisticsFunctionFromString(string str)
+        {
+            return str switch
+            {
+                "averagestep" => StatisticsFunction.AverageStep,
+                "averagelinear" => StatisticsFunction.AverageLinear,
+                _ => throw new ArgumentException("function is not correct"),
+            };
         }
 
         private string HandleDeviceCreate(string data)
@@ -45,7 +64,25 @@ namespace Hspi
             var durationInterval = GetDuration(daysDuration, hoursDuration, minutesDuration, secondsDuration);
             var refreshInterval = GetDuration(daysRefresh, hoursRefresh, minutesRefresh, secondsRefresh);
 
-            return "{}";
+            var refId = StatisticsDevice.CreateDevice(HomeSeerSystem,
+                                                      new StatisticsDeviceData(trackedref, function, durationInterval, refreshInterval));
+
+            RestartStatisticsDeviceUpdate();
+
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
+            jsonWriter.WritePropertyName("result");
+            jsonWriter.WriteStartObject();
+            jsonWriter.WritePropertyName("ref");
+            jsonWriter.WriteValue(refId);
+            jsonWriter.WriteEndObject();
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+
+            return stb.ToString();
 
             static TimeSpan GetDuration(int days, int hours, int minutes, int seconds)
             {
@@ -55,16 +92,19 @@ namespace Hspi
 
             static StatisticsFunction GetStatisticsFunction(JObject? jsonData)
             {
-                try
-                {
-                    var str = GetJsonValue<string>(jsonData, "function");
-                    return str.DehumanizeTo<StatisticsFunction>();
-                }
-                catch (NoMatchFoundException ex)
-                {
-                    throw new ArgumentException("function is not correct", ex);
-                }
+                var str = GetJsonValue<string>(jsonData, "function");
+                return GetStatisticsFunctionFromString(str);
             }
         }
+
+        private void RestartStatisticsDeviceUpdate()
+        {
+            Log.Debug("Restarting statistics device update");
+            statisticsDeviceUpdater?.Dispose();
+            CheckNotNull(hsFeatureCachedDataProvider);
+            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), hsFeatureCachedDataProvider, ShutdownCancellationToken);
+        }
+
+        private StatisticsDeviceUpdater? statisticsDeviceUpdater;
     }
 }

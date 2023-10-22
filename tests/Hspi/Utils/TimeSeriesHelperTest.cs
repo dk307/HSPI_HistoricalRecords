@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Hspi;
 using Hspi.Database;
+using Hspi.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HSPI_HistoricalRecordsTest
@@ -24,6 +25,19 @@ namespace HSPI_HistoricalRecordsTest
             var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
             CollectionAssert.AreEqual(dbValues, result);
+        }
+
+        [TestMethod]
+        public void AverageForEmptyList()
+        {
+            List<TimeAndValue> dbValues = new()
+            {
+            };
+
+            TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
+            var result = timeSeriesHelper.Average(FillStrategy.Linear);
+
+            Assert.IsFalse(result.HasValue);
         }
 
         [TestMethod]

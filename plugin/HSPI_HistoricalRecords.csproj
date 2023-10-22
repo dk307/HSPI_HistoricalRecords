@@ -93,6 +93,7 @@
     <Compile Include="Database\IDBSettings.cs" />
     <Compile Include="Database\ResultSortBy.cs" />
     <Compile Include="Database\TimeAndValue.cs" />
+    <Compile Include="Hspi\StatisticsDeviceUpdater.cs" />
     <Compile Include="Hspi\HsFeatureCachedProperty.cs" />
     <Compile Include="Hspi\HsFeatureData.cs" />
     <Compile Include="Hspi\HsFeatureCachedDataProvider.cs" />
@@ -102,6 +103,8 @@
     <Compile Include="Hspi\SystemClock.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />
     <Compile Include="Hspi\Utils\FillStrategy.cs" />
+    <Compile Include="Hspi\Utils\HsDeviceInvalidException.cs" />
+    <Compile Include="Hspi\StatisticsDevice.cs" />
     <Compile Include="Hspi\Utils\TypeConverter.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIterator.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueQueryHelper.cs" />

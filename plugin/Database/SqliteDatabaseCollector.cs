@@ -16,7 +16,7 @@ using static SQLitePCL.raw;
 
 namespace Hspi.Database
 {
-    internal sealed class SqliteDatabaseCollector : IDisposable
+    public sealed class SqliteDatabaseCollector : IDisposable
     {
         static SqliteDatabaseCollector()
         {

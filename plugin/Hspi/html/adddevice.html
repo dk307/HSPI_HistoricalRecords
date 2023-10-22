@@ -28,7 +28,7 @@
 					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetRecordedDeviceList' [] }}
                     <select class='mdb-select md-form' id='deviceSelect' searchable="Search for a device here..." required>
 						{{ for id in deviceRefIds }}
-						<option value='{{id}}'>{{device_name_full id  | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
+						<option value='{{id}}'>{{device_name_full id | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
 						{{ end }}
 					</select>
                     <div class="step-actions">                   
@@ -188,7 +188,7 @@
         }
 
         function finish() {
-            var devicesPage = window.location.origin + "/devices.html";
+            var devicesPage = window.location.origin + "/Devices.html?ref=" + refId + "&subpage=devprop&tab=settings";
             window.location.assign(devicesPage);
         }
     </script>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using Hspi;
+using Hspi.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;

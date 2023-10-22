@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Hspi;
 using Hspi.Database;
+using Hspi.Utils;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HSPI_HistoricalRecordsTest
@@ -25,7 +26,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void LongList()
         {
-            List<TimeAndValue> list = new List<TimeAndValue>();
+            List<TimeAndValue> list = new();
 
             for (int i = 0; i < 100; i++)
             {
@@ -60,7 +61,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void OneElementList()
         {
-            List<TimeAndValue> list = new List<TimeAndValue>() { new TimeAndValue(1, 10) };
+            List<TimeAndValue> list = new() { new TimeAndValue(1, 10) };
             var iterator = new TimeAndValueIterator(list, 10000);
 
             Assert.IsTrue(iterator.IsCurrentValid);

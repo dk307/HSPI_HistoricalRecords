@@ -2,15 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Reflection;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
+using Hspi.DeviceData;
 using Hspi.Utils;
 using Nito.AsyncEx.Synchronous;
 using Serilog;
-using Serilog.Core;
 using Constants = HomeSeer.PluginSdk.Constants;
 
 #nullable enable
@@ -97,6 +96,7 @@ namespace Hspi
         {
             if (disposing)
             {
+                statisticsDeviceUpdater?.Dispose();
                 collector?.Dispose();
             }
             base.Dispose(disposing);
@@ -115,6 +115,7 @@ namespace Hspi
 
                 CheckNotNull(settingsPages);
                 collector = new SqliteDatabaseCollector(settingsPages, CreateClock(), ShutdownCancellationToken);
+                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), hsFeatureCachedDataProvider, ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
@@ -122,7 +123,9 @@ namespace Hspi
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
                 HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a database statistics device");
 
-                RestartProcessing();
+                Utils.TaskHelper.StartAsyncWithErrorChecking("All device values collection",
+                                                             RecordAllDevices,
+                                                             ShutdownCancellationToken);
 
                 Log.Information("Plugin Started");
             }
@@ -178,6 +181,12 @@ namespace Hspi
             {
                 int refId = ConvertToInt32(3);
                 hsFeatureCachedDataProvider?.Invalidate(refId);
+
+                const int DeleteDevice = 2;
+                if (ConvertToInt32(4) == DeleteDevice && (statisticsDeviceUpdater?.HasRefId(refId) ?? false))
+                {
+                    RestartStatisticsDeviceUpdate();
+                }
             }
 
             int ConvertToInt32(int index)
@@ -221,13 +230,6 @@ namespace Hspi
             Log.Verbose("Recording {@record}", recordData);
 
             await collector.Record(recordData).ConfigureAwait(false);
-        }
-
-        private void RestartProcessing()
-        {
-            Utils.TaskHelper.StartAsyncWithErrorChecking("All device values collection",
-                                                         RecordAllDevices,
-                                                         ShutdownCancellationToken);
         }
 
         private void UpdateDebugLevel()
