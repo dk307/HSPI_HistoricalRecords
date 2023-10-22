@@ -141,8 +141,10 @@ namespace HSPI_HistoricalRecordsTest
             plugIn.Object.Dispose();
         }
 
-        [TestMethod]
-        public async Task DeviceIsUpdated()
+        [DataTestMethod]
+        [DataRow(StatisticsFunction.AverageStep)]
+        [DataRow(StatisticsFunction.AverageLinear)]
+        public async Task DeviceIsUpdated(StatisticsFunction statisticsFunction)
         {
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.CancelAfter(5 * 1000);
@@ -153,16 +155,16 @@ namespace HSPI_HistoricalRecordsTest
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
             Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
-            mockClock.Setup(x => x.Now).Returns(aTime);
+            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
 
             int deviceRefId = 1000;
             hsControllerMock.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, false))
-                             .Returns(new List<int>() { deviceRefId });
+                            .Returns(new List<int>() { deviceRefId });
             HsFeature statsFeature = TestHelper.SetupHsFeature(hsControllerMock, deviceRefId, 12.132, featureInterface: PlugInData.PlugInId);
             HsFeature trackedFeature = TestHelper.SetupHsFeature(hsControllerMock, 19384, 12.132);
 
             PlugExtraData plugExtraData = new();
-            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeature.Ref},\"StatisticsFunction\":0,\"FunctionDuration\":\"0.00:10:00\",\"RefreshInterval\":\"00:01:30\"}}");
+            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeature.Ref},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDuration\":\"0.00:10:00\",\"RefreshInterval\":\"00:01:30\"}}");
 
             hsControllerMock.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(plugExtraData);
             AsyncManualResetEvent updated = new();
@@ -181,13 +183,29 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
                                            trackedFeature, 10, "10", aTime.AddMinutes(-10), 1);
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedFeature, 20, "20", aTime.AddMinutes(-5), 2);
 
             plugIn.Object.UpdateStatisticsFeature(deviceRefId);
 
             await updated.WaitAsync(cancellationTokenSource.Token);
 
             Assert.AreEqual(false, deviceOrFeatureData[statsFeature.Ref][EProperty.InvalidValue]);
-            Assert.AreEqual(10D, deviceOrFeatureData[statsFeature.Ref][EProperty.Value]);
+
+            double ExpectedValue = 0;
+            switch (statisticsFunction)
+            {
+                case StatisticsFunction.AverageStep:
+                    ExpectedValue = ((10D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
+                case StatisticsFunction.AverageLinear:
+                    ExpectedValue = ((15D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
+                default:
+                    Assert.Fail();
+                    break;
+            }
+
+            Assert.AreEqual(ExpectedValue, deviceOrFeatureData[statsFeature.Ref][EProperty.Value]);
 
             plugIn.Object.ShutdownIO();
         }
