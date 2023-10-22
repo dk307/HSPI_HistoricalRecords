@@ -96,6 +96,7 @@ namespace Hspi
         {
             if (disposing)
             {
+                statisticsDeviceUpdater?.Dispose();
                 collector?.Dispose();
             }
             base.Dispose(disposing);

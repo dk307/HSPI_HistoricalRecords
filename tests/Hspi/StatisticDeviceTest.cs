@@ -1,18 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Threading;
+using System.Threading.Tasks;
+using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
-using Hspi.DeviceData;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Nito.AsyncEx;
 
 namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
-    public class AddDeviceTest
+    public class StatisticsDeviceTest
     {
         [DataTestMethod]
         [DataRow("averagestep")]
@@ -136,6 +139,57 @@ namespace HSPI_HistoricalRecordsTest
 
             plugIn.Object.ShutdownIO();
             plugIn.Object.Dispose();
+        }
+
+        [TestMethod]
+        public async Task DeviceIsUpdated()
+        {
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            cancellationTokenSource.CancelAfter(5 * 1000);
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock =
+                TestHelper.SetupHsControllerAndSettings(plugIn, new Dictionary<string, string>());
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
+            mockClock.Setup(x => x.Now).Returns(aTime);
+
+            int deviceRefId = 1000;
+            hsControllerMock.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, false))
+                             .Returns(new List<int>() { deviceRefId });
+            HsFeature statsFeature = TestHelper.SetupHsFeature(hsControllerMock, deviceRefId, 12.132, featureInterface: PlugInData.PlugInId);
+            HsFeature trackedFeature = TestHelper.SetupHsFeature(hsControllerMock, 19384, 12.132);
+
+            PlugExtraData plugExtraData = new();
+            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeature.Ref},\"StatisticsFunction\":0,\"FunctionDuration\":\"0.00:10:00\",\"RefreshInterval\":\"00:01:30\"}}");
+
+            hsControllerMock.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(plugExtraData);
+            AsyncManualResetEvent updated = new();
+
+            SortedDictionary<int, Dictionary<EProperty, object>> deviceOrFeatureData = new();
+            TestHelper.SetupEPropertySet(hsControllerMock, deviceOrFeatureData, (refId, type, value) =>
+            {
+                if (type == EProperty.Value)
+                {
+                    updated.Set();
+                }
+            });
+
+            Assert.IsTrue(plugIn.Object.InitIO());
+
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedFeature, 10, "10", aTime.AddMinutes(-10), 1);
+
+            plugIn.Object.UpdateStatisticsFeature(deviceRefId);
+
+            await updated.WaitAsync(cancellationTokenSource.Token);
+
+            Assert.AreEqual(false, deviceOrFeatureData[statsFeature.Ref][EProperty.InvalidValue]);
+            Assert.AreEqual(10D, deviceOrFeatureData[statsFeature.Ref][EProperty.Value]);
+
+            plugIn.Object.ShutdownIO();
         }
     }
 }

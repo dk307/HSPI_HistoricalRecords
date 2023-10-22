@@ -15,10 +15,11 @@ using static System.FormattableString;
 
 namespace Hspi
 {
-    public sealed record StatisticsDeviceData(int TrackedRef,
-                                              StatisticsFunction StatisticsFunction,
-                                              TimeSpan FunctionDuration,
-                                              TimeSpan RefreshInterval);
+    public sealed record StatisticsDeviceData(
+                [property: JsonProperty(Required = Required.Always)] int TrackedRef,
+                [property: JsonProperty(Required = Required.Always)] StatisticsFunction StatisticsFunction,
+                [property: JsonProperty(Required = Required.Always)] TimeSpan FunctionDuration,
+                [property: JsonProperty(Required = Required.Always)] TimeSpan RefreshInterval);
 
     public sealed class StatisticsDevice : IDisposable
     {
@@ -168,7 +169,7 @@ namespace Hspi
             }
         }
 
-        private void UpdateDeviceValue(in double data)
+        private void UpdateDeviceValue(in double? data)
         {
             if (Log.IsEnabled(LogEventLevel.Information))
             {
@@ -180,10 +181,17 @@ namespace Hspi
 
             HS.UpdatePropertyByRef(RefId, EProperty.InvalidValue, false);
 
-            // only this call triggers events
-            if (!HS.UpdateFeatureValueByRef(RefId, data))
+            if (data.HasValue)
             {
-                throw new InvalidOperationException($"Failed to update device {NameForLog}");
+                // only this call triggers events
+                if (!HS.UpdateFeatureValueByRef(RefId, data.Value))
+                {
+                    throw new InvalidOperationException($"Failed to update device {NameForLog}");
+                }
+            }
+            else
+            {
+                HS.UpdatePropertyByRef(RefId, EProperty.InvalidValue, true);
             }
         }
 

@@ -21,11 +21,18 @@ namespace Hspi.Utils
             this.timeAndValues = timeAndValues;
         }
 
-        public double Average(FillStrategy fillStrategy)
+        public double? Average(FillStrategy fillStrategy)
         {
             var res = ReduceSeriesWithAverage(maxUnixTimeSeconds - minUnixTimeSeconds, fillStrategy).ToList();
-            Debug.Assert(res.Count == 1);
-            return res[0].DeviceValue;
+            if (res.Count == 0)
+            {
+                return null;
+            }
+            else
+            {
+                Debug.Assert(res.Count == 1);
+                return res[0].DeviceValue;
+            }
         }
 
         public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(long intervalUnixTimeSeconds, FillStrategy fillStrategy)

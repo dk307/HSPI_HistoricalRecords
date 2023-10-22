@@ -31,6 +31,21 @@ namespace Hspi
             return HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();
         }
 
+        public bool UpdateStatisticsFeature(int featureRefId)
+        {
+            return statisticsDeviceUpdater?.UpdateData(featureRefId) ?? false;
+        }
+
+        private static StatisticsFunction GetStatisticsFunctionFromString(string str)
+        {
+            return str switch
+            {
+                "averagestep" => StatisticsFunction.AverageStep,
+                "averagelinear" => StatisticsFunction.AverageLinear,
+                _ => throw new ArgumentException("function is not correct"),
+            };
+        }
+
         private string HandleDeviceCreate(string data)
         {
             var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
@@ -87,16 +102,6 @@ namespace Hspi
             Log.Debug("Restarting statistics device update");
             statisticsDeviceUpdater?.Dispose();
             statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), ShutdownCancellationToken);
-        }
-
-        private static StatisticsFunction GetStatisticsFunctionFromString(string str)
-        {
-            return str switch
-            {
-                "averagestep" => StatisticsFunction.AverageStep,
-                "averagelinear" => StatisticsFunction.AverageLinear,
-                _ => throw new ArgumentException("function is not correct"),
-            };
         }
 
         private StatisticsDeviceUpdater? statisticsDeviceUpdater;

@@ -28,6 +28,19 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void AverageForEmptyList()
+        {
+            List<TimeAndValue> dbValues = new()
+            {
+            };
+
+            TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
+            var result = timeSeriesHelper.Average(FillStrategy.Linear);
+
+            Assert.IsFalse(result.HasValue);
+        }
+
+        [TestMethod]
         public void AverageForLinear()
         {
             List<TimeAndValue> dbValues = new()

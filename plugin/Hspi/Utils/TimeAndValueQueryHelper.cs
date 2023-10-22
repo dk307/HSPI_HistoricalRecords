@@ -29,7 +29,7 @@ namespace Hspi.Utils
             }
         }
 
-        public static async Task<double> Average(SqliteDatabaseCollector collector,
+        public static async Task<double?> Average(SqliteDatabaseCollector collector,
                                                  int refId,
                                                  long minUnixTimeSeconds,
                                                  long maxUnixTimeSeconds,
@@ -38,9 +38,7 @@ namespace Hspi.Utils
             double? result = null;
 
             await collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup).ConfigureAwait(false);
-
-            Debug.Assert(result != null);
-            return result!.Value;
+            return result;
 
             // this is called under db lock
             void CollectAndGroup(IEnumerable<TimeAndValue> x)
