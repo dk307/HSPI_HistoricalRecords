@@ -115,7 +115,7 @@ namespace Hspi
 
                 CheckNotNull(settingsPages);
                 collector = new SqliteDatabaseCollector(settingsPages, CreateClock(), ShutdownCancellationToken);
-                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), ShutdownCancellationToken);
+                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), hsFeatureCachedDataProvider, ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);

@@ -9,7 +9,10 @@ using Newtonsoft.Json;
 using Nito.AsyncEx;
 using Serilog;
 using Serilog.Events;
+using Humanizer;
 using static System.FormattableString;
+using System.Text.RegularExpressions;
+using System.Globalization;
 
 #nullable enable
 
@@ -23,13 +26,18 @@ namespace Hspi
 
     public sealed class StatisticsDevice : IDisposable
     {
-        public StatisticsDevice(IHsController hs, SqliteDatabaseCollector collector, int refId,
-                                ISystemClock systemClock, CancellationToken cancellationToken)
+        public StatisticsDevice(IHsController hs,
+                                SqliteDatabaseCollector collector,
+                                int refId,
+                                ISystemClock systemClock,
+                                HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
+                                CancellationToken cancellationToken)
         {
             this.HS = hs;
             this.collector = collector;
             this.RefId = refId;
             this.systemClock = systemClock;
+            this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
             this.combinedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             this.deviceData = GetPlugExtraData<StatisticsDeviceData>(hs, refId, DataKey);
@@ -58,8 +66,10 @@ namespace Hspi
             var plugExtraData = new PlugExtraData();
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
 
+            string featureName = GetStatisticsFunctionForName(data.StatisticsFunction) + " - " +
+                                                              data.FunctionDuration.Humanize(culture: CultureInfo.InvariantCulture);
             var newFeatureData = FeatureFactory.CreateFeature(PlugInData.PlugInId)
-                                               .WithName(GetStatisticsFunctionForName(data.StatisticsFunction))
+                                               .WithName(featureName)
                                                .WithLocation(feature.Location)
                                                .WithLocation2(feature.Location2)
                                                .WithMiscFlags(EMiscFlag.StatusOnly)
@@ -86,8 +96,8 @@ namespace Hspi
             {
                 return statisticsFunction switch
                 {
-                    StatisticsFunction.AverageStep => "Average(Linear)",
-                    StatisticsFunction.AverageLinear => "Average(Step)",
+                    StatisticsFunction.AverageLinear => "Average(Linear)",
+                    StatisticsFunction.AverageStep => "Average(Step)",
                     _ => throw new NotImplementedException(),
                 };
             }
@@ -151,6 +161,11 @@ namespace Hspi
                                                                        min.ToUnixTimeSeconds(),
                                                                        max.ToUnixTimeSeconds(),
                                                                        this.deviceData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear).ConfigureAwait(false);
+                    if (result.HasValue)
+                    {
+                        var precision = hsFeatureCachedDataProvider.GetPrecision(deviceData.TrackedRef);
+                        result = Math.Round(result.Value, precision);
+                    }
 
                     UpdateDeviceValue(result);
                 }
@@ -206,6 +221,7 @@ namespace Hspi
         private readonly StatisticsDeviceData deviceData;
         private readonly IHsController HS;
         private readonly ISystemClock systemClock;
+        private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
         private readonly AsyncAutoResetEvent updateNowEvent = new(false);
     }
 }

@@ -194,8 +194,10 @@ namespace HSPI_HistoricalRecordsTest
                 }
                 else
                 {
-                    var dict2 = new Dictionary<EProperty, object>();
-                    dict2.Add(property, value);
+                    var dict2 = new Dictionary<EProperty, object>
+                    {
+                        { property, value }
+                    };
                     deviceOrFeatureData[devOrFeatRef] = dict2;
                 }
             }

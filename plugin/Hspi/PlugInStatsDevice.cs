@@ -101,7 +101,8 @@ namespace Hspi
         {
             Log.Debug("Restarting statistics device update");
             statisticsDeviceUpdater?.Dispose();
-            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), ShutdownCancellationToken);
+            CheckNotNull(hsFeatureCachedDataProvider);
+            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), hsFeatureCachedDataProvider, ShutdownCancellationToken);
         }
 
         private StatisticsDeviceUpdater? statisticsDeviceUpdater;

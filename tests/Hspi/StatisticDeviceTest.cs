@@ -78,7 +78,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.AreEqual(trackedFeature.Location, newDataForDevice.Device[EProperty.Location]);
             Assert.AreEqual(trackedFeature.Location2, newDataForDevice.Device[EProperty.Location2]);
 
-            Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average"));
             Assert.AreEqual(PlugInData.PlugInId, newFeatureData.Feature[EProperty.Interface]);
             CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
             Assert.AreEqual(trackedFeature.Location, newFeatureData.Feature[EProperty.Location]);
@@ -102,8 +101,10 @@ namespace HSPI_HistoricalRecordsTest
             switch (function)
             {
                 case "averagestep":
+                    Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Step)"));
                     Assert.AreEqual(StatisticsFunction.AverageStep, data.StatisticsFunction); break;
                 case "averagelinear":
+                    Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Linear)"));
                     Assert.AreEqual(StatisticsFunction.AverageLinear, data.StatisticsFunction); break;
             }
             Assert.AreEqual(new TimeSpan(1, 0, 10, 0), data.FunctionDuration);
@@ -146,7 +147,7 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow(StatisticsFunction.AverageLinear)]
         public async Task DeviceIsUpdated(StatisticsFunction statisticsFunction)
         {
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            CancellationTokenSource cancellationTokenSource = new();
             cancellationTokenSource.CancelAfter(5 * 1000);
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock =

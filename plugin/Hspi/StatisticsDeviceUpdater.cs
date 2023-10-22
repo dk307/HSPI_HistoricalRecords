@@ -18,11 +18,13 @@ namespace Hspi.DeviceData
         public StatisticsDeviceUpdater(IHsController hs,
                                        SqliteDatabaseCollector collector,
                                        ISystemClock systemClock,
+                                       HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
                                        CancellationToken cancellationToken)
         {
             this.HS = hs;
             this.collector = collector;
             this.systemClock = systemClock;
+            this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
             this.cancellationToken = cancellationToken;
 
             var result = GetCurrentDevices();
@@ -61,7 +63,7 @@ namespace Hspi.DeviceData
                     //data is stored in feature(child)
                     if (relationship == ERelationship.Feature)
                     {
-                        var importDevice = new StatisticsDevice(HS, collector, refId, systemClock, cancellationToken);
+                        var importDevice = new StatisticsDevice(HS, collector, refId, systemClock, hsFeatureCachedDataProvider, cancellationToken);
                         currentChildDevices.Add(refId, importDevice);
                     }
                 }
@@ -85,6 +87,7 @@ namespace Hspi.DeviceData
         private readonly IHsController HS;
         private readonly SqliteDatabaseCollector collector;
         private readonly ISystemClock systemClock;
+        private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
         private readonly CancellationToken cancellationToken;
         private readonly ImmutableList<int> allRefIds;
         private readonly ImmutableDictionary<int, StatisticsDevice> devices;
