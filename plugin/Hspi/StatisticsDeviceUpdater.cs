@@ -27,9 +27,9 @@ namespace Hspi.DeviceData
             this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
             this.cancellationToken = cancellationToken;
 
-            var result = GetCurrentDevices();
-            this.allRefIds = result.Item1.ToImmutableList();
-            this.devices = result.Item2.ToImmutableDictionary();
+            var (list, dict) = GetCurrentDevices();
+            this.allRefIds = list.ToImmutableList();
+            this.devices = dict.ToImmutableDictionary();
         }
 
         public bool HasRefId(int refId)
@@ -47,7 +47,7 @@ namespace Hspi.DeviceData
             return false;
         }
 
-        private System.Tuple<List<int>, Dictionary<int, StatisticsDevice>> GetCurrentDevices()
+        private (List<int>, Dictionary<int, StatisticsDevice>) GetCurrentDevices()
         {
             var refIds = HS.GetRefsByInterface(PlugInData.PlugInId);
 
@@ -73,7 +73,7 @@ namespace Hspi.DeviceData
                 }
             }
 
-            return new System.Tuple<List<int>, Dictionary<int, StatisticsDevice>>(refIds, currentChildDevices);
+            return (refIds, currentChildDevices);
         }
 
         public void Dispose()
