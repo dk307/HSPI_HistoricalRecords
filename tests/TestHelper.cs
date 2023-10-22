@@ -301,4 +301,21 @@ namespace HSPI_HistoricalRecordsTest
             }));
         }
     }
+
+    internal sealed class PlugInLifeCycle : IDisposable
+    {
+        public PlugInLifeCycle(Mock<Hspi.PlugIn> plugIn)
+        {
+            this.plugIn = plugIn;
+            Assert.IsTrue(plugIn.Object.InitIO());
+        }
+
+        void IDisposable.Dispose()
+        {
+            plugIn.Object.ShutdownIO();
+            plugIn.Object.Dispose();
+        }
+
+        private readonly Mock<Hspi.PlugIn> plugIn;
+    }
 }

@@ -33,7 +33,7 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "IsTracked", null, PlugInData.SettingFileName)).Returns(true.ToString());
             mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "RetentionPeriod", null, PlugInData.SettingFileName)).Returns(TimeSpan.FromSeconds(2).ToString("c"));
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId));
 
@@ -53,9 +53,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 112));
 
             Assert.AreEqual(10 - 8, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref)[0]);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -73,7 +70,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 3, 100);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             int addedRecordCount = SettingsPages.MinRecordsToKeepDefault + 20;
 
@@ -91,9 +88,6 @@ namespace HSPI_HistoricalRecordsTest
 
             // first 20 are gone
             Assert.AreEqual(200 - 20, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref)[0]);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -111,7 +105,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 3, 100);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             int addedRecordCount = SettingsPages.MinRecordsToKeepDefault + 20;
 
@@ -129,9 +123,6 @@ namespace HSPI_HistoricalRecordsTest
 
             // first 5 are gone
             Assert.AreEqual(10 - 5, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref)[0]);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
     }
 }

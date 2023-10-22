@@ -11,7 +11,7 @@ namespace HSPI_HistoricalRecordsTest
         public void DefaultConstructor()
         {
             // Arrange
-            HsDeviceInvalidException exception = new HsDeviceInvalidException();
+            HsDeviceInvalidException exception = new();
 
             // Act & Assert
             Assert.IsNotNull(exception);
@@ -23,8 +23,8 @@ namespace HSPI_HistoricalRecordsTest
         {
             // Arrange
             string errorMessage = "Test Error Message";
-            Exception innerException = new Exception("Inner Exception");
-            HsDeviceInvalidException exception = new HsDeviceInvalidException(errorMessage, innerException);
+            Exception innerException = new("Inner Exception");
+            HsDeviceInvalidException exception = new(errorMessage, innerException);
 
             // Act & Assert
             Assert.IsNotNull(exception);
@@ -38,7 +38,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             // Arrange
             string errorMessage = "Test Error Message";
-            HsDeviceInvalidException exception = new HsDeviceInvalidException(errorMessage);
+            HsDeviceInvalidException exception = new(errorMessage);
 
             // Act & Assert
             Assert.IsNotNull(exception);

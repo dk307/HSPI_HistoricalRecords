@@ -113,7 +113,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             TestHelper.CreateMockPlugInAndHsController(out var plugin, out var _);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             int devRefId = 1938;
             string paramsForRecord = String.Format(format, devRefId);
@@ -127,9 +127,6 @@ namespace HSPI_HistoricalRecordsTest
             var errorMessage = jsonData["error"].Value<string>();
             Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
             StringAssert.Contains(errorMessage, exception);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -142,7 +139,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var added = new List<RecordData>();
             for (int i = 0; i < addedRecordCount; i++)
@@ -165,9 +162,6 @@ namespace HSPI_HistoricalRecordsTest
 
             var recordsFiltered = jsonData["recordsFiltered"].Value<long>();
             Assert.AreEqual(total, recordsFiltered);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -180,7 +174,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var durations = new SortedDictionary<long, long?>();
             var added = new List<RecordData>();
@@ -215,9 +209,6 @@ namespace HSPI_HistoricalRecordsTest
                 Assert.AreEqual(record.DeviceString, expected.DeviceString);
                 Assert.AreEqual(record.DurationSeconds, durations[record.UnixTimeSeconds]);
             }
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -230,7 +221,7 @@ namespace HSPI_HistoricalRecordsTest
             var feature1 = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime);
             var feature2 = TestHelper.SetupHsFeature(mockHsController, 374, 1.1, displayString: "4.5", lastChange: nowTime);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             for (int i = 0; i < 10; i++)
             {
@@ -248,9 +239,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(stats.ContainsKey("Size"));
             Assert.AreEqual("20", stats["Total records"]);
             Assert.AreEqual("20", stats["Total records from last 24 hr"]);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -265,7 +253,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var feature = TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1", lastChange: nowTime.AddSeconds(-50));
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 3333, "3333", nowTime.AddSeconds(-100), 1);
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, 33434, "333", nowTime.AddSeconds(-1000), 2);
@@ -274,9 +262,6 @@ namespace HSPI_HistoricalRecordsTest
             var records = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(feature.Ref);
             Assert.AreEqual(2000, records[0]);
             Assert.AreEqual(100, records[1]);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -288,7 +273,7 @@ namespace HSPI_HistoricalRecordsTest
 
             List<HsFeature> hsFeatures = new();
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
             for (int i = 0; i < 15; i++)
             {
                 hsFeatures.Add(TestHelper.SetupHsFeature(mockHsController, 1307 + i, 1.1, displayString: "1.1", lastChange: nowTime));
@@ -306,9 +291,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.AreEqual(14, stats[0].Value);
             Assert.AreEqual(1307 + 5, stats[9].Key);
             Assert.AreEqual(5, stats[9].Value);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -319,7 +301,7 @@ namespace HSPI_HistoricalRecordsTest
             int deviceRefId = 373;
             TestHelper.SetupHsFeature(mockHsController, deviceRefId, 1.1, displayString: "1.1");
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId));
 
@@ -336,9 +318,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsFalse(jsonData.ContainsKey("error"));
 
             Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId));
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         [TestMethod]
@@ -348,7 +327,7 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1");
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             // send invalid json
             string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"tracked\":1}", string.Empty, 0);
@@ -359,9 +338,6 @@ namespace HSPI_HistoricalRecordsTest
 
             var errorMessage = jsonData["error"].Value<string>();
             Assert.IsNotNull(errorMessage);
-
-            plugin.Object.ShutdownIO();
-            plugin.Object.Dispose();
         }
 
         private class StringValueComparer : IComparer<RecordData>
