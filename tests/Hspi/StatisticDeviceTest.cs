@@ -233,6 +233,38 @@ namespace HSPI_HistoricalRecordsTest
             plugIn.Object.ShutdownIO();
         }
 
+        [TestMethod]
+        public void StatisticsDeviceIsDeleted()
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock =
+                TestHelper.SetupHsControllerAndSettings(plugIn, new Dictionary<string, string>());
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            int statsDeviceRefId = 1000;
+            AsyncManualResetEvent updated = new();
+
+            SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, updated, out var statsFeature, out var trackedFeature,
+                                  out var _);
+
+            Assert.IsTrue(plugIn.Object.InitIO());
+
+            Assert.IsTrue(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+
+            hsControllerMock.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, It.IsAny<bool>())).Returns(new List<int>());
+            plugIn.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE,
+                                  new object[] { null, null, null, statsDeviceRefId, 2 });
+
+            TestHelper.TimedWaitTillTrue(() => !plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+
+            // not more tracking after delete
+            Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+
+            plugIn.Object.ShutdownIO();
+        }
+
         private static void SetupStatisticsDevice(StatisticsFunction statisticsFunction, Mock<PlugIn> plugIn,
                                                   Mock<IHsController> hsControllerMock,
                                                   DateTime aTime,

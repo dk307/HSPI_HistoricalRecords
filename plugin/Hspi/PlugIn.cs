@@ -123,7 +123,9 @@ namespace Hspi
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
                 HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a database statistics device");
 
-                RestartProcessing();
+                Utils.TaskHelper.StartAsyncWithErrorChecking("All device values collection",
+                                                             RecordAllDevices,
+                                                             ShutdownCancellationToken);
 
                 Log.Information("Plugin Started");
             }
@@ -228,13 +230,6 @@ namespace Hspi
             Log.Verbose("Recording {@record}", recordData);
 
             await collector.Record(recordData).ConfigureAwait(false);
-        }
-
-        private void RestartProcessing()
-        {
-            Utils.TaskHelper.StartAsyncWithErrorChecking("All device values collection",
-                                                         RecordAllDevices,
-                                                         ShutdownCancellationToken);
         }
 
         private void UpdateDebugLevel()
