@@ -72,6 +72,13 @@ namespace HSPI_HistoricalRecordsTest
             return (mockPlugin, mockHsController);
         }
 
+        public static void CreateMockPlugInAndHsController(out Mock<PlugIn> plugin,
+                                                           out Mock<IHsController> mockHsController)
+        {
+            plugin = TestHelper.CreatePlugInMock();
+            mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+        }
+
         public static Mock<ISystemClock> CreateMockSystemClock(Mock<PlugIn> plugIn)
         {
             var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
@@ -204,7 +211,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         public static Mock<IHsController> SetupHsControllerAndSettings(Mock<PlugIn> mockPlugin,
-                                                                               Dictionary<string, string> settingsFromIni)
+                                                                       Dictionary<string, string> settingsFromIni)
         {
             var mockHsController = new Mock<IHsController>(MockBehavior.Strict);
 

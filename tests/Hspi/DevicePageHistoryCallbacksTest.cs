@@ -105,15 +105,13 @@ namespace HSPI_HistoricalRecordsTest
              };
         }
 
- 
         [DataTestMethod]
         [DataRow("refId={0}&min=1001&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "max < min")]
         [DataRow("refId={0}&min=abc&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min is invalid")]
         [DataRow("refId={0}&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min/max not specified")]
         public void DatatableCallbackMinMoreThanMax(string format, string exception)
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var _);
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -138,8 +136,7 @@ namespace HSPI_HistoricalRecordsTest
         [DynamicData(nameof(GetDatatableCallbackTotalData), DynamicDataSourceType.Method)]
         public void DatatableCallbackTotal(Func<HsFeature, List<RecordData>, string> createString, int addedRecordCount, int total)
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             DateTime nowTime = DateTime.Now;
 
@@ -177,8 +174,7 @@ namespace HSPI_HistoricalRecordsTest
         [DynamicData(nameof(GetDatatableCallbacksData), DynamicDataSourceType.Method)]
         public void DatatableCallbackTotalData(Func<HsFeature, List<RecordData>, string> createString, Func<List<RecordData>, List<RecordData>> filter)
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             DateTime nowTime = DateTime.Now;
 
@@ -227,8 +223,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetDatabaseStats()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             DateTime nowTime = DateTime.Now;
 
@@ -261,8 +256,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetEarliestAndOldestRecordTimeDate()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
             plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
@@ -288,8 +282,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetTop10RecordsStats()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             DateTime nowTime = DateTime.Now;
 
@@ -321,8 +314,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void HandleUpdateDeviceSettings()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             int deviceRefId = 373;
             TestHelper.SetupHsFeature(mockHsController, deviceRefId, 1.1, displayString: "1.1");
@@ -352,8 +344,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void HandleUpdateDeviceSettingsError()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             TestHelper.SetupHsFeature(mockHsController, 373, 1.1, displayString: "1.1");
 

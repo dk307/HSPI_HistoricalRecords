@@ -17,8 +17,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void DeviceValueUpdateIsRecorded(Constants.HSEvent eventType, string displayStatus, string expectedString)
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                                           35673,
@@ -42,8 +41,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void MultipleDeviceValueUpdatesAreRecorded()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             DateTime time = DateTime.Now;
 
@@ -96,8 +94,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void SameSecondChangesAreOverwritten()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             DateTime time = DateTime.Now;
 
@@ -148,8 +145,7 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("countername")]
         public void TimerOrCounterChangeIsNotRecorded(string plugInExtraKey)
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             HsFeature feature = TestHelper.SetupHsFeature(mockHsController, 673, 1);
 
@@ -174,8 +170,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void UnTrackedDeviceIsNotStored()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             DateTime time = DateTime.Now;
 

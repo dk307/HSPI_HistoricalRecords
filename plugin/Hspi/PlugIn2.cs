@@ -92,14 +92,14 @@ namespace Hspi
 
         internal int GetFeaturePrecision(int refId)
         {
-            CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.GetPrecision(refId);
+            CheckNotNull(featureCachedDataProvider);
+            return featureCachedDataProvider.GetPrecision(refId);
         }
 
         internal string? GetFeatureUnit(int refId)
         {
-            CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.GetUnit(refId);
+            CheckNotNull(featureCachedDataProvider);
+            return featureCachedDataProvider.GetUnit(refId);
         }
 
         internal long GetTotalRecords(int refId)
@@ -111,9 +111,9 @@ namespace Hspi
         internal bool IsFeatureTracked(int refId)
         {
             CheckNotNull(settingsPages);
-            CheckNotNull(hsFeatureCachedDataProvider);
+            CheckNotNull(featureCachedDataProvider);
             return settingsPages.IsTracked(refId) &&
-                     hsFeatureCachedDataProvider.IsMonitoried(refId);
+                     featureCachedDataProvider.IsMonitoried(refId);
         }
 
         protected virtual ISystemClock CreateClock() => new SystemClock();
@@ -240,7 +240,7 @@ namespace Hspi
                             await TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy).ConfigureAwait(false) :
                             await Collector.GetGraphValues(refId, min / 1000, max / 1000).ConfigureAwait(false);
 
-            CheckNotNull(hsFeatureCachedDataProvider);
+            CheckNotNull(featureCachedDataProvider);
             StringBuilder stb = new();
             using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
             using var jsonWriter = new JsonTextWriter(stringWriter);
@@ -343,7 +343,7 @@ namespace Hspi
             jsonWriter.WritePropertyName("data");
             jsonWriter.WriteStartArray();
 
-            CheckNotNull(hsFeatureCachedDataProvider);
+            CheckNotNull(featureCachedDataProvider);
             foreach (var row in queryData)
             {
                 jsonWriter.WriteStartArray();

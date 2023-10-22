@@ -372,7 +372,7 @@ namespace Hspi.Database
                     var minSupportedVersion = new Version(3, 37);
                     if (version < minSupportedVersion)
                     {
-                        throw new SystemException("sqlite version on machine is too old. Need 3.37+");
+                        throw new SystemException("Sqlite version on machine is too old. Need 3.37+");
                     }
                 }
             }

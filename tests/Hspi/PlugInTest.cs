@@ -20,9 +20,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void AllDevicesAreUpdatedOnStart()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
-
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
             List<int> allDeviceRefs = new() { 1000, 1001 };
             mockHsController.Setup(x => x.GetAllRefs()).Returns(allDeviceRefs);
             var feature1 = TestHelper.SetupHsFeature(mockHsController, allDeviceRefs[0], 1.1, "abcd", lastChange: DateTime.Now - TimeSpan.FromDays(6));
@@ -108,8 +106,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetFeatureUnit()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                               35673,
@@ -136,9 +133,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetJuiDeviceConfigPageForDevice()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
-
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
             Assert.IsTrue(plugin.Object.InitIO());
 
             int devOrFeatRef = 10;
@@ -168,9 +163,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetJuiDeviceConfigPageForFeature()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
-
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
             Assert.IsTrue(plugin.Object.InitIO());
 
             int devOrFeatRef = 10;
@@ -201,8 +194,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetJuiDeviceConfigPageErrored()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -225,8 +217,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetPrecision()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                               35673,
@@ -262,8 +253,7 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("apple", null)]
         public void GetFeatureUnitForDifferentTypes(string displayStatus, string unit)
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             Assert.IsTrue(plugin.Object.InitIO());
 
@@ -279,8 +269,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void InitFirstTime()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             Assert.IsTrue(plugin.Object.InitIO());
             plugin.Object.ShutdownIO();
@@ -298,8 +287,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void IsFeatureTrackedForTimer()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                               35673,
@@ -332,8 +320,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void IsFeatureTrackedForThisPluginDevices()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                               35673,
@@ -364,8 +351,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void IsFeatureTrackedForHS4RootDevices()
         {
-            var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
             HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
                                               35673,

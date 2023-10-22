@@ -65,8 +65,8 @@ namespace Hspi
 
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
         {
-            CheckNotNull(hsFeatureCachedDataProvider);
-            return hsFeatureCachedDataProvider.IsMonitoried(devOrFeatRef);
+            CheckNotNull(featureCachedDataProvider);
+            return featureCachedDataProvider.IsMonitoried(devOrFeatRef);
         }
 
         public override void HsEvent(Constants.HSEvent eventType, object[] @params)
@@ -107,7 +107,7 @@ namespace Hspi
             try
             {
                 Log.Information("Plugin Starting");
-                hsFeatureCachedDataProvider = new HsFeatureCachedDataProvider(HomeSeerSystem);
+                featureCachedDataProvider = new HsFeatureCachedDataProvider(HomeSeerSystem);
                 Settings.Add(SettingsPages.CreateDefault());
                 LoadSettingsFromIni();
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
@@ -115,7 +115,7 @@ namespace Hspi
 
                 CheckNotNull(settingsPages);
                 collector = new SqliteDatabaseCollector(settingsPages, CreateClock(), ShutdownCancellationToken);
-                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), hsFeatureCachedDataProvider, ShutdownCancellationToken);
+                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
@@ -180,7 +180,7 @@ namespace Hspi
             else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 3) && ConvertToInt32(1) == 0)
             {
                 int refId = ConvertToInt32(3);
-                hsFeatureCachedDataProvider?.Invalidate(refId);
+                featureCachedDataProvider?.Invalidate(refId);
 
                 const int DeleteDevice = 2;
                 if (ConvertToInt32(4) == DeleteDevice && (statisticsDeviceUpdater?.HasRefId(refId) ?? false))
@@ -243,7 +243,7 @@ namespace Hspi
         }
 
         private SqliteDatabaseCollector? collector;
-        private HsFeatureCachedDataProvider? hsFeatureCachedDataProvider;
+        private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
     }
 }
