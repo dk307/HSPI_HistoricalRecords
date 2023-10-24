@@ -173,6 +173,44 @@ namespace HSPI_HistoricalRecordsTest
                             JsonConvert.DeserializeObject<StatisticsDeviceData>(json));
         }
 
+        [TestMethod]
+        public void EditDeviceFailsForInvalidDevice()
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock =
+                TestHelper.SetupHsControllerAndSettings(plugIn, new Dictionary<string, string>());
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            int statsDeviceRefId = 1000;
+            AsyncManualResetEvent updated = new();
+
+            SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, updated, out var _, out var trackedFeature,
+                                  out var _);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            JObject editRequest = new()
+            {
+                { "ref" , new JValue(trackedFeature.Ref) }, // wrong ref
+                { "data" , new JObject() {
+                    { "TrackedRef", new JValue(trackedFeature.Ref) },
+                    { "StatisticsFunction", new JValue(StatisticsFunction.AverageLinear) },
+                    { "FunctionDurationSeconds", new JValue((long)new TimeSpan(5, 1, 10, 3).TotalSeconds) },
+                    { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 5, 1, 30).TotalSeconds) },
+                }}
+            };
+
+            // edit
+            string data2 = plugIn.Object.PostBackProc("deviceedit", editRequest.ToString(), string.Empty, 0);
+
+            // error is returned
+            var result2 = JsonConvert.DeserializeObject<JObject>(data2);
+            Assert.IsNotNull(result2);
+            StringAssert.Contains((string)result2["error"], $"Device/Feature {trackedFeature.Ref} not a plugin feature");
+        }
+
         [DataTestMethod]
         [DataRow("{\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}", "Required property 'TrackedRef' not found in JSON")]
         [DataRow("", "data is not correct")]
