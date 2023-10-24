@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!--Don't cache anything-->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+	
+    {{includefile '/bootstrap/css/page_common.css'}}
+    <title>Edit Device</title>
+ 
+    <link href="/css/hs.css" rel="stylesheet">
+</head>
+	{{	
+		refId=queries['ref'] ?? ""
+		featureId=queries['feature'] ?? refId		
+		jsonDataString=plugin_function 'HistoricalRecords' 'GetStatisticDeviceDataAsJson' [featureId]
+	}}
+	
+<body class="body homeseer-skin ml-0 mr-0" aria-busy="true">
+	<div class="row mt-1 mb-1">
+		<div class="md-form col-md alert alert-danger" role="alert" id="error-message-div" style="display: none;">		 
+		</div>
+	</div>
+
+	<form id="mainform"> 
+	  <div class="row mb-1">
+		<div class="col">
+		  <div class="form-outline">
+				<span class="font-weight-bold">Select a device to this statistic device is for</span>
+				{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}
+				<select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here..." required>
+					{{ for id in deviceRefIds }}
+					<option value='{{id}}' >{{device_name_full id | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
+					{{ end }}
+				</select>
+		  </div>
+		</div>	 
+	  </div>
+
+	 
+	  <div class="row mb-1">	 
+		<div class="col-5">	
+			 <div class="form-outline">
+				<span class="font-weight-bold">Select statistical function</span>
+				<select id="function" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
+					<option value="averagelinear" selected >Average Linear</option>	
+					<option value="averagestep">Average Step</option>	
+				</select> 		
+			</div>
+		</div>
+		<div class="col-7">		
+			{{includefile '/HistoricalRecords/statsfuncdefs.html'}} 
+		</div>	 		
+	  </div>
+
+ 
+	<div class="row mb-1">	 
+		<div class="col">
+			<div class="form-outline">
+			<span class="font-weight-bold">Select duration of statistical function</span>
+				<div class="input-group">					 
+					<p>   
+						<div class="md-form mr-1">
+							<input type="number" id="daysDuration" name="days" class="form-control" value="0" required>
+							<label for="daysDuration">Days</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" required>
+							<label for="hoursDuration">Hours</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="0" required>
+							<label for="minutesDuration">Minutes</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" required>
+							<label for="secondsDuration">Seconds</label>                                     
+						</div>
+					</p> 
+				</div>
+			</div>
+		</div>
+	</div>
+
+ 	<div class="row mb-1">	 
+		<div class="col md-flex">
+			<div class="form-outline">
+			<span class="font-weight-bold">Select refresh interval of statistical function</span>
+				<div class="input-group">					 
+					<p>   
+						<div class="md-form mr-1">
+							<input type="number" id="daysRefresh" name="days" class="form-control" value="0" required>
+							<label for="daysRefresh">Days</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" required>
+							<label for="hoursRefresh">Hours</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" required>
+							<label for="minutesRefresh">Minutes</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="0" required>
+							<label for="secondsRefresh">Seconds</label>                                     
+						</div>
+					</p> 
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="row mt-1 mb-1">
+		<div class="col-md d-flex justify-content-end">
+			<button class="btn btn-default waves-effect waves-light" name="save" type="submit">Save</button>
+		</div>
+	</div>		
+	</form>
+	
+{{includefile 'bootstrap/js/page_common.js'}}
+<script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+<script>
+const jsonData = JSON.parse('{{jsonDataString ?? '{}'}}');
+
+$(document).ready(function () {
+
+	if (jsonData === null) {
+		Console.log("Invalid device data");
+	} else {	
+		$('#deviceSelect').val(jsonData.TrackedRef); 
+		$('#function').val(jsonData.StatisticsFunction);
+		
+		var duration = moment.duration(jsonData.FunctionDurationSeconds, 'seconds');
+		
+		$('#daysDuration').val(Math.floor(duration.asDays())); 	
+		$('#hoursDuration').val(duration.hours()); 	
+		$('#minutesDuration').val(duration.minutes()); 	
+		$('#secondsDuration').val(duration.seconds()); 	
+
+		var refresh = moment.duration(jsonData.RefreshIntervalSeconds, 'seconds');
+		$('#daysRefresh').val(Math.floor(refresh.asDays())); 	
+		$('#hoursRefresh').val(refresh.hours()); 	
+		$('#minutesRefresh').val(refresh.minutes()); 	
+		$('#secondsRefresh').val(refresh.seconds()); 	
+	}
+	
+	
+	$("#mainform").submit(function(e) {	
+		 e.preventDefault();
+		 alert("t");
+		let duration = moment.duration({
+			seconds: $('#secondsDuration').val(),
+			minutes: $('#minutesDuration').val(),
+			hours: $('#hoursDuration').val() ,
+			days: $('#daysDuration').val(),
+		});
+
+		let refresh = moment.duration({
+			seconds: $('#secondsRefresh').val(),
+			minutes: $('#minutesRefresh').val(),
+			hours: $('#hoursRefresh').val() ,
+			days: $('#daysRefresh').val(),
+		});
+
+
+		var formObject = {
+			ref : {{featureId}},
+			data: {		
+			   TrackedRef: $('#deviceSelect').val(),
+			   StatisticsFunction: $('#function').val(),
+			   FunctionDurationSeconds: duration.asSeconds(),
+			   RefreshIntervalSeconds: refresh.asSeconds(),
+		   }
+		};
+		
+		var data = JSON.stringify(formObject);
+		
+		$('#error-message-div').hide(); 		
+		$('#error-message-div').html(''); 		
+		
+		ajaxPostPlugIn("deviceedit", formObject, null, 
+		function (errorMessage) {	
+			$('#error-message-div').show(); 
+			$('#error-message-div').html(errorMessage);
+		});
+	});		
+});
+</script>
+
+</body>
+</html>

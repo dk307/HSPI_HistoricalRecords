@@ -11,7 +11,7 @@ using Serilog;
 
 #nullable enable
 
-namespace Hspi.DeviceData
+namespace Hspi.Device
 {
     internal sealed class StatisticsDeviceUpdater : IDisposable
     {

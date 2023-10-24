@@ -68,6 +68,7 @@ namespace Hspi
                     "graphrecords" => HandleGraphRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
                     "updatedevicesettings" => HandleUpdateDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
+                    "deviceedit" => HandleDeviceEdit(data),
                     _ => base.PostBackProc(page, data, user, userRights),
                 };
             }
@@ -170,22 +171,21 @@ namespace Hspi
             return stb.ToString();
         }
 
-        private string CreateDeviceConfigPage(int devOrFeatRef, string iFrameName)
+        private string CreateTrackedDeviceConfigPage(int devOrFeatRef, string iFrameName)
         {
             GetRefAndFeatureIds(devOrFeatRef, out var @ref, out var feature);
 
             StringBuilder stb = new();
             stb.Append("<script>$('#save_device_config').hide();</script>");
 
-            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?ref={@ref}");
-
-            iFrameUrl += $"&feature={feature}";
+            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?ref={@ref}&feature={feature}");
 
             // iframeSizer.min.js
-            stb.Append($"<script type=\"text/javascript\" src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
+            stb.Append($"<script src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
             stb.Append(@"<style>iframe{width: 1px;min-width: 100%;min-height: 40rem; border: 0px;}</style>");
-            stb.Append(Invariant($"<iframe id=\"historicalrecordsiframeid\" src=\"{iFrameUrl}\"></iframe>"));
-            stb.Append(Invariant($"<script>iFrameResize({{heightCalculationMethod: 'max', log: true, inPageLinks: true }}, '#historicalRecordsiFrame');</script>"));
+            string id = "historicalrecordsiframeid";
+            stb.Append(Invariant($"<iframe id=\"{id}\" src=\"{iFrameUrl}\"></iframe>"));
+            stb.Append(Invariant($"<script>iFrameResize({{log: true, inPageLinks: true }}, '#{id}');</script>"));
 
             LabelView labelView = new("id", stb.ToString())
             {

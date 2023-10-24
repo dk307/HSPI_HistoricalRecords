@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
-using Hspi.DeviceData;
+using Hspi.Device;
 using Hspi.Utils;
 using Nito.AsyncEx.Synchronous;
 using Serilog;
@@ -44,7 +44,8 @@ namespace Hspi
         {
             try
             {
-                return CreateDeviceConfigPage(devOrFeatRef, "devicehistoricalrecords.html");
+                string iFrameName = IsThisPlugInFeature(devOrFeatRef) ? "editdevice.html" : "devicehistoricalrecords.html";
+                return CreateTrackedDeviceConfigPage(devOrFeatRef, iFrameName);
             }
             catch (Exception ex)
             {
@@ -66,7 +67,8 @@ namespace Hspi
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
         {
             CheckNotNull(featureCachedDataProvider);
-            return featureCachedDataProvider.IsMonitoried(devOrFeatRef);
+            bool hasPage = featureCachedDataProvider.IsMonitoried(devOrFeatRef) || IsThisPlugInFeature(devOrFeatRef);
+            return hasPage;
         }
 
         public override void HsEvent(Constants.HSEvent eventType, object[] @params)
@@ -193,6 +195,11 @@ namespace Hspi
             {
                 return Convert.ToInt32(parameters[index], CultureInfo.InvariantCulture);
             }
+        }
+
+        private bool IsThisPlugInFeature(int devOrFeatRef)
+        {
+            return (string)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, HomeSeer.PluginSdk.Devices.EProperty.Interface) == this.Id;
         }
 
         private async Task RecordAllDevices()

@@ -4,7 +4,6 @@ using System.IO;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -124,8 +123,10 @@ namespace HSPI_HistoricalRecordsTest
             Assert.AreEqual("C", unit2);
         }
 
-        [TestMethod]
-        public void GetJuiDeviceConfigPageForDevice()
+        [DataTestMethod]
+        [DataRow(PlugInData.PlugInId, "editdevice")]
+        [DataRow("", "devicehistoricalrecords")]
+        public void GetJuiDeviceConfigPageForDevice(string deviceInterface, string page)
         {
             TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
@@ -133,13 +134,12 @@ namespace HSPI_HistoricalRecordsTest
             int devOrFeatRef = 10;
 
             mockHsController.Setup(x => x.IsRefDevice(devOrFeatRef)).Returns(true);
+            mockHsController.Setup(x => x.GetPropertyByRef(devOrFeatRef, EProperty.Interface)).Returns(deviceInterface);
 
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
             var data = (JObject)JsonConvert.DeserializeObject(pageJson);
             Assert.IsNotNull(data);
-            Assert.AreEqual(PlugInData.PlugInId, data["id"].Value<string>());
-            Assert.AreEqual("Device", data["name"].Value<string>());
             Assert.AreEqual(5, data["type"].Value<int>());
 
             string labelHtml = data["views"][0]["name"].Value<string>();
@@ -147,12 +147,17 @@ namespace HSPI_HistoricalRecordsTest
             var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
             var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
 
+            Assert.IsNotNull(iFrameElement);
+
             var iFrameSource = iFrameElement.Attributes["src"].Value;
-            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/devicehistoricalrecords.html?ref={devOrFeatRef}&feature={devOrFeatRef}");
+            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/{page}.html?ref={devOrFeatRef}&feature={devOrFeatRef}");
         }
 
         [TestMethod]
-        public void GetJuiDeviceConfigPageForFeature()
+        [DataTestMethod]
+        [DataRow(PlugInData.PlugInId, "editdevice")]
+        [DataRow("", "devicehistoricalrecords")]
+        public void GetJuiDeviceConfigPageForFeature(string deviceInterface, string page)
         {
             TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
@@ -161,13 +166,12 @@ namespace HSPI_HistoricalRecordsTest
 
             mockHsController.Setup(x => x.IsRefDevice(devOrFeatRef)).Returns(false);
             mockHsController.Setup(x => x.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).Returns(new HashSet<int>() { 9 });
+            mockHsController.Setup(x => x.GetPropertyByRef(devOrFeatRef, EProperty.Interface)).Returns(deviceInterface);
 
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
             var data = (JObject)JsonConvert.DeserializeObject(pageJson);
             Assert.IsNotNull(data);
-            Assert.AreEqual(PlugInData.PlugInId, data["id"].Value<string>());
-            Assert.AreEqual("Device", data["name"].Value<string>());
             Assert.AreEqual(5, data["type"].Value<int>());
 
             string labelHtml = data["views"][0]["name"].Value<string>();
@@ -175,8 +179,10 @@ namespace HSPI_HistoricalRecordsTest
             var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
             var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
 
+            Assert.IsNotNull(iFrameElement);
+
             var iFrameSource = iFrameElement.Attributes["src"].Value;
-            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/devicehistoricalrecords.html?ref={9}&feature={devOrFeatRef}");
+            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/{page}.html?ref={9}&feature={devOrFeatRef}");
         }
 
         [TestMethod]
@@ -286,61 +292,6 @@ namespace HSPI_HistoricalRecordsTest
 
             // invalidate the cache
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
-
-            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
-            Assert.IsFalse(tracked2);
-
-            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
-        }
-
-        [TestMethod]
-        public void IsFeatureTrackedForThisPluginDevices()
-        {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
-
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
-                                              35673,
-                                              1.132,
-                                              "1.1 F");
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-
-            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
-            Assert.IsTrue(tracked1);
-            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
-
-            // invalidate the cache
-            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
-
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.DeviceType))
-                            .Returns(new TypeInfo() { ApiType = EApiType.Device });
-
-            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
-            Assert.IsFalse(tracked2);
-
-            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
-        }
-
-        [TestMethod]
-        public void IsFeatureTrackedForHS4RootDevices()
-        {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
-
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
-                                              35673,
-                                              1.132,
-                                              "1.1 F");
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-
-            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
-            Assert.IsTrue(tracked1);
-            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
-
-            // invalidate the cache
-            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
-
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.Interface)).Returns(PlugInData.PlugInId);
 
             var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
             Assert.IsFalse(tracked2);

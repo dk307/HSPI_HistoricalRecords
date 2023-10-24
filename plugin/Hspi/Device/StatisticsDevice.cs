@@ -1,29 +1,23 @@
 ﻿using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi.Database;
 using Hspi.Utils;
+using Humanizer;
 using Newtonsoft.Json;
 using Nito.AsyncEx;
 using Serilog;
 using Serilog.Events;
-using Humanizer;
 using static System.FormattableString;
-using System.Text.RegularExpressions;
-using System.Globalization;
 
 #nullable enable
 
-namespace Hspi
+namespace Hspi.Device
 {
-    public sealed record StatisticsDeviceData(
-                [property: JsonProperty(Required = Required.Always)] int TrackedRef,
-                [property: JsonProperty(Required = Required.Always)] StatisticsFunction StatisticsFunction,
-                [property: JsonProperty(Required = Required.Always)] TimeSpan FunctionDuration,
-                [property: JsonProperty(Required = Required.Always)] TimeSpan RefreshInterval);
-
     public sealed class StatisticsDevice : IDisposable
     {
         public StatisticsDevice(IHsController hs,
@@ -67,7 +61,7 @@ namespace Hspi
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
 
             string featureName = GetStatisticsFunctionForName(data.StatisticsFunction) + " - " +
-                                                              data.FunctionDuration.Humanize(culture: CultureInfo.InvariantCulture);
+                                                              TimeSpan.FromSeconds(data.FunctionDurationSeconds).Humanize(culture: CultureInfo.InvariantCulture);
             var newFeatureData = FeatureFactory.CreateFeature(PlugInData.PlugInId)
                                                .WithName(featureName)
                                                .WithLocation(feature.Location)
@@ -103,6 +97,30 @@ namespace Hspi
             }
         }
 
+        public static void EditDevice(IHsController hsController, int refId, StatisticsDeviceData data)
+        {
+            // check same interface and is a feature
+            var deviceInterface = (string)hsController.GetPropertyByRef(refId, EProperty.Interface);
+            var eRelationship = (ERelationship)hsController.GetPropertyByRef(refId, EProperty.Relationship);
+            if (deviceInterface != PlugInData.PlugInId || eRelationship != ERelationship.Feature)
+            {
+                throw new HsDeviceInvalidException(Invariant($"Device/Feature {refId} not a plugin feature"));
+            }
+
+            var plugExtraData = new PlugExtraData();
+            plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
+            hsController.UpdatePropertyByRef(refId, EProperty.PlugExtraData, plugExtraData);
+
+            Log.Information("Updated device {refId} with {data}", refId, data);
+        }
+
+        public static string GetDataFromFeatureAsJson(IHsController hs, int refId) => GetPlugExtraDataString(hs, refId, DataKey);
+
+        public void Dispose()
+        {
+            combinedToken.Cancel();
+        }
+
         public void UpdateNow()
         {
             updateNowEvent.Set();
@@ -125,17 +143,7 @@ namespace Hspi
                                              string tag,
                                              params JsonConverter[] converters)
         {
-            if (hsController.GetPropertyByRef(refId, EProperty.PlugExtraData) is not PlugExtraData plugInExtra)
-            {
-                throw new HsDeviceInvalidException("PlugExtraData is null");
-            }
-
-            if (!plugInExtra.ContainsNamed(tag))
-            {
-                throw new HsDeviceInvalidException(Invariant($"{tag} type not found"));
-            }
-
-            var stringData = plugInExtra[tag] ?? throw new HsDeviceInvalidException(Invariant($"{tag} type not found"));
+            string stringData = GetPlugExtraDataString(hsController, refId, tag);
             try
             {
                 var typeData = JsonConvert.DeserializeObject<T>(stringData, converters) ?? throw new HsDeviceInvalidException(Invariant($"{tag} not a valid Json value"));
@@ -147,6 +155,22 @@ namespace Hspi
             }
         }
 
+        private static string GetPlugExtraDataString(IHsController hsController, int refId, string tag)
+        {
+            if (hsController.GetPropertyByRef(refId, EProperty.PlugExtraData) is not PlugExtraData plugInExtra)
+            {
+                throw new HsDeviceInvalidException("PlugExtraData is null");
+            }
+
+            if (!plugInExtra.ContainsNamed(tag))
+            {
+                throw new HsDeviceInvalidException(Invariant($"{tag} type not found"));
+            }
+
+            var stringData = plugInExtra[tag] ?? throw new HsDeviceInvalidException(Invariant($"{tag} type not found"));
+            return stringData;
+        }
+
         private async Task UpdateDevice()
         {
             var shutdownToken = combinedToken.Token;
@@ -154,12 +178,18 @@ namespace Hspi
             {
                 try
                 {
-                    var max = systemClock.Now;
-                    var min = max - this.deviceData.FunctionDuration;
+                    var max = systemClock.Now.ToUnixTimeSeconds();
+                    var min = max - this.deviceData.FunctionDurationSeconds;
+
+                    if (min < 0)
+                    {
+                        throw new ArgumentException("Duration too long");
+                    }
+
                     var result = await TimeAndValueQueryHelper.Average(collector,
                                                                        deviceData.TrackedRef,
-                                                                       min.ToUnixTimeSeconds(),
-                                                                       max.ToUnixTimeSeconds(),
+                                                                       min,
+                                                                       max,
                                                                        this.deviceData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear).ConfigureAwait(false);
                     if (result.HasValue)
                     {
@@ -180,7 +210,11 @@ namespace Hspi
                 }
 
                 var eventWaitTask = updateNowEvent.WaitAsync(shutdownToken);
-                await Task.WhenAny(Task.Delay(deviceData.RefreshInterval, shutdownToken), eventWaitTask).ConfigureAwait(false);
+
+                //validate passed intervals, must be between 1000 and int.maxValue ms
+                var refreshInterval = Math.Max(deviceData.RefreshIntervalSeconds * 1000, 1000);
+                var refreshInterval2 = (int)Math.Min(refreshInterval, int.MaxValue);
+                await Task.WhenAny(Task.Delay(refreshInterval2, shutdownToken), eventWaitTask).ConfigureAwait(false);
             }
         }
 
@@ -210,18 +244,13 @@ namespace Hspi
             }
         }
 
-        public void Dispose()
-        {
-            combinedToken.Cancel();
-        }
-
         private const string DataKey = "data";
         private readonly SqliteDatabaseCollector collector;
         private readonly CancellationTokenSource combinedToken;
         private readonly StatisticsDeviceData deviceData;
         private readonly IHsController HS;
-        private readonly ISystemClock systemClock;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
+        private readonly ISystemClock systemClock;
         private readonly AsyncAutoResetEvent updateNowEvent = new(false);
     }
 }

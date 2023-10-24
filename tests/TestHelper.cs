@@ -193,6 +193,13 @@ namespace HSPI_HistoricalRecordsTest
                     updateValueCallback?.Invoke(devOrFeatRef, property, value);
                 });
 
+            mockHsController.Setup(x => x.UpdatePropertyByRef(It.IsAny<int>(), It.IsAny<EProperty>(), It.IsAny<object>()))
+                 .Callback((int devOrFeatRef, EProperty property, object value) =>
+                 {
+                     AddValue(devOrFeatRef, property, value);
+                     updateValueCallback?.Invoke(devOrFeatRef, property, value);
+                 });
+
             void AddValue(int devOrFeatRef, EProperty property, object value)
             {
                 if (deviceOrFeatureData.TryGetValue(devOrFeatRef, out var dict))
@@ -237,11 +244,6 @@ namespace HSPI_HistoricalRecordsTest
                                                 IDictionary<EProperty, object> changes)
         {
             HsFeature feature = new(deviceRefId);
-            foreach (var change in changes)
-            {
-                mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, change.Key)).Returns(change.Value);
-                feature.Changes.Add(change.Key, change.Value);
-            }
 
             mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.Interface)).Returns("Z-Wave");
             mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.DeviceType)).Returns(new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Feature });
@@ -249,6 +251,12 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.StatusGraphics)).Returns(new List<StatusGraphic>());
             mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(new PlugExtraData());
             mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Returns(feature);
+
+            foreach (var change in changes)
+            {
+                mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, change.Key)).Returns(change.Value);
+                feature.Changes.Add(change.Key, change.Value);
+            }
             return feature;
         }
 
