@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi.Database;
 using Hspi.Utils;
 using Humanizer;
@@ -105,15 +105,19 @@ namespace Hspi
 
         public static void EditDevice(IHsController hsController, int refId, StatisticsDeviceData data)
         {
+            // check same interface and is a feature
+            var deviceInterface = (string)hsController.GetPropertyByRef(refId, EProperty.Interface);
+            var eRelationship = (ERelationship)hsController.GetPropertyByRef(refId, EProperty.Relationship);
+            if (deviceInterface != PlugInData.PlugInId || eRelationship != ERelationship.Feature)
+            {
+                throw new HsDeviceInvalidException(Invariant($"Device/Feature {refId} not a plugin feature"));
+            }
+
             var plugExtraData = new PlugExtraData();
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
+            hsController.UpdatePropertyByRef(refId, EProperty.PlugExtraData, plugExtraData);
 
-            Dictionary<EProperty, object> changes = new()
-            {
-                { EProperty.PlugExtraData, plugExtraData}
-            };
-
-            hsController.UpdateFeatureByRef(refId, changes);
+            Log.Information("Updated device {refId} with {data}", refId, data);
         }
 
         public static string GetDataFromFeatureAsJson(IHsController hs, int refId) => GetPlugExtraDataString(hs, refId, DataKey);
