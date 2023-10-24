@@ -44,14 +44,8 @@ namespace Hspi
         {
             try
             {
-                if (IsThisPlugInFeature(devOrFeatRef))
-                {
-                    return CreateStatisticsDeviceConfigPage(devOrFeatRef);
-                }
-                else
-                {
-                    return CreateTrackedDeviceConfigPage(devOrFeatRef, "devicehistoricalrecords.html");
-                }
+                string iFrameName = IsThisPlugInFeature(devOrFeatRef) ? "editdevice.html" : "devicehistoricalrecords.html";
+                return CreateTrackedDeviceConfigPage(devOrFeatRef, iFrameName);
             }
             catch (Exception ex)
             {

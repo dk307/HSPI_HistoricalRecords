@@ -23,9 +23,9 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [DataTestMethod]
-        [DataRow("averagestep")]
-        [DataRow("averagelinear")]
-        public void AddDevice(string function)
+        [DataRow(StatisticsFunction.AverageStep)]
+        [DataRow(StatisticsFunction.AverageLinear)]
+        public void AddDevice(StatisticsFunction function)
         {
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock =
@@ -56,16 +56,10 @@ namespace HSPI_HistoricalRecordsTest
 
             JObject pairRequest = new()
             {
-                { "trackedref", new JValue(trackedFeature.Ref) },
-                { "function", new JValue(function) },
-                { "daysDuration", new JValue(1) },
-                { "hoursDuration", new JValue(0) },
-                { "minutesDuration", new JValue(10) },
-                { "secondsDuration", new JValue(0) },
-                { "daysRefresh", new JValue(0) },
-                { "hoursRefresh", new JValue(0) },
-                { "minutesRefresh", new JValue(1) },
-                { "secondsRefresh", new JValue(30) }
+                { "TrackedRef", new JValue(trackedFeature.Ref) },
+                { "StatisticsFunction", new JValue(function) },
+                { "FunctionDurationSeconds", new JValue((long)new TimeSpan(1, 0, 10, 0).TotalSeconds) },
+                { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 0, 1, 30).TotalSeconds) },
             };
 
             //add
@@ -105,24 +99,28 @@ namespace HSPI_HistoricalRecordsTest
 
             switch (function)
             {
-                case "averagestep":
+                case StatisticsFunction.AverageStep:
                     Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Step)"));
-                    Assert.AreEqual(StatisticsFunction.AverageStep, data.StatisticsFunction); break;
-                case "averagelinear":
+                    break;
+
+                case StatisticsFunction.AverageLinear:
                     Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Linear)"));
-                    Assert.AreEqual(StatisticsFunction.AverageLinear, data.StatisticsFunction); break;
+                    break;
             }
-            Assert.AreEqual(new TimeSpan(1, 0, 10, 0), data.FunctionDuration);
-            Assert.AreEqual(new TimeSpan(0, 0, 1, 30), data.RefreshInterval);
+
+            Assert.AreEqual(function, data.StatisticsFunction);
+
+            Assert.AreEqual((long)new TimeSpan(1, 0, 10, 0).TotalSeconds, data.FunctionDurationSeconds);
+
+            Assert.AreEqual((long)new TimeSpan(0, 0, 1, 30).TotalSeconds, data.RefreshIntervalSeconds);
 
             CollectionAssert.AreEqual(trackedFeature.StatusGraphics.Values,
                                      ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values);
         }
 
         [DataTestMethod]
-        [DataRow("{\"trackedref\":1000,\"function\":\"average\",\"daysDuration\":1,\"hoursDuration\":0,\"minutesDuration\":10,\"secondsDuration\":0,\"daysRefresh\":0,\"hoursRefresh\":0,\"minutesRefresh\":1,\"secondsRefresh\":30}", "function is not correct")]
-        [DataRow("{\"trackedref\":1000,\"function\":\"averagelinear\",\"hoursDuration\":0,\"minutesDuration\":10,\"secondsDuration\":0,\"daysRefresh\":0,\"hoursRefresh\":0,\"minutesRefresh\":1,\"secondsRefresh\":30}", "daysDuration is not correct")]
-        [DataRow("", "trackedref is not correct")]
+        [DataRow("{\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}", "Required property 'TrackedRef' not found in JSON")]
+        [DataRow("", "data is not correct")]
         public void AddDeviceErrorChecking(string format, string exception)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -272,7 +270,7 @@ namespace HSPI_HistoricalRecordsTest
             statsFeature = TestHelper.SetupHsFeature(hsControllerMock, deviceRefId, 12.132, featureInterface: PlugInData.PlugInId);
             trackedFeature = TestHelper.SetupHsFeature(hsControllerMock, 19384, 12.132);
             PlugExtraData plugExtraData = new();
-            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeature.Ref},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDuration\":\"0.00:10:00\",\"RefreshInterval\":\"00:01:30\"}}");
+            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeature.Ref},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDurationSeconds\":600,\"RefreshIntervalSeconds\":30}}");
 
             hsControllerMock.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(plugExtraData);
             deviceOrFeatureData = new();

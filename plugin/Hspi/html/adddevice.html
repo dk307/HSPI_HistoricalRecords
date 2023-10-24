@@ -25,8 +25,8 @@
                 <div data-step-label="Add device" class="step-title waves-effect waves-dark">Step 1</div>
                 <div class="step-new-content">
 					Select a device to create a statistic device for
-					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetRecordedDeviceList' [] }}
-                    <select class='mdb-select md-form' id='deviceSelect' searchable="Search for a device here..." required>
+					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}
+                    <select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here..." required>
 						{{ for id in deviceRefIds }}
 						<option value='{{id}}'>{{device_name_full id | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
 						{{ end }}
@@ -44,19 +44,12 @@
 					<div class="row">	
 						<div class="col-5">	
 							<select id="function" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
-								<option value="averagelinear" selected >Average Linear</option>	
-								<option value="averagestep">Average Step</option>	
+								<option value="1" selected >Average Linear</option>	
+								<option value="0">Average Step</option>	
 							</select> 										 
 						</div>
 						<div class="col-7">		
-							<p>
-							<span>Average Linear</span>
-							<label class="fw-lighter" style="font-size:small">The average value of stored records under consideration of the time distances between them. A linear interpolation is applied per measurement pair. Good suited to observe a source sensor with non-periodic sensor updates and when continuous behavior is represented by the records (e.g. outside temperature).</label> 						 
-							</p>
-							<p>
-							<span>Average Step</span>
-							<label class="fw-lighter" style="font-size:small">The average value of stored measurements under consideration of the time distances between them. LOCF (last observation carried forward weighting) is applied, meaning, that the old value is assumed between two measurements. The resulting step function represents well the behavior of non-continuous behavior, like the set temperature of a boiler.</label> 						 
-							</p>
+							{{includefile '/HistoricalRecords/statsfuncdefs.html'}} 						
 						</div>
 					</div>
 					
@@ -151,6 +144,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
     {{includefile 'bootstrap/js/page_common.js'}}
     <script type="text/javascript" src="../bootstrap/js/addons-pro/steppers.min.js"></script>
+	<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
 	<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
     <script type="text/JavaScript">
 		var refId = null;
@@ -158,18 +152,27 @@
             $('.stepper').mdbStepper();
         })
 
-        function createDevice() {			
+        function createDevice() {	
+			let duration = moment.duration({
+				seconds: $('#secondsDuration').val(),
+				minutes: $('#minutesDuration').val(),
+				hours: $('#hoursDuration').val() ,
+				days: $('#daysDuration').val(),
+			});
+
+			let refresh = moment.duration({
+				seconds: $('#secondsRefresh').val(),
+				minutes: $('#minutesRefresh').val(),
+				hours: $('#hoursRefresh').val() ,
+				days: $('#daysRefresh').val(),
+			});
+
+		
 			var formObject = {
-			   trackedref: $('#deviceSelect').val(),
-			   'function': $('#function').val(),
-			   daysDuration: $('#daysDuration').val(),
-			   hoursDuration: $('#hoursDuration').val(),
-			   minutesDuration: $('#minutesDuration').val(),
-			   secondsDuration: $('#secondsDuration').val(),
-			   daysRefresh: $('#daysRefresh').val(),
-			   hoursRefresh: $('#hoursRefresh').val(),
-			   minutesRefresh: $('#minutesRefresh').val(),
-			   secondsRefresh: $('#secondsRefresh').val(),		  
+			   TrackedRef: $('#deviceSelect').val(),
+			   StatisticsFunction: $('#function').val(),
+			   FunctionDurationSeconds: duration.asSeconds(),
+			   RefreshIntervalSeconds: refresh.asSeconds(),
 		    };
 			
 			var data = JSON.stringify(formObject);

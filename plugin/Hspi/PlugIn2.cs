@@ -68,6 +68,7 @@ namespace Hspi
                     "graphrecords" => HandleGraphRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
                     "updatedevicesettings" => HandleUpdateDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
+                    "deviceedit" => HandleDeviceEdit(data),
                     _ => base.PostBackProc(page, data, user, userRights),
                 };
             }
@@ -214,52 +215,6 @@ namespace Hspi
                     @ref = ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).First();
                     feature = devOrFeatRef;
                 }
-            }
-        }
-
-        private string CreateStatisticsDeviceConfigPage(int devOrFeatRef)
-        {
-            // GetRefAndFeatureIds(devOrFeatRef, out var @ref, out var featureId);
-            //int deviceRefId = GetDeviceIds(devOrFeatRef);
-
-            //var featuresIds = ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(deviceRefId, EProperty.AssociatedDevices));
-
-            var page = PageFactory.CreateDeviceConfigPage(this.Id, "Device");
-
-            //foreach (var featuresId in featuresIds)
-            //{
-            //    var data = StatisticsDevice.GetFromFeature(HomeSeerSystem, featuresId);
-
-            //    var options = EnumHelper.GetValues<StatisticsFunction>().Select(x => EnumHelper.GetDescription(x)).ToList();
-            //    var optionKeys = EnumHelper.GetValues<StatisticsFunction>().Select(x => ((int)x).ToString()).ToList();
-
-            //    var selectListView = new SelectListView(Id(featuresId, "statistical_function"),
-            //                                            "",
-            //                                            options,
-            //                                            optionKeys,
-            //                                            ESelectListType.DropDown,
-            //                                            (int)data.StatisticsFunction);
-            //}
-
-            return page.Page.ToJsonString();
-
-            int GetDeviceIds(int devOrFeatRef)
-            {
-                bool isDevice = HomeSeerSystem.IsRefDevice(devOrFeatRef);
-
-                if (isDevice)
-                {
-                    return devOrFeatRef;
-                }
-                else
-                {
-                    return ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).First();
-                }
-            }
-
-            static string Id(int id, string suffix)
-            {
-                return Invariant($"{id}_{suffix}");
             }
         }
 

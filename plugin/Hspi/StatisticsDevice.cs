@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,8 +21,8 @@ namespace Hspi
     public sealed record StatisticsDeviceData(
                 [property: JsonProperty(Required = Required.Always)] int TrackedRef,
                 [property: JsonProperty(Required = Required.Always)] StatisticsFunction StatisticsFunction,
-                [property: JsonProperty(Required = Required.Always)] TimeSpan FunctionDuration,
-                [property: JsonProperty(Required = Required.Always)] TimeSpan RefreshInterval);
+                [property: JsonProperty(Required = Required.Always)] long FunctionDurationSeconds,
+                [property: JsonProperty(Required = Required.Always)] long RefreshIntervalSeconds);
 
     public sealed class StatisticsDevice : IDisposable
     {
@@ -66,7 +67,7 @@ namespace Hspi
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
 
             string featureName = GetStatisticsFunctionForName(data.StatisticsFunction) + " - " +
-                                                              data.FunctionDuration.Humanize(culture: CultureInfo.InvariantCulture);
+                                                              TimeSpan.FromSeconds(data.FunctionDurationSeconds).Humanize(culture: CultureInfo.InvariantCulture);
             var newFeatureData = FeatureFactory.CreateFeature(PlugInData.PlugInId)
                                                .WithName(featureName)
                                                .WithLocation(feature.Location)
@@ -102,10 +103,20 @@ namespace Hspi
             }
         }
 
-        public static StatisticsDeviceData GetFromFeature(IHsController hs, int refId)
+        public static void EditDevice(IHsController hsController, int refId, StatisticsDeviceData data)
         {
-            return GetPlugExtraData<StatisticsDeviceData>(hs, refId, DataKey);
+            var plugExtraData = new PlugExtraData();
+            plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
+
+            Dictionary<EProperty, object> changes = new()
+            {
+                { EProperty.PlugExtraData, plugExtraData}
+            };
+
+            hsController.UpdateFeatureByRef(refId, changes);
         }
+
+        public static string GetDataFromFeatureAsJson(IHsController hs, int refId) => GetPlugExtraDataString(hs, refId, DataKey);
 
         public void Dispose()
         {
@@ -134,17 +145,7 @@ namespace Hspi
                                              string tag,
                                              params JsonConverter[] converters)
         {
-            if (hsController.GetPropertyByRef(refId, EProperty.PlugExtraData) is not PlugExtraData plugInExtra)
-            {
-                throw new HsDeviceInvalidException("PlugExtraData is null");
-            }
-
-            if (!plugInExtra.ContainsNamed(tag))
-            {
-                throw new HsDeviceInvalidException(Invariant($"{tag} type not found"));
-            }
-
-            var stringData = plugInExtra[tag] ?? throw new HsDeviceInvalidException(Invariant($"{tag} type not found"));
+            string stringData = GetPlugExtraDataString(hsController, refId, tag);
             try
             {
                 var typeData = JsonConvert.DeserializeObject<T>(stringData, converters) ?? throw new HsDeviceInvalidException(Invariant($"{tag} not a valid Json value"));
@@ -156,6 +157,22 @@ namespace Hspi
             }
         }
 
+        private static string GetPlugExtraDataString(IHsController hsController, int refId, string tag)
+        {
+            if (hsController.GetPropertyByRef(refId, EProperty.PlugExtraData) is not PlugExtraData plugInExtra)
+            {
+                throw new HsDeviceInvalidException("PlugExtraData is null");
+            }
+
+            if (!plugInExtra.ContainsNamed(tag))
+            {
+                throw new HsDeviceInvalidException(Invariant($"{tag} type not found"));
+            }
+
+            var stringData = plugInExtra[tag] ?? throw new HsDeviceInvalidException(Invariant($"{tag} type not found"));
+            return stringData;
+        }
+
         private async Task UpdateDevice()
         {
             var shutdownToken = combinedToken.Token;
@@ -163,12 +180,18 @@ namespace Hspi
             {
                 try
                 {
-                    var max = systemClock.Now;
-                    var min = max - this.deviceData.FunctionDuration;
+                    var max = systemClock.Now.ToUnixTimeSeconds();
+                    var min = max - this.deviceData.FunctionDurationSeconds;
+
+                    if (min < 0)
+                    {
+                        throw new ArgumentException("Duration too long");
+                    }
+
                     var result = await TimeAndValueQueryHelper.Average(collector,
                                                                        deviceData.TrackedRef,
-                                                                       min.ToUnixTimeSeconds(),
-                                                                       max.ToUnixTimeSeconds(),
+                                                                       min,
+                                                                       max,
                                                                        this.deviceData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear).ConfigureAwait(false);
                     if (result.HasValue)
                     {
@@ -189,7 +212,11 @@ namespace Hspi
                 }
 
                 var eventWaitTask = updateNowEvent.WaitAsync(shutdownToken);
-                await Task.WhenAny(Task.Delay(deviceData.RefreshInterval, shutdownToken), eventWaitTask).ConfigureAwait(false);
+
+                //validate passed intervals, must be between 1000 and int.maxValue ms
+                var refreshInterval = Math.Max(deviceData.RefreshIntervalSeconds * 1000, 1000);
+                var refreshInterval2 = (int)Math.Min(refreshInterval, int.MaxValue);
+                await Task.WhenAny(Task.Delay(refreshInterval2, shutdownToken), eventWaitTask).ConfigureAwait(false);
             }
         }
 
