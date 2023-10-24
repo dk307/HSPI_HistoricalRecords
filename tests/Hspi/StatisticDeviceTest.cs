@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
+using Hspi.Device;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;

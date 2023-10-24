@@ -16,14 +16,8 @@ using static System.FormattableString;
 
 #nullable enable
 
-namespace Hspi
+namespace Hspi.Device
 {
-    public sealed record StatisticsDeviceData(
-                [property: JsonProperty(Required = Required.Always)] int TrackedRef,
-                [property: JsonProperty(Required = Required.Always)] StatisticsFunction StatisticsFunction,
-                [property: JsonProperty(Required = Required.Always)] long FunctionDurationSeconds,
-                [property: JsonProperty(Required = Required.Always)] long RefreshIntervalSeconds);
-
     public sealed class StatisticsDevice : IDisposable
     {
         public StatisticsDevice(IHsController hs,
