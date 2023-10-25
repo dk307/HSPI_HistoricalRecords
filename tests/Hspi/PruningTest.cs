@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using Moq.Protected;
 
 namespace HSPI_HistoricalRecordsTest
 {

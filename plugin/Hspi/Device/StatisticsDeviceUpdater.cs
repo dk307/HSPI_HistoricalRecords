@@ -32,6 +32,14 @@ namespace Hspi.Device
             this.devices = dict.ToImmutableDictionary();
         }
 
+        public void Dispose()
+        {
+            foreach (var device in devices)
+            {
+                device.Value.Dispose();
+            }
+        }
+
         public bool HasRefId(int refId)
         {
             return allRefIds.Contains(refId);
@@ -44,6 +52,7 @@ namespace Hspi.Device
                 data.UpdateNow();
                 return true;
             }
+
             return false;
         }
 
@@ -76,20 +85,12 @@ namespace Hspi.Device
             return (refIds, currentChildDevices);
         }
 
-        public void Dispose()
-        {
-            foreach (var device in devices)
-            {
-                device.Value.Dispose();
-            }
-        }
-
-        private readonly IHsController HS;
-        private readonly SqliteDatabaseCollector collector;
-        private readonly ISystemClock systemClock;
-        private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
-        private readonly CancellationToken cancellationToken;
         private readonly ImmutableList<int> allRefIds;
+        private readonly CancellationToken cancellationToken;
+        private readonly SqliteDatabaseCollector collector;
         private readonly ImmutableDictionary<int, StatisticsDevice> devices;
+        private readonly IHsController HS;
+        private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
+        private readonly ISystemClock systemClock;
     }
 }
