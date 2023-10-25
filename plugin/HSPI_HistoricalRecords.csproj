@@ -17,7 +17,7 @@
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <Nullable>enable</Nullable>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>11.0</LangVersion>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -123,7 +123,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resource.resx</DependentUpon>
     </Compile>
-    <Compile Include="Shared\Hspi\CompilerHelper.cs" />
     <Compile Include="Shared\Hspi\HSPIBase.cs" />
     <Compile Include="Shared\Hspi\Logger2.cs" />
     <Compile Include="Shared\Hspi\Utils\EnumHelper.cs" />
@@ -176,6 +175,11 @@
     </PackageReference>
     <PackageReference Include="Nito.AsyncEx.Coordination">
       <Version>5.1.2</Version>
+    </PackageReference>
+    <PackageReference Include="PolySharp">
+      <Version>1.13.2</Version>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Serilog">
       <Version>3.0.1</Version>

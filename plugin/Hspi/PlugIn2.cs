@@ -144,12 +144,14 @@ namespace Hspi
             {
                 return false;
             }
+
             return true;
 
             static bool IsOnlyOnOffFeature(HsFeature feature)
             {
-                return feature.StatusControls.Values.TrueForAll(x => x.ControlUse == EControlUse.On || x.ControlUse == EControlUse.Off);
+                return feature.StatusControls.Values.TrueForAll(x => x.ControlUse is EControlUse.On or EControlUse.Off);
             }
+
             static bool HasAnyRangeGraphics(HsFeature feature)
             {
                 return feature.StatusGraphics.Values.Exists(x => x.IsRange);

@@ -234,6 +234,7 @@ namespace Hspi.Database
             {
                 records.Add(new KeyValuePair<long, long>(ugly.column_int64(stmt, 0), ugly.column_int64(stmt, 1)));
             }
+
             return records;
         }
 
@@ -302,8 +303,8 @@ namespace Hspi.Database
                 {
                     Log.Warning("Failed to prune with {error}}", ExceptionHelper.GetFullMessage(ex));
                 }
-                var eventWaitTask = pruneNowEvent.WaitAsync(shutdownToken);
 
+                var eventWaitTask = pruneNowEvent.WaitAsync(shutdownToken);
                 await Task.WhenAny(Task.Delay(TimeSpan.FromHours(1), shutdownToken), eventWaitTask).ConfigureAwait(false);
             }
 

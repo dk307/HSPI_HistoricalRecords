@@ -83,6 +83,7 @@ namespace Hspi
                 {
                     return;
                 }
+
                 Log.Warning("Error in recording event with {error}", ex.GetFullMessage());
             }
         }
@@ -101,6 +102,7 @@ namespace Hspi
                 statisticsDeviceUpdater?.Dispose();
                 collector?.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
