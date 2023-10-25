@@ -55,12 +55,16 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
+            string deviceName = "ssdfsd";
             JObject request = new()
             {
-                { "TrackedRef", new JValue(trackedFeature.Ref) },
-                { "StatisticsFunction", new JValue(function) },
-                { "FunctionDurationSeconds", new JValue((long)new TimeSpan(1, 0, 10, 0).TotalSeconds) },
-                { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 0, 1, 30).TotalSeconds) },
+                { "name", new JValue(deviceName) },
+                { "data", new JObject() {
+                    { "TrackedRef", new JValue(trackedFeature.Ref) },
+                    { "StatisticsFunction", new JValue(function) },
+                    { "FunctionDurationSeconds", new JValue((long)new TimeSpan(1, 0, 10, 0).TotalSeconds) },
+                    { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 0, 1, 30).TotalSeconds) } }
+                },
             };
 
             //add
@@ -74,7 +78,7 @@ namespace HSPI_HistoricalRecordsTest
             // check proper device & feature was added
             Assert.IsNotNull(newDataForDevice);
 
-            Assert.IsTrue(((string)newDataForDevice.Device[EProperty.Name]).StartsWith(trackedFeature.Name));
+            Assert.AreEqual(((string)newDataForDevice.Device[EProperty.Name]), deviceName);
             Assert.AreEqual(PlugInData.PlugInId, newDataForDevice.Device[EProperty.Interface]);
             Assert.AreEqual(trackedFeature.Location, newDataForDevice.Device[EProperty.Location]);
             Assert.AreEqual(trackedFeature.Location2, newDataForDevice.Device[EProperty.Location2]);
@@ -111,18 +115,23 @@ namespace HSPI_HistoricalRecordsTest
             }
 
             Assert.AreEqual(function, data.StatisticsFunction);
-
             Assert.AreEqual((long)new TimeSpan(1, 0, 10, 0).TotalSeconds, data.FunctionDurationSeconds);
-
             Assert.AreEqual((long)new TimeSpan(0, 0, 1, 30).TotalSeconds, data.RefreshIntervalSeconds);
 
-            CollectionAssert.AreEqual(trackedFeature.StatusGraphics.Values,
-                                     ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values);
+            var list1 = trackedFeature.StatusGraphics.Values;
+            var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
+            Assert.AreEqual(1, list1.Count);
+            Assert.AreEqual(1, list2.Count);
+            Assert.AreEqual(list1[0].Label, list2[0].Label);
+            Assert.AreEqual(list1[0].IsRange, list2[0].IsRange);
+            Assert.AreEqual(list1[0].ControlUse, list2[0].ControlUse);
+            Assert.AreEqual(list1[0].HasAdditionalData, list2[0].HasAdditionalData);
+            Assert.AreEqual(list1[0].TargetRange, list2[0].TargetRange);
         }
 
         [DataTestMethod]
-        [DataRow("{\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}", "Required property 'TrackedRef' not found in JSON")]
-        [DataRow("", "data is not correct")]
+        [DataRow("{\"name\":\"dev name\", \"data\": {\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}}", "Required property 'TrackedRef' not found in JSON")]
+        [DataRow("", "name is not correct")]
         public void AddDeviceErrorChecking(string format, string exception)
         {
             var plugIn = TestHelper.CreatePlugInMock();

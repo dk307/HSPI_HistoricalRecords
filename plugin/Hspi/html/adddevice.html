@@ -26,7 +26,7 @@
                 <div class="step-new-content">
 					Select a device to create a statistic device for
 					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}
-                    <select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here..." required>
+                    <select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here..." required><span class="caret">▼</span>
 						{{ for id in deviceRefIds }}
 						<option value='{{id}}'>{{device_name_full id | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
 						{{ end }}
