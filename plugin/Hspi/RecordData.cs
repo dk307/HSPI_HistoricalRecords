@@ -8,7 +8,7 @@ namespace Hspi
     public record RecordData
     {
         public RecordData(long deviceRefId, in double deviceValue, string? deviceString,
-                          in long unixTimeSeconds)
+                          long unixTimeSeconds)
         {
             this.DeviceRefId = deviceRefId;
             this.DeviceValue = deviceValue;
@@ -17,7 +17,7 @@ namespace Hspi
         }
 
         public RecordData(long deviceRefId, in double deviceValue, string? deviceString,
-                            in DateTimeOffset timeStamp)
+                          in DateTimeOffset timeStamp)
         {
             this.DeviceRefId = deviceRefId;
             this.DeviceValue = deviceValue;
@@ -43,7 +43,7 @@ namespace Hspi
         public long? DurationSeconds { get; init; }
 
         public RecordDataAndDuration(long deviceRefId, in double deviceValue, string? deviceString,
-                                     in long unixTimeSeconds, in long? durationSeconds)
+                                     long unixTimeSeconds, in long? durationSeconds)
             : base(deviceRefId, deviceValue, deviceString, unixTimeSeconds)
         {
             DurationSeconds = durationSeconds;

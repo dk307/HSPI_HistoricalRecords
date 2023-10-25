@@ -218,13 +218,8 @@ namespace Hspi.Device
 
                     UpdateDeviceValue(result);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!ex.IsCancelException())
                 {
-                    if (ex.IsCancelException())
-                    {
-                        throw;
-                    }
-
                     Log.Warning("Failed to update device:{name} with {error}}", NameForLog, ExceptionHelper.GetFullMessage(ex));
                 }
 

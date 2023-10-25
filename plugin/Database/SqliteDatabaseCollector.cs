@@ -10,6 +10,7 @@ using Nito.AsyncEx;
 using Serilog;
 using SQLitePCL;
 using SQLitePCL.Ugly;
+using static System.FormattableString;
 using static SQLitePCL.raw;
 
 #nullable enable
@@ -297,13 +298,8 @@ namespace Hspi.Database
 
                     Log.Information("Finished pruning database");
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!ex.IsCancelException())
                 {
-                    if (ex.IsCancelException())
-                    {
-                        throw;
-                    }
-
                     Log.Warning("Failed to prune with {error}}", ExceptionHelper.GetFullMessage(ex));
                 }
                 var eventWaitTask = pruneNowEvent.WaitAsync(shutdownToken);
@@ -333,6 +329,7 @@ namespace Hspi.Database
 
             ugly.exec(sqliteConnection, "PRAGMA page_size=4096");
             ugly.exec(sqliteConnection, "PRAGMA journal_mode=WAL");
+            ugly.exec(sqliteConnection, Invariant($"PRAGMA journal_size_limit={10 * 1024 * 1024}")); //10 MB
             ugly.exec(sqliteConnection, "PRAGMA synchronous=normal");
             ugly.exec(sqliteConnection, "PRAGMA locking_mode=EXCLUSIVE");
             ugly.exec(sqliteConnection, "PRAGMA temp_store=MEMORY");
@@ -387,13 +384,8 @@ namespace Hspi.Database
                     Log.Verbose("Adding to database: {@record}", record);
                     await InsertRecord(record).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!ex.IsCancelException())
                 {
-                    if (ex.IsCancelException())
-                    {
-                        throw;
-                    }
-
                     Log.Warning("Failed to update {record} with {error}}", record, ExceptionHelper.GetFullMessage(ex));
 
                     await queue.EnqueueAsync(record, shutdownToken).ConfigureAwait(false);
