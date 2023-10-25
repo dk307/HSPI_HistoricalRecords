@@ -8,7 +8,7 @@ namespace Hspi
     public record RecordData
     {
         public RecordData(long deviceRefId, in double deviceValue, string? deviceString,
-                            in long unixTimeSeconds)
+                          in long unixTimeSeconds)
         {
             this.DeviceRefId = deviceRefId;
             this.DeviceValue = deviceValue;

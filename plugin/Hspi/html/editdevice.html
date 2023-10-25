@@ -19,6 +19,7 @@
 		refId=queries['ref'] ?? ""
 		featureId=queries['feature'] ?? refId		
 		jsonDataString=plugin_function 'HistoricalRecords' 'GetStatisticDeviceDataAsJson' [featureId]
+		show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
 	}}
 	
 <body class="body homeseer-skin ml-0 mr-0" aria-busy="true">
@@ -27,13 +28,13 @@
 		</div>
 	</div>
 
-	<form id="mainform"> 
+	<form class="needs-validation" id="mainform"> 
 	  <div class="row mb-1">
 		<div class="col">
 		  <div class="form-outline">
 				<span class="font-weight-bold">Select a device to this statistic device is for</span>
 				{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}
-				<select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here..." required>
+				<select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here" required>
 					{{ for id in deviceRefIds }}
 					<option value='{{id}}' >{{device_name_full id | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
 					{{ end }}
@@ -66,19 +67,19 @@
 				<div class="input-group">					 
 					<p>   
 						<div class="md-form mr-1">
-							<input type="number" id="daysDuration" name="days" class="form-control" value="0" required>
+							<input type="number" id="daysDuration" name="days" class="form-control" value="0" min="0" required>
 							<label for="daysDuration">Days</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" required>
+							<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" min="0" required>
 							<label for="hoursDuration">Hours</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="0" required>
+							<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="0" min="0" required>
 							<label for="minutesDuration">Minutes</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" required>
+							<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" min="0" required>
 							<label for="secondsDuration">Seconds</label>                                     
 						</div>
 					</p> 
@@ -94,19 +95,19 @@
 				<div class="input-group">					 
 					<p>   
 						<div class="md-form mr-1">
-							<input type="number" id="daysRefresh" name="days" class="form-control" value="0" required>
+							<input type="number" id="daysRefresh" name="days" class="form-control" value="0" min="0" required>
 							<label for="daysRefresh">Days</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" required>
+							<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" min="0" required>
 							<label for="hoursRefresh">Hours</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" required>
+							<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" min="0" required>
 							<label for="minutesRefresh">Minutes</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="0" required>
+							<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="0" min="0" required>
 							<label for="secondsRefresh">Seconds</label>                                     
 						</div>
 					</p> 
@@ -154,7 +155,6 @@ $(document).ready(function () {
 	
 	$("#mainform").submit(function(e) {	
 		 e.preventDefault();
-		 alert("t");
 		let duration = moment.duration({
 			seconds: $('#secondsDuration').val(),
 			minutes: $('#minutesDuration').val(),

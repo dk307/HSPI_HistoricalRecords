@@ -61,8 +61,14 @@ namespace Hspi
 
         private string HandleDeviceCreate(string data)
         {
-            var statisticsDeviceData = JsonConvert.DeserializeObject<StatisticsDeviceData>(data) ?? throw new ArgumentException("data is not correct", nameof(data));
-            var refId = StatisticsDevice.CreateDevice(HomeSeerSystem, statisticsDeviceData);
+            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var name = GetJsonValue<string>(jsonData, "name");
+            var dataJObject = GetJsonValue<JObject>(jsonData, "data");
+            JsonSerializer serializer = new();
+            var statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ??
+                                       throw new ArgumentException("data is incorrect", nameof(data));
+
+            var refId = StatisticsDevice.CreateDevice(HomeSeerSystem, name, statisticsDeviceData);
 
             RestartStatisticsDeviceUpdate();
 
@@ -72,10 +78,8 @@ namespace Hspi
         private string HandleDeviceEdit(string data)
         {
             var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
-
             var refId = GetJsonValue<int>(jsonData, "ref");
             var dataJObject = GetJsonValue<JObject>(jsonData, "data");
-
             JsonSerializer serializer = new();
             var statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ?? throw new ArgumentException(nameof(data));
 

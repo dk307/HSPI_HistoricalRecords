@@ -154,8 +154,7 @@ namespace Hspi.Database
         /// <param name="minUnixTimeSeconds"></param>
         /// <param name="maxUnixTimeSeconds"></param>
         /// <param name="iterator">Function called for iteration</param>
-        public async Task IterateGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                            Action<IEnumerable<TimeAndValue>> iterator)
+        public async Task IterateGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds, Action<IEnumerable<TimeAndValue>> iterator)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,13 +44,12 @@ namespace Hspi.Device
 
         private string NameForLog => GetNameForLog(HS, RefId);
 
-        public static int CreateDevice(IHsController hsController, StatisticsDeviceData data)
+        public static int CreateDevice(IHsController hsController, string name, StatisticsDeviceData data)
         {
             var feature = hsController.GetFeatureByRef(data.TrackedRef);
-            string deviceName = feature.Name + " Statistics";
 
             var newDeviceData = DeviceFactory.CreateDevice(PlugInData.PlugInId)
-                                             .WithName(deviceName)
+                                             .WithName(name)
                                              .WithLocation(feature.Location)
                                              .WithLocation2(feature.Location2)
                                              .PrepareForHs();
@@ -76,8 +76,8 @@ namespace Hspi.Device
             {
                 case StatisticsFunction.AverageStep:
                 case StatisticsFunction.AverageLinear:
-                    newFeatureData.Feature[EProperty.AdditionalStatusData] = feature.AdditionalStatusData;
-                    newFeatureData.Feature[EProperty.StatusGraphics] = feature.StatusGraphics;
+                    newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string>(feature.AdditionalStatusData);
+                    newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(feature.StatusGraphics);
                     break;
 
                 default:
@@ -85,6 +85,25 @@ namespace Hspi.Device
             }
 
             return hsController.CreateFeatureForDevice(newFeatureData);
+
+            static StatusGraphicCollection CloneGraphics(StatusGraphicCollection collection)
+            {
+                StatusGraphicCollection copy = new();
+                foreach (var t in collection.Values)
+                {
+                    try
+                    {
+                        // some of the graphics values can be invalid and clone fails
+                        copy.Add(t.Clone());
+                    }
+                    catch
+                    {
+                        //Ignore any error
+                    }
+                }
+
+                return copy;
+            }
 
             static string GetStatisticsFunctionForName(StatisticsFunction statisticsFunction)
             {

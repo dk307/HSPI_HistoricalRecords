@@ -22,16 +22,19 @@
         <!-- MDB Steppers -->
         <ul id="process-stepper" class="stepper linear">
             <li class="step active locked">
-                <div data-step-label="Add device" class="step-title waves-effect waves-dark">Step 1</div>
-                <div class="step-new-content">
+                <div data-step-label="Select device" class="step-title waves-effect waves-dark">Step 1</div>
+				
+                <div class="step-new-content needs-validation" noinvalidate>
 					Select a device to create a statistic device for
 					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}
-                    <select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here..." required>
+					
+                    <select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here" required>
+						<option value="" disabled="disabled" selected="selected">Select Device</option>
 						{{ for id in deviceRefIds }}
 						<option value='{{id}}'>{{device_name_full id | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
 						{{ end }}
 					</select>
-                    <div class="step-actions">                   
+                    <div class="step-actions pt-4">                   
                         <button class="waves-effect waves-dark btn btn-sm btn-primary next-step">SELECT</button>
                     </div>
                 </div>
@@ -48,8 +51,8 @@
 								<option value="0">Average Step</option>	
 							</select> 										 
 						</div>
-						<div class="col-7">		
-							{{includefile '/HistoricalRecords/statsfuncdefs.html'}} 						
+						<div class="col-7">								 
+							{{includefile '/HistoricalRecords/statsfuncdefs.html'}} 												
 						</div>
 					</div>
 					
@@ -66,19 +69,19 @@
                     <div class="input-group">					 
 						<p>   
 							<div class="md-form mr-1">
-								<input type="number" id="daysDuration" name="days" class="form-control" value="0" required>
+								<input type="number" id="daysDuration" name="days" class="form-control" value="0" min="0" required>
 								<label for="daysDuration">Days</label>                                     
 							</div>
 							<div class="md-form mr-1">
-								<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" required>
+								<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" min="0" required>
 								<label for="hoursDuration">Hours</label>                                     
 							</div>
 							<div class="md-form mr-1">
-								<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="10" required>
+								<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="10" min="0" required>
 								<label for="minutesDuration">Minutes</label>                                     
 							</div>
 							<div class="md-form mr-1">
-								<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" required>
+								<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" min="0" required>
 								<label for="secondsDuration">Seconds</label>                                     
 							</div>
 						</p> 
@@ -90,40 +93,58 @@
 				</div>       
 			</li>
                     
-			
-
 			<li class="step">
                 <div data-step-label="Select refresh interval of statistical function" class="step-title waves-effect waves-dark">Step 4</div>
                 <div id="step4" class="step-new-content">
                     <div class="input-group">					 
 						<p>   
 							<div class="md-form mr-1">
-								<input type="number" id="daysRefresh" name="days" class="form-control" value="0" required>
+								<input type="number" id="daysRefresh" name="days" class="form-control" value="0" min="0" required>
 								<label for="daysRefresh">Days</label>                                     
 							</div>
 							<div class="md-form mr-1">
-								<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" required>
+								<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" min="0" required>
 								<label for="hoursRefresh">Hours</label>                                     
 							</div>
 							<div class="md-form mr-1">
-								<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" required>
+								<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" min="0" required>
 								<label for="minutesRefresh">Minutes</label>                                     
 							</div>
 							<div class="md-form mr-1">
-								<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="30" required>
+								<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="30" min="0" required>
 								<label for="secondsRefresh">Seconds</label>                                     
 							</div>
 						</p> 
 					</div>
 					
-					<div id="error-message-div" class="text-danger">
-                    </div>
+					
+					<div class="step-actions" style="margin-top: 32px;">
+						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
+						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step" data-feedback="prefillName">NEXT</button>
+					</div>            	
+				</div>       
+            </li>
+			
+			<li class="step">
+                <div data-step-label="Name of the device" class="step-title waves-effect waves-dark">Step 5</div>
+                <div id="step5" class="step-new-content">                  
+                        What is the name of the new device?                        
+                        <div class="row">
+                            <div class="md-form col-12 ml-auto mt-2">
+                                <input id="deviceName" type="text" class="form-control" required>
+                              
+                            </div>
+                        </div>
+										
+						<div id="error-message-div" class="text-danger">
+						</div>		
 					
 					<div class="step-actions" style="margin-top: 32px;">
 						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
 						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step" data-feedback="createDevice">CREATE</button>
 					</div>            	
-				</div>       
+				</div>   
+				
             </li>
 
             <li class="step">
@@ -151,6 +172,35 @@
         $(document).ready(function () {
             $('.stepper').mdbStepper();
         })
+		
+		function prefillName() {	
+			if (!$('#deviceName').val()) {
+				const str = $('#deviceSelect option:selected').text();	
+
+				{{if show_refId}}		
+				const regex = new RegExp('^(.*)\\(\\d*\\)$', 'gms')
+				 
+				
+				let m;
+
+				while ((m = regex.exec(str)) !== null) {
+					// This is necessary to avoid infinite loops with zero-width matches
+					if (m.index === regex.lastIndex) {
+						regex.lastIndex++;
+					}
+					
+					// The result can be accessed through the `m`-variable.
+					m.forEach((match, groupIndex) => {
+						console.log(`Found match, group ${groupIndex}: ${match}`);
+						$('#deviceName').val(match + "Statistics");
+					});
+				}
+				{{else}}
+				$('#deviceName').val(str + " Statistics");
+				{{end}}	 
+			}
+			$('#process-stepper').nextStep();
+		}
 
         function createDevice() {	
 			let duration = moment.duration({
@@ -169,10 +219,13 @@
 
 		
 			var formObject = {
-			   TrackedRef: $('#deviceSelect').val(),
-			   StatisticsFunction: $('#function').val(),
-			   FunctionDurationSeconds: duration.asSeconds(),
-			   RefreshIntervalSeconds: refresh.asSeconds(),
+			   name: $('#deviceName').val(),
+			   data: {
+				   TrackedRef: $('#deviceSelect').val(),
+				   StatisticsFunction: $('#function').val(),
+				   FunctionDurationSeconds: duration.asSeconds(),
+				   RefreshIntervalSeconds: refresh.asSeconds(),
+			   }
 		    };
 			
 			var data = JSON.stringify(formObject);
