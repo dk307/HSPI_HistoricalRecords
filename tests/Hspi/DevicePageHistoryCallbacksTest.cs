@@ -265,7 +265,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void GetTop10RecordsStats()
+        public void GetAllDevicesProperties()
         {
             TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
 
@@ -284,13 +284,19 @@ namespace HSPI_HistoricalRecordsTest
                 }
             }
 
-            var stats = plugin.Object.GetTop10RecordsStats();
+            mockHsController.Setup(x => x.GetAllRefs()).Returns(hsFeatures.Select(x => x.Ref).ToList());
+
+            var stats = plugin.Object.GetAllDevicesProperties();
             Assert.IsNotNull(stats);
-            Assert.AreEqual(10, stats.Count);
-            Assert.AreEqual(1307 + 14, stats[0].Key);
-            Assert.AreEqual(14, stats[0].Value);
-            Assert.AreEqual(1307 + 5, stats[9].Key);
-            Assert.AreEqual(5, stats[9].Value);
+            Assert.AreEqual(15, stats.Count);
+
+            for (int i = 0; i < 15; i++)
+            {
+                Assert.AreEqual(1307 + i, stats[i]["ref"]);
+                Assert.AreEqual((long)i, stats[i]["records"]);
+                Assert.AreEqual(true, stats[i]["monitored"]);
+                Assert.AreEqual(true, stats[i]["tracked"]);
+            }
         }
 
         [TestMethod]

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<!--Don't cache anything-->
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+		<meta http-equiv="Pragma" content="no-cache" />
+		<meta http-equiv="Expires" content="0" />
+
+        
+        {{includefile 'bootstrap/css/page_common.css'}}          
+        <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
+		<link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />		
+		<link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
+		
+		<title>Historical Records Devices Statistics</title>    
+		
+		
+    </head>
+  <body class="body homeseer-skin">  
+    {{includefile 'header.html'}}
+    {{includefile 'navbar.html'}} 
+	{{
+		deviceRecords=plugin_function 'HistoricalRecords' 'GetAllDevicesProperties' []
+		show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
+	}}
+ 
+	
+	<div class="hs_spinner" id="loading">
+		<div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
+			<div class="spinner-border" role="status">
+				<span class="sr-only">Loading...</span>
+			</div>
+		</div>
+	</div>	
+	
+	<div class="container">
+	 
+	 
+		<table id="dt-persistence" class="table table-sm mb-0"cellspacing="0" width="100%">	
+			<thead>
+				<tr>
+					<th>Device</th> 
+					<th>Records Count</th> 
+					<th>Tracked</th> 
+					<th></th> 
+				</tr>
+			</thead> 
+			<tbody>
+			
+			{{for item in deviceRecords}}         
+            <tr class="devicerow" data-refId="{{item["ref"]}}">
+                <td><a href="/Devices.html?ref={{item["ref"]}}&subpage=devprop&tab=HistoricalRecords">{{device_name_full item["ref"] true | html.escape}}{{if show_refId}}&nbsp;({{item["ref"]}}){{end}}</a></td> 
+                <td>{{item["records"]}}</td> 
+                <td>{{if item["tracked"] && item["monitored"]}}Yes{{else}}No{{end}}</td> 
+                <td>{{if item["monitored"]}}
+					<a class="deviceoptions" data-refId='{{item["ref"]}}' data-tracked='{{item["tracked"]}}' data-mdb-toggle="tooltip" title="Change tracking options for the device" href="#">
+					  <i class="fa fa-edit"></i>
+					</a>
+					{{end}}
+				</td> 
+            </tr>
+        {{end}}
+			
+			</tbody>
+					 
+		<table>
+	</div>
+	
+	
+	<div class="modal fade" id="modalEdit" tabindex="-1" role="dialog" aria-labelledby="lblModalEdit" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="lblModalEdit">Device Options</h5>
+				</div>
+				<div class="modal-body">
+					<form>
+						<input type="hidden" id="ref" value="{{featureId}}"/>
+						<div class="row mt-1 mb-1 no-gutters">
+							<div class="form-check form-switch">
+							<div class="custom-control custom-switch">
+							  <input type="checkbox" class="custom-control-input" id="idTrackedFeature">
+							  <label class="custom-control-label" for="idTrackedFeature">Track this device values</label>
+							</div>
+						</div>					 
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-primary" id="btnOk">Save</button>
+				</div>
+			</div>
+		</div>
+	</div>
+    
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+     {{includefile 'bootstrap/js/page_common.js'}}
+<script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>	 
+<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+<script>
+
+function setUpPersistanceTable() {
+  $('#dt-persistence').dataTable({
+		"order": [[ 1, 'desc' ]],
+		columnDefs: [
+		{ orderable: false, targets: 3 },	
+	],
+  });
+  
+  $(".dataTables_length").addClass("bs-select"); 
+}
+
+$(document).ready(function () {
+	setUpPersistanceTable();
+	$('#loading').hide();
+	
+	
+	$('.deviceoptions').on('click',function(e){
+		e.preventDefault();
+		var refId = $(this).attr('data-refId');
+		var tracked = $(this).attr('data-tracked');
+		
+		// set the values from a link to modal
+		$('#ref').val(refId);
+		$("#idTrackedFeature").prop('checked', tracked == "true");
+		
+		$('#modalEdit').modal('show');
+	});
+	
+	
+	$(document).on('click', '#btnOk', {}, async function (e) {
+		$('#modalEdit').modal('hide');
+		
+		var ref = $('#ref').val();
+		
+		var data = {
+			refId: ref,
+			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
+		};
+		await ajaxPostPlugIn("updatedevicesettings", data, function(result, context) {
+			//update the table column
+			var col3 = $('.devicerow[data-refId='+context.refId +'] td:nth-child(3)');		
+			col3.text(context.tracked ? "Yes" : "No");
+			
+			// update the custom attribute also
+			var link = $('.devicerow[data-refId='+context.refId +'] td:nth-child(4) a');	
+			link.attr('data-tracked', context.tracked ? 'true' : 'false');	
+		}, null, data);
+	});	 
+});	
+
+</script>    
+  </body>
+</html>

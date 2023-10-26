@@ -18,8 +18,6 @@
     {{includefile 'navbar.html'}} 
 	{{
 		dbStats=plugin_function 'HistoricalRecords' 'GetDatabaseStats' []
-		dbTop10Records=plugin_function 'HistoricalRecords' 'GetTop10RecordsStats' []
-		show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
 	}}
     <div class="container card">
 		<div class="streakhs grey lighten-2">
@@ -35,25 +33,8 @@
                     {{item.value | html.escape }}
                 </div>
             </div>
-        {{end}}
-          
+        {{end}}        
     </div>
-	
-   <div class="container card">
-		<div class="streakhs grey lighten-2">
-            Top 10 devices by records count.
-        </div>	
-		{{for item in dbTop10Records}}         
-            <div class="row pl-1 {{if row==1}}hs-bg-blue-l4{{row=0}}{{else}}{{row=1}}{{end}}">
-                <div class="col-6">
-				<a href="/Devices.html?ref={{item.key}}&subpage=devprop&tab=HistoricalRecords">{{device_name_full item.key true | html.escape}}{{if show_refId}}&nbsp;({{item.value}}){{end}}</a>
-                </div>
-                <div class="col-6">
-                    {{item.value | html.escape }}
-                </div>
-            </div>
-        {{end}}
-          
     </div>
 
     <!-- Bootstrap core JavaScript

@@ -1,12 +1,13 @@
 
 
-async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback = null) {
+async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback = null, contextValue = null) {
     const result = $.ajax({
         type: 'POST',
         async: 'true',
         url: '../HistoricalRecords/' + url,
         data:  JSON.stringify(data),
         timeout: 60000,
+		context: contextValue,
         success: function (response) {
 			let result = JSON.parse(response);
 			let errorMessage = result.error;
@@ -15,11 +16,11 @@ async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback
 				if (failureCallback === null) {
 					alert(errorMessage);
 				} else {
-					failureCallback(errorMessage);
+					failureCallback(errorMessage, this);
 				}
 			} else {
 				if (!(successCallback === null)) {
-					successCallback(result.result); 
+					successCallback(result.result, this); 
 				};
 			}
         },
@@ -28,7 +29,7 @@ async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback
           	if (failureCallback === null) {
 				alert(message);
 			} else {
-				failureCallback(message);
+				failureCallback(message, this);
 			}
         }
     });

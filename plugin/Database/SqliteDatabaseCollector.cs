@@ -148,38 +148,8 @@ namespace Hspi.Database
             return records;
         }
 
-        /// <summary>
-        /// Iterates the values between the range and one above and below the range. Order is time stamp ascending.
-        /// </summary>
-        /// <param name="refId"></param>
-        /// <param name="minUnixTimeSeconds"></param>
-        /// <param name="maxUnixTimeSeconds"></param>
-        /// <param name="iterator">Function called for iteration</param>
-        public async Task IterateGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds, Action<IEnumerable<TimeAndValue>> iterator)
-        {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-
-            var stmt = getTimeAndValueCommand;
-            ugly.reset(stmt);
-            ugly.bind_int(stmt, 1, refId);
-            ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
-            ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
-
-            iterator(Iterate(stmt));
-
-            static IEnumerable<TimeAndValue> Iterate(sqlite3_stmt stmt)
-            {
-                while (ugly.step(stmt) != SQLITE_DONE)
-                {
-                    // order: SELECT (time, value) FROM history
-                    var record = new TimeAndValue(ugly.column_int64(stmt, 0), ugly.column_double(stmt, 1));
-                    yield return record;
-                }
-            }
-        }
-
         public async Task<IList<RecordDataAndDuration>> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                                        long start, long length, ResultSortBy sortBy)
+                                                                long start, long length, ResultSortBy sortBy)
         {
             using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
             var stmt = getHistoryCommand;
@@ -225,11 +195,12 @@ namespace Hspi.Database
             return stmt.column<long>(0);
         }
 
-        public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
+        public IList<KeyValuePair<long, long>> GetRecordsWithCount(int limit)
         {
             var records = new List<KeyValuePair<long, long>>();
-            using var stmt = CreateStatement("SELECT ref, COUNT(*) as rcount FROM history GROUP BY ref ORDER BY rcount DESC LIMIT 10");
+            using var stmt = CreateStatement("SELECT ref, COUNT(*) as rcount FROM history GROUP BY ref ORDER BY rcount DESC LIMIT ?");
 
+            ugly.bind_int64(stmt, 1, limit);
             while (ugly.step(stmt) != SQLITE_DONE)
             {
                 records.Add(new KeyValuePair<long, long>(ugly.column_int64(stmt, 0), ugly.column_int64(stmt, 1)));
@@ -238,7 +209,36 @@ namespace Hspi.Database
             return records;
         }
 
-        public void PruneNow()
+        /// <summary>
+        /// Iterates the values between the range and one above and below the range. Order is time stamp ascending.
+        /// </summary>
+        /// <param name="refId"></param>
+        /// <param name="minUnixTimeSeconds"></param>
+        /// <param name="maxUnixTimeSeconds"></param>
+        /// <param name="iterator">Function called for iteration</param>
+        public async Task IterateGraphValues(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds, Action<IEnumerable<TimeAndValue>> iterator)
+        {
+            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+
+            var stmt = getTimeAndValueCommand;
+            ugly.reset(stmt);
+            ugly.bind_int(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
+            ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
+
+            iterator(Iterate(stmt));
+
+            static IEnumerable<TimeAndValue> Iterate(sqlite3_stmt stmt)
+            {
+                while (ugly.step(stmt) != SQLITE_DONE)
+                {
+                    // order: SELECT (time, value) FROM history
+                    var record = new TimeAndValue(ugly.column_int64(stmt, 0), ugly.column_double(stmt, 1));
+                    yield return record;
+                }
+            }
+        }
+       public void PruneNow()
         {
             pruneNowEvent.Set();
         }

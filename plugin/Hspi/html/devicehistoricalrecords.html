@@ -163,7 +163,7 @@ function getRangeString(min, max) {
 }
 </script>
 	
-<body class="body homeseer-skin ml-0 mr-0" style="min-height: 4rem" aria-busy="true">	
+<body class="body homeseer-skin ml-0 mr-0" style="min-height: 3rem" aria-busy="true">	
 <!-- refId={{refId}}<BR> -->
 <!-- featureId={{featureId}}<BR> -->
 <!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
@@ -225,7 +225,7 @@ function getRangeString(min, max) {
 			</div>
 			<ul class="navbar-nav ml-auto nav-flex-icons nav-right"  >
 			  <li class="nav-item">	  
-				<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change tracking options for device" id="idModalEditLink"  href="#">
+				<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change tracking options for the device" id="idModalEditLink"  href="#">
 				  <i class="fa fa-edit"></i>
 				</a>
 			  </li>
@@ -276,7 +276,7 @@ function getRangeString(min, max) {
 				<button id="btnGroupDropCurve" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Curve</button>
 				<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
 				  <a class="dropdown-item"  onclick="chartFunction(1)">Step</a>
-				  <a class="dropdown-item"  onclick="chartFunction(2)">Curve</a>
+				  <a class="dropdown-item"  onclick="chartFunction(2)">Linear</a>
 				</div>
 			  </div>
 			  <!-- <div class="btn-group" role="group"> -->
@@ -301,7 +301,7 @@ function getRangeString(min, max) {
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title" id="lblModalEdit">Tracked Device Options</h5>
+				<h5 class="modal-title" id="lblModalEdit">Device Options</h5>
 			</div>
 			<div class="modal-body">
 				<form>
@@ -365,6 +365,15 @@ $(function() {
 		$('#modalEdit').modal('show');
 	});
 	
+	$(document).on('click', '#btnOk', {}, async function (e) {
+		$('#modalEdit').modal('hide');
+		var data = {
+			refId: $('#ref').val(),
+			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
+		};
+		await ajaxPostPlugIn("updatedevicesettings", data, null );
+	});	
+
 	$(document).on('click', '#btnOk', {}, async function (e) {
 		$('#modalEdit').modal('hide');
 		var data = {
@@ -590,11 +599,6 @@ $(document).ready(function () {
 			maintainAspectRatio: false,
 			plugins: {
 			    zoom: zoomOptions,
-				title: {
-					display: true,
-					position: 'top',
-					text: '{{device_name_full featureId | html.escape}}'
-				},
 				legend: {
 					display: false
 				},	

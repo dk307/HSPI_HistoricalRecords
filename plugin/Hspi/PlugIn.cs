@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
@@ -59,9 +60,27 @@ namespace Hspi
             }
         }
 
-        public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
+        public List<Dictionary<string, object>> GetAllDevicesProperties()
         {
-            return Collector.GetTop10RecordsStats();
+            var recordCounts = Collector.GetRecordsWithCount(int.MaxValue).ToDictionary(x => x.Key, x => x.Value);
+
+            CheckNotNull(featureCachedDataProvider);
+            CheckNotNull(settingsPages);
+
+            List<Dictionary<string, object>> result = new();
+            foreach (var refId in HomeSeerSystem.GetAllRefs())
+            {
+                Dictionary<string, object> row = new()
+                {
+                    ["ref"] = refId,
+                    ["records"] = recordCounts.TryGetValue((long)refId, out var count) ? count : 0,
+                    ["monitored"] = featureCachedDataProvider.IsMonitoried(refId),
+                    ["tracked"] = settingsPages.IsTracked(refId)
+                };
+                result.Add(row);
+            }
+
+            return result;
         }
 
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
@@ -124,13 +143,13 @@ namespace Hspi
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId);
+                HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a statistics device");
+                HomeSeerSystem.RegisterFeaturePage(this.Id, "alldevices.html", "Device statistics");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
-                HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a database statistics device");
 
                 Utils.TaskHelper.StartAsyncWithErrorChecking("All device values collection",
                                                              RecordAllDevices,
                                                              ShutdownCancellationToken);
-
                 Log.Information("Plugin Started");
             }
             catch (Exception ex)
