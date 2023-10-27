@@ -19,16 +19,16 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void AllDevicesAreUpdatedOnStart()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
             List<int> allDeviceRefs = new() { 1000, 1001 };
-            mockHsController.Setup(x => x.GetAllRefs()).Returns(allDeviceRefs);
-            var feature1 = TestHelper.SetupHsFeature(mockHsController, allDeviceRefs[0], 1.1, "abcd", lastChange: DateTime.Now - TimeSpan.FromDays(6));
-            var feature2 = TestHelper.SetupHsFeature(mockHsController, allDeviceRefs[1], 2221.1, "rteyee", lastChange: DateTime.Now - TimeSpan.FromDays(24));
+
+            mockHsController.SetupFeature(allDeviceRefs[0], 1.1, "abcd", lastChange: DateTime.Now - TimeSpan.FromDays(6));
+            mockHsController.SetupFeature(allDeviceRefs[1], 2221.1, "rteyee", lastChange: DateTime.Now - TimeSpan.FromDays(24));
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            TestHelper.CheckRecordedValueForFeatureType(plugin, feature1, 100, 1);
-            TestHelper.CheckRecordedValueForFeatureType(plugin, feature2, 100, 1);
+            TestHelper.CheckRecordedValueForFeatureType(plugin, mockHsController.GetFeature(allDeviceRefs[0]), 100, 1);
+            TestHelper.CheckRecordedValueForFeatureType(plugin, mockHsController.GetFeature(allDeviceRefs[1]), 100, 1);
         }
 
         [DataTestMethod]
@@ -46,7 +46,7 @@ namespace HSPI_HistoricalRecordsTest
                 { "LogToFileId", logToFile.ToString() }
             };
 
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController(settingsFromIni);
+            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(settingsFromIni);
 
             PlugIn plugIn = plugInMock.Object;
 
@@ -69,7 +69,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void CheckPlugInStatus()
         {
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController(new Dictionary<string, string>());
+            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(new Dictionary<string, string>());
 
             PlugIn plugIn = plugInMock.Object;
             Assert.AreEqual(plugIn.OnStatusCheck().Status, PluginStatus.Ok().Status);
@@ -84,7 +84,7 @@ namespace HSPI_HistoricalRecordsTest
                 { SettingsPages.LogToFileId, true.ToString()},
             };
 
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController(settingsFromIni);
+            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(settingsFromIni);
 
             PlugIn plugIn = plugInMock.Object;
 
@@ -102,24 +102,22 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetFeatureUnit()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
-                                              35673,
-                                              1.132,
-                                              "1.1 F");
+            int refId = 5655;
+            mockHsController.SetupFeature(refId, 1.132, "1.1 F");
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            var unit1 = plugin.Object.GetFeatureUnit(feature.Ref);
+            var unit1 = plugin.Object.GetFeatureUnit(refId);
             Assert.AreEqual("F", unit1);
 
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.DisplayedStatus)).Returns("1.1 C");
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.DisplayedStatus, "1.1 C");
 
             // invalidate the cache
-            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, refId, 0 });
 
-            var unit2 = plugin.Object.GetFeatureUnit(feature.Ref);
+            var unit2 = plugin.Object.GetFeatureUnit(refId);
             Assert.AreEqual("C", unit2);
         }
 
@@ -128,13 +126,12 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("", "devicehistoricalrecords")]
         public void GetJuiDeviceConfigPageForDevice(string deviceInterface, string page)
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             int devOrFeatRef = 10;
 
-            mockHsController.Setup(x => x.IsRefDevice(devOrFeatRef)).Returns(true);
-            mockHsController.Setup(x => x.GetPropertyByRef(devOrFeatRef, EProperty.Interface)).Returns(deviceInterface);
+            mockHsController.SetupDevice(devOrFeatRef, deviceInterface: deviceInterface);
 
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
@@ -159,14 +156,12 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("", "devicehistoricalrecords")]
         public void GetJuiDeviceConfigPageForFeature(string deviceInterface, string page)
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             int devOrFeatRef = 10;
-
-            mockHsController.Setup(x => x.IsRefDevice(devOrFeatRef)).Returns(false);
-            mockHsController.Setup(x => x.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).Returns(new HashSet<int>() { 9 });
-            mockHsController.Setup(x => x.GetPropertyByRef(devOrFeatRef, EProperty.Interface)).Returns(deviceInterface);
+            mockHsController.SetupFeature(devOrFeatRef, 0, featureInterface: deviceInterface);
+            mockHsController.SetupDevOrFeatureValue(devOrFeatRef, EProperty.AssociatedDevices, new HashSet<int>() { 9 });
 
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
@@ -208,25 +203,23 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetPrecision()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
-                                              35673,
-                                              1.132,
-                                              "1.1 F");
+            int refId = 10394;
+            mockHsController.SetupFeature(refId, 1.132, "1.1 F");
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            var precision1 = plugin.Object.GetFeaturePrecision(feature.Ref);
+            var precision1 = plugin.Object.GetFeaturePrecision(refId);
             Assert.AreEqual(3, precision1);
 
             List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.StatusGraphics)).Returns(statusGraphics);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusGraphics, statusGraphics);
 
             // invalidate the cache
-            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, refId, 0 });
 
-            var precision2 = plugin.Object.GetFeaturePrecision(feature.Ref);
+            var precision2 = plugin.Object.GetFeaturePrecision(refId);
             Assert.AreEqual(1, precision2);
         }
 
@@ -241,12 +234,11 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("apple", null)]
         public void GetFeatureUnitForDifferentTypes(string displayStatus, string unit)
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            mockHsController.Setup(x => x.GetPropertyByRef(100, EProperty.DisplayedStatus)).Returns(displayStatus);
-
+            mockHsController.SetupDevOrFeatureValue(100, EProperty.DisplayedStatus, displayStatus);
             var unitFound = plugin.Object.GetFeatureUnit(100);
             Assert.AreEqual(unit, unitFound);
         }
@@ -272,31 +264,29 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void IsFeatureTrackedForTimer()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
-                                              35673,
-                                              1.132,
-                                              "1.1 F");
+            int refId = 9456;
+            mockHsController.SetupFeature(refId, 1.132, "1.1 F");
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            var tracked1 = plugin.Object.IsFeatureTracked(feature.Ref);
+            var tracked1 = plugin.Object.IsFeatureTracked(refId);
             Assert.IsTrue(tracked1);
-            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
+            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(refId));
 
             var data = new PlugExtraData();
             data.AddNamed("timername", "123");
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.PlugExtraData)).Returns(data);
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.Interface)).Returns(string.Empty);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.PlugExtraData, data);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.Interface, string.Empty);
 
             // invalidate the cache
-            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, feature.Ref });
+            plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, refId, 0 });
 
-            var tracked2 = plugin.Object.IsFeatureTracked(feature.Ref);
+            var tracked2 = plugin.Object.IsFeatureTracked(refId);
             Assert.IsFalse(tracked2);
 
-            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(feature.Ref));
+            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(refId));
         }
 
         [TestMethod]

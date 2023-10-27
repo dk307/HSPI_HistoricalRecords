@@ -18,7 +18,7 @@ namespace Hspi
 
         public int Ref { get; }
 
-        public double Value => GetPropertyValue<double>(EProperty.Value);
+        public double Value => Convert.ToDouble(GetPropertyValue<object>(EProperty.Value));
         public DateTimeOffset LastChange => GetPropertyValue<DateTime>(EProperty.LastChange);
         public string DisplayedStatus => GetPropertyValue<string>(EProperty.DisplayedStatus);
 

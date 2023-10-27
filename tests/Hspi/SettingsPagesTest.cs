@@ -31,7 +31,7 @@ namespace HSPI_HistoricalRecordsTest
             PerDeviceSettings deviceSettings = new(837, false, TimeSpan.FromSeconds(666));
             var settingPages = new SettingsPages(mockHsController.Object, settingsCollection);
 
-            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "DeviceRefId", deviceSettings.DeviceRefId.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "RefId", deviceSettings.DeviceRefId.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "IsTracked", deviceSettings.IsTracked.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "RetentionPeriod", deviceSettings.RetentionPeriod.ToString(), PlugInData.SettingFileName));
 
@@ -51,7 +51,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var deviceSettings2 = deviceSettings with { RetentionPeriod = null };
 
-            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "DeviceRefId", deviceSettings.DeviceRefId.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "RefId", deviceSettings.DeviceRefId.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "IsTracked", deviceSettings.IsTracked.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceSettings.DeviceRefId.ToString(), "RetentionPeriod", string.Empty, PlugInData.SettingFileName));
 
@@ -182,7 +182,7 @@ namespace HSPI_HistoricalRecordsTest
             int deviceRefId = 1592;
 
             mockHsController.Setup(x => x.GetINISetting("Settings", "DeviceSettings", null, PlugInData.SettingFileName)).Returns(deviceRefId.ToString());
-            mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "DeviceRefId", null, PlugInData.SettingFileName)).Returns(deviceRefId.ToString());
+            mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "RefId", null, PlugInData.SettingFileName)).Returns(deviceRefId.ToString());
             mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "IsTracked", null, PlugInData.SettingFileName)).Returns(false.ToString());
             mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "RetentionPeriod", null, PlugInData.SettingFileName)).Returns(TimeSpan.FromMinutes(1).ToString());
 

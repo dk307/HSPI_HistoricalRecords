@@ -77,8 +77,6 @@ namespace Hspi.Database
 
             var changesCount = ugly.changes(sqliteConnection);
             Log.Information("Removed {rows} row(s) for device:{refId} in database", changesCount, refId);
-
-            var count = ugly.query_scalar<long>(sqliteConnection, $"SELECT COUNT(*) FROM history WHERE ref={refId}");
             return changesCount;
         }
 

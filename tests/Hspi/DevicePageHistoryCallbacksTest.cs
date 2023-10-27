@@ -311,7 +311,7 @@ namespace HSPI_HistoricalRecordsTest
 
             Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId));
 
-            mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "DeviceRefId", deviceRefId.ToString(), PlugInData.SettingFileName));
+            mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "RefId", deviceRefId.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "IsTracked", false.ToString(), PlugInData.SettingFileName));
             mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), "RetentionPeriod", string.Empty, PlugInData.SettingFileName));
 

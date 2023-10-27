@@ -47,6 +47,7 @@
     <Compile Include="..\plugin\shared\tests\ExceptionHelperTest.cs">
       <Link>shared\ExceptionHelperTest.cs</Link>
     </Compile>
+    <Compile Include="FakeHSController.cs" />
     <Compile Include="Hspi\StatisticDeviceTest.cs" />
     <Compile Include="Hspi\GraphCallbacksTest.cs" />
     <Compile Include="Hspi\PruningTest.cs" />
@@ -101,6 +102,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Drawing" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

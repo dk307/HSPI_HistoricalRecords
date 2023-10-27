@@ -72,11 +72,33 @@ namespace HSPI_HistoricalRecordsTest
             return (mockPlugin, mockHsController);
         }
 
+        public static (Mock<PlugIn> mockPlugin, FakeHSController mockHsController)
+                         CreateMockPluginAndHsController2(Dictionary<string, string> settingsFromIni)
+        {
+            var mockPlugin = new Mock<PlugIn>(MockBehavior.Loose)
+            {
+                CallBase = true,
+            };
+
+            var mockHsController = SetupHsControllerAndSettings2(mockPlugin, settingsFromIni);
+
+            mockPlugin.Object.InitIO();
+
+            return (mockPlugin, mockHsController);
+        }
+
         public static void CreateMockPlugInAndHsController(out Mock<PlugIn> plugin,
                                                            out Mock<IHsController> mockHsController)
         {
             plugin = TestHelper.CreatePlugInMock();
             mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+        }
+
+        public static void CreateMockPlugInAndHsController2(out Mock<PlugIn> plugin,
+                                                            out FakeHSController mockHsController)
+        {
+            plugin = TestHelper.CreatePlugInMock();
+            mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin, new Dictionary<string, string>());
         }
 
         public static Mock<ISystemClock> CreateMockSystemClock(Mock<PlugIn> plugIn)
@@ -152,8 +174,20 @@ namespace HSPI_HistoricalRecordsTest
             }
         }
 
+        public static void RaiseHSEvent(Mock<PlugIn> plugin, Constants.HSEvent eventType, int refId)
+        {
+            if (eventType == Constants.HSEvent.VALUE_CHANGE)
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.VALUE_CHANGE, new object[] { null, null, null, null, refId });
+            }
+            else
+            {
+                plugin.Object.HsEvent(Constants.HSEvent.STRING_CHANGE, new object[] { null, null, null, refId });
+            }
+        }
+
         public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
-                                                                     Mock<IHsController> mockHsController,
+                                                     Mock<IHsController> mockHsController,
                                                      Constants.HSEvent eventType,
                                                      HsFeature feature,
                                                      double value,
@@ -163,6 +197,18 @@ namespace HSPI_HistoricalRecordsTest
         {
             RaiseHSEvent(plugin, mockHsController, eventType, feature, value, status, lastChange);
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, expectedCount));
+            return new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+        }
+
+        public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
+                                                     Constants.HSEvent eventType,
+                                                     FakeHSController mockHsController,
+                                                     int refId,
+                                                     int expectedCount)
+        {
+            var feature = mockHsController.GetFeature(refId);
+            RaiseHSEvent(plugin, eventType, refId);
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, expectedCount));
             return new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
         }
 
@@ -238,6 +284,21 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, It.IsAny<bool>())).Returns(new List<int>());
             mockHsController.Setup(x => x.RegisterEventCB(It.IsAny<Constants.HSEvent>(), PlugInData.PlugInId));
             return mockHsController;
+        }
+
+        public static FakeHSController SetupHsControllerAndSettings2(Mock<PlugIn> mockPlugin,
+                                                                     Dictionary<string, string> settingsFromIni)
+        {
+            var fakeHsController = new FakeHSController();
+
+            fakeHsController.SetipIniSettingsSection("Settings", settingsFromIni);
+
+            // set mock homeseer via reflection
+            Type plugInType = typeof(AbstractPlugin);
+            var method = plugInType.GetMethod("set_HomeSeerSystem", BindingFlags.NonPublic | BindingFlags.SetProperty | BindingFlags.Instance);
+            method.Invoke(mockPlugin.Object, new object[] { fakeHsController as IHsController });
+
+            return fakeHsController;
         }
 
         public static HsFeature SetupHsFeature(Mock<IHsController> mockHsController, int deviceRefId,
