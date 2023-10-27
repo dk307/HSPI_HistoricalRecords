@@ -294,7 +294,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 Assert.AreEqual(1307 + i, stats[i]["ref"]);
                 Assert.AreEqual((long)i, stats[i]["records"]);
-                Assert.AreEqual(true, stats[i]["monitored"]);
+                Assert.AreEqual(true, stats[i]["monitorableType"]);
                 Assert.AreEqual(true, stats[i]["tracked"]);
             }
         }

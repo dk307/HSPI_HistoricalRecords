@@ -54,19 +54,16 @@
 			{{for item in deviceRecords}}         
             <tr class="devicerow" data-refId="{{item["ref"]}}">	
 				{{relationship=device_prop item["ref"] "Relationship"}}
-				{{assoc_count=device_prop item["ref"] "AssociatedDevices_Count"}}
-				 
+				{{assoc_count=device_prop item["ref"] "AssociatedDevices_Count"}}	 
 				{{if relationship==4 && assoc_count==1}}
 					{{deviceRefId=device_prop item["ref"] "AssociatedDevices_List"}}
-				{{else}}	
-					{{deviceRefId=item["ref"]}}
 				{{end}}
 				
-                <td><a href="/Devices.html?ref={{deviceRefId}}&subpage=devprop&tab=HistoricalRecords&feature={{item["ref"]}}">{{device_name_full item["ref"] true | html.escape}}{{if show_refId}}&nbsp;({{item["ref"]}}){{end}}</a></td> 
+                <td><a onclick="javascript:showDevicePage(this, {{item["ref"]}}, {{deviceRefId ?? -1}})">{{device_name_full item["ref"] true | html.escape}}{{if show_refId}}&nbsp;({{item["ref"]}}){{end}}</a></td> 
                 <td>{{item["records"]}}</td> 
-                <td>{{if item["tracked"] && item["monitored"]}}Yes{{else}}No{{end}}</td> 
-                <td>{{if item["monitored"]}}
-					<a class="deviceoptions" data-refId='{{item["ref"]}}' data-tracked='{{item["tracked"]}}' data-mdb-toggle="tooltip" title="Change tracking options for the device" href="#">
+                <td>{{if item["tracked"] && item["monitorableType"]}}Yes{{else}}No{{end}}</td> 
+                <td>{{if item["monitorableType"]}}
+					<a class="deviceoptions" data-refId='{{item["ref"]}}' data-tracked='{{item["tracked"]}}' data-mdb-toggle="tooltip" title="Change tracking options for the device" onclick="javascript:showDeviceOptions(this)" href="#{{item["ref"]}}">
 					  <i class="fa fa-edit"></i>
 					</a>
 					{{end}}
@@ -87,12 +84,13 @@
 				</div>
 				<div class="modal-body">
 					<form>
-						<input type="hidden" id="ref" value="{{featureId}}"/>
+						<input type="hidden" id="deviceOptionsRef" value="{{featureId}}"/>
 						<div class="row mt-1 mb-1 no-gutters">
 							<div class="form-check form-switch">
-							<div class="custom-control custom-switch">
-							  <input type="checkbox" class="custom-control-input" id="idTrackedFeature">
-							  <label class="custom-control-label" for="idTrackedFeature">Track this device values</label>
+								<div class="form-check form-check-inline">
+									<input type="checkbox" class="form-check-input" id="idTrackedFeature" name="idTrackedFeature" >
+									<label class="form-check-label" for="idTrackedFeature">Track this device values</label>
+								</div>            
 							</div>
 						</div>					 
 					</form>
@@ -127,40 +125,62 @@ function setUpPersistanceTable() {
   $(".dataTables_length").addClass("bs-select"); 
 }
 
+
+function showDevicePage(e, feature, parent){
+	const link = $('.devicerow[data-refId='+feature+'] td:nth-child(4) a');	
+	const tracked = link.attr('data-tracked');	
+	
+	let devicesPageUrl= window.location.origin + '/Devices.html?';	
+	
+	//ref
+	devicesPageUrl += ('ref=' + (parent != -1 ? parent : feature));
+	
+	// tab
+	devicesPageUrl += '&subpage=devprop'
+	devicesPageUrl += (tracked == 'true'? '&tab=HistoricalRecords' : '&tab=features');
+	
+	//feature
+	if (parent!=-1) {
+		devicesPageUrl += ('&feature=' + feature);
+	}
+	
+    window.open(devicesPageUrl, "_blank");
+};
+
+
+function showDeviceOptions(e){
+	const refId = $(e).attr('data-refId');
+	const tracked = $(e).attr('data-tracked');
+	
+	// set the values from a link to modal
+	$('#deviceOptionsRef').val(refId);
+	$("#idTrackedFeature").prop('checked', tracked == "true");
+	
+	$('#modalEdit').modal('show');
+};
+
+
 $(document).ready(function () {
 	setUpPersistanceTable();
 	$('#loading').hide();
-	
-	
-	$('.deviceoptions').on('click',function(e){
-		e.preventDefault();
-		var refId = $(this).attr('data-refId');
-		var tracked = $(this).attr('data-tracked');
-		
-		// set the values from a link to modal
-		$('#ref').val(refId);
-		$("#idTrackedFeature").prop('checked', tracked == "true");
-		
-		$('#modalEdit').modal('show');
-	});
-	
-	
+
 	$(document).on('click', '#btnOk', {}, async function (e) {
 		$('#modalEdit').modal('hide');
 		
-		var ref = $('#ref').val();
+		const ref = $('#deviceOptionsRef').val();
 		
-		var data = {
+		
+		const data = {
 			refId: ref,
 			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
 		};
 		await ajaxPostPlugIn("updatedevicesettings", data, function(result, context) {
 			//update the table column
-			var col3 = $('.devicerow[data-refId='+context.refId +'] td:nth-child(3)');		
+			const col3 = $('.devicerow[data-refId='+context.refId +'] td:nth-child(3)');		
 			col3.text(context.tracked ? "Yes" : "No");
 			
 			// update the custom attribute also
-			var link = $('.devicerow[data-refId='+context.refId +'] td:nth-child(4) a');	
+			const link = $('.devicerow[data-refId='+context.refId +'] td:nth-child(4) a');	
 			link.attr('data-tracked', context.tracked ? 'true' : 'false');	
 		}, null, data);
 	});	 

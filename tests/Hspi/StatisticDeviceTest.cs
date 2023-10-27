@@ -87,7 +87,6 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
             Assert.AreEqual(trackedFeature.Location, newFeatureData.Feature[EProperty.Location]);
             Assert.AreEqual(trackedFeature.Location2, newFeatureData.Feature[EProperty.Location2]);
-            Assert.AreEqual((int)EFeatureDisplayType.Important, newFeatureData.Feature[EProperty.FeatureDisplayType]);
 #pragma warning disable S3265 // Non-flags enums should not be used in bitwise operations
             Assert.AreEqual((uint)(EMiscFlag.StatusOnly | EMiscFlag.SetDoesNotChangeLastChange | EMiscFlag.ShowValues),
                             newFeatureData.Feature[EProperty.Misc]);

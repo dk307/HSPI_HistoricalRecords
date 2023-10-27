@@ -40,31 +40,9 @@
 	displayMax=queries['displayMax'] ?? ""
 	displayPeriod=queries['displayPeriod'] ?? ""
 	
-	# get list of features for devices in order
-	childrenRefIds=[]
-	device=device_by_ref refId
-	if device
-		featureList=device.display_priority ?? device.children
-		
-		for child in featureList
-			childrenRefIds = childrenRefIds | array.add child.ref
-		end
-		
-		# add root if not added for HS3 devices
-		if device.version < 4
-			refIdInt=string.to_int refId
-			if !(childrenRefIds | array.contains refIdInt)
-				childrenRefIds = childrenRefIds | array.add refIdInt
-			end
-		end
-		
-		featureIdInt=string.to_int featureId
-		if ((childrenRefIds | array.contains featureIdInt))
-		else
-			featureId=childrenRefIds[0]
-		end
-	end
-		
+	# get list of features for devices
+	childrenRefIds=plugin_function 'HistoricalRecords' 'GetFeatureRefIdsForDevice'[refId]
+
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[featureId]
 	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[featureId]
 
@@ -301,16 +279,17 @@ function getRangeString(min, max) {
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title" id="lblModalEdit">Tracked Device Options</h5>
+				<h5 class="modal-title" id="lblModalEdit">Device Options</h5>
 			</div>
 			<div class="modal-body">
 				<form>
-					<input type="hidden" id="ref" value="{{featureId}}"/>
+					<input type="hidden" id="deviceOptionsRef" value="{{featureId}}"/>
 					<div class="row mt-1 mb-1 no-gutters">
 						<div class="form-check form-switch">
-						<div class="custom-control custom-switch">
-						  <input type="checkbox" class="custom-control-input" id="idTrackedFeature" {{if deviceTracked}} checked {{end}}>
-						  <label class="custom-control-label" for="idTrackedFeature">Track this device values</label>
+							<div class="form-check form-check-inline">
+								<input type="checkbox" class="form-check-input" id="idTrackedFeature" name="idTrackedFeature" {{if deviceTracked}} checked {{end}}>
+								<label class="form-check-label" for="idTrackedFeature">Track this device values</label>
+							</div>            
 						</div>
 					</div>					 
 				</form>
@@ -368,7 +347,7 @@ $(function() {
 	$(document).on('click', '#btnOk', {}, async function (e) {
 		$('#modalEdit').modal('hide');
 		var data = {
-			refId: $('#ref').val(),
+			refId: $('#deviceOptionsRef').val(),
 			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
 		};
 		await ajaxPostPlugIn("updatedevicesettings", data, null );

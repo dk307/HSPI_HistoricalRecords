@@ -26,13 +26,7 @@ namespace Hspi
             var refId = Hspi.Utils.TypeConverter.TryGetFromObject<int>(refIdString)
                 ?? throw new ArgumentException(null, nameof(refIdString));
 
-            if (!HomeSeerSystem.IsRefDevice(refId))
-            {
-                // data is stored in feature
-                return StatisticsDevice.GetDataFromFeatureAsJson(HomeSeerSystem, refId);
-            }
-
-            return null;
+            return StatisticsDevice.GetDataFromFeatureAsJson(HomeSeerSystem, refId);
         }
 
         public List<int> GetTrackedDeviceList()
