@@ -82,6 +82,7 @@ namespace Hspi
                     return defaultValue;
                 }
             }
+
             return defaultValue;
         }
 
@@ -108,6 +109,7 @@ namespace Hspi
                 {
                     retentionPeriod = temp;
                 }
+
                 data.Add(deviceRefId, new PerDeviceSettings(deviceRefId, isTracked, retentionPeriod));
             }
 

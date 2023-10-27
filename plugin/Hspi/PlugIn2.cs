@@ -44,6 +44,14 @@ namespace Hspi
             return displays;
         }
 
+        public IList<int> GetFeatureRefIdsForDevice(object? refIdString)
+        {
+            var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
+            HashSet<int> hashSet = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
+            hashSet.Add(refId);
+            return hashSet.ToList();
+        }
+
         public List<object?> GetDeviceStatsForPage(object? refIdString)
         {
             var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));

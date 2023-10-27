@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
@@ -38,7 +39,7 @@ namespace Hspi
 
         public IDictionary<string, string> GetDatabaseStats()
         {
-            return Collector.GetDatabaseStats();
+            return Collector.GetDatabaseStats().WaitAndUnwrapException();
         }
 
         public override string GetJuiDeviceConfigPage(int devOrFeatRef)
@@ -62,7 +63,7 @@ namespace Hspi
 
         public List<Dictionary<string, object>> GetAllDevicesProperties()
         {
-            var recordCounts = Collector.GetRecordsWithCount(int.MaxValue).ToDictionary(x => x.Key, x => x.Value);
+            var recordCounts = Collector.GetRecordsWithCount(int.MaxValue).WaitAndUnwrapException().ToDictionary(x => x.Key, x => x.Value);
 
             CheckNotNull(featureCachedDataProvider);
             CheckNotNull(settingsPages);
@@ -205,9 +206,17 @@ namespace Hspi
                 featureCachedDataProvider?.Invalidate(refId);
 
                 const int DeleteDevice = 2;
-                if (ConvertToInt32(4) == DeleteDevice && (statisticsDeviceUpdater?.HasRefId(refId) ?? false))
+                if (ConvertToInt32(4) == DeleteDevice)
                 {
-                    RestartStatisticsDeviceUpdate();
+                    // currently these events are only for devices not features
+                    if ((statisticsDeviceUpdater?.HasRefId(refId) ?? false))
+                    {
+                        RestartStatisticsDeviceUpdate();
+                    }
+                    else
+                    {
+                        await Collector.DeleteAllRecordsForRef(refId).ConfigureAwait(false);
+                    }
                 }
             }
 
@@ -224,11 +233,18 @@ namespace Hspi
 
         private async Task RecordAllDevices()
         {
-            var deviceEnumerator = HomeSeerSystem.GetAllRefs();
+            var deviceEnumerator = HomeSeerSystem.GetAllRefs().ToImmutableHashSet();
             foreach (var refId in deviceEnumerator)
             {
                 await RecordDeviceValue(refId).ConfigureAwait(false);
                 ShutdownCancellationToken.ThrowIfCancellationRequested();
+            }
+
+            // remove the records for devices which were deleted
+            var dbRefIds = await Collector.GetRefIdsWithRecords().ConfigureAwait(false);
+            foreach (var refId in dbRefIds.Where(refId => !deviceEnumerator.Contains((int)refId)))
+            {
+                await Collector.DeleteAllRecordsForRef(refId).ConfigureAwait(false);
             }
         }
 
