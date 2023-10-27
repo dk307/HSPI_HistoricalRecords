@@ -257,7 +257,7 @@ function getRangeString(min, max) {
 
 		{{needDataTables=false}}
 		{{if displaySelect=="table"}}
-			<table id="dt-persistence" class="table table-striped"  width="100%">	
+			<table id="dt-persistence" class="table table-sm mb-0 table-striped"  width="100%">	
 				<thead>
 					<tr>
 						<th>Time</th>
@@ -301,7 +301,7 @@ function getRangeString(min, max) {
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title" id="lblModalEdit">Device Options</h5>
+				<h5 class="modal-title" id="lblModalEdit">Tracked Device Options</h5>
 			</div>
 			<div class="modal-body">
 				<form>
@@ -338,7 +338,7 @@ function getRangeString(min, max) {
 <script type="text/javascript" src="/HistoricalRecords/hammer.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/chartjs-plugin-zoom.min.js"></script>
 {{end}}
-<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script><script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
 
 <script>
 $(function() {
@@ -365,15 +365,6 @@ $(function() {
 		$('#modalEdit').modal('show');
 	});
 	
-	$(document).on('click', '#btnOk', {}, async function (e) {
-		$('#modalEdit').modal('hide');
-		var data = {
-			refId: $('#ref').val(),
-			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
-		};
-		await ajaxPostPlugIn("updatedevicesettings", data, null );
-	});	
-
 	$(document).on('click', '#btnOk', {}, async function (e) {
 		$('#modalEdit').modal('hide');
 		var data = {
@@ -414,6 +405,8 @@ function setUpPersistanceTable() {
 	order: [[0, 'desc']],
 	paging: true,
 	processing: true,
+	responsive: true,
+	stateSave: false,
     serverSide: true,
 	  ajax: {
         url: '../HistoricalRecords/historyrecords',
