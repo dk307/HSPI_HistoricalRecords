@@ -259,7 +259,7 @@ namespace Hspi
                 var deviceString = feature.DisplayedStatus;
 
                 RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-                Log.Verbose("Recording {@record}", recordData);
+                Log.Information("Recording {@record}", recordData);
 
                 await Collector.Record(recordData).ConfigureAwait(false);
             }

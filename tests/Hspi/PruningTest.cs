@@ -25,9 +25,9 @@ namespace HSPI_HistoricalRecordsTest
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(10));
 
-            mockHsController.SetupFeature(refId, 100);
+            mockHsController.SetupFeature(refId, 0D, "", aTime);
 
-            //set device retention to 10s
+            //set device retention to custom value
             mockHsController.SetupIniValue("Settings", "DeviceSettings", refId.ToString());
             mockHsController.SetupIniValue(refId.ToString(), "RefId", refId.ToString());
             mockHsController.SetupIniValue(refId.ToString(), "IsTracked", true.ToString());
@@ -60,7 +60,7 @@ namespace HSPI_HistoricalRecordsTest
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(200));
 
             int refId = 3;
-            mockHsController.SetupFeature(refId, 100);
+            mockHsController.SetupFeature(refId, 0D, "", aTime);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
@@ -90,7 +90,7 @@ namespace HSPI_HistoricalRecordsTest
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(10));
 
             int refId = 3;
-            mockHsController.SetupFeature(refId, 100);
+            mockHsController.SetupFeature(refId, 0D, "", aTime);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 

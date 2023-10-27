@@ -275,6 +275,7 @@ namespace Hspi.Database
 
         public void PruneNow()
         {
+            Log.Information("Pruning for database triggered");
             pruneNowEvent.Set();
         }
 
@@ -417,7 +418,7 @@ namespace Hspi.Database
                 var record = await queue.DequeueAsync(shutdownToken).ConfigureAwait(false);
                 try
                 {
-                    Log.Verbose("Adding to database: {@record}", record);
+                    Log.Information("Adding to database: {@record}", record);
                     await InsertRecord(record).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (!ex.IsCancelException())
