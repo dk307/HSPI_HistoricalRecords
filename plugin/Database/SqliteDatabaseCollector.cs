@@ -238,7 +238,8 @@ namespace Hspi.Database
                 }
             }
         }
-       public void PruneNow()
+
+        public void PruneNow()
         {
             pruneNowEvent.Set();
         }

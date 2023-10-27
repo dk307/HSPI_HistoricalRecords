@@ -136,7 +136,6 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
-                CheckNotNull(settingsPages);
                 collector = new SqliteDatabaseCollector(settingsPages, CreateClock(), ShutdownCancellationToken);
                 statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
 
@@ -238,26 +237,20 @@ namespace Hspi
             if (IsFeatureTracked(deviceRefId))
             {
                 var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
-                await RecordDeviceValue(feature).ConfigureAwait(false);
+
+                var deviceValue = feature.Value;
+                var lastChange = feature.LastChange;
+                var deviceString = feature.DisplayedStatus;
+
+                RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
+                Log.Verbose("Recording {@record}", recordData);
+
+                await Collector.Record(recordData).ConfigureAwait(false);
             }
             else
             {
                 Log.Verbose("Not adding {refId} to db as it is not tracked", deviceRefId);
             }
-        }
-
-        private async Task RecordDeviceValue(HsFeatureData feature)
-        {
-            CheckNotNull(collector);
-
-            var deviceValue = feature.Value;
-            var lastChange = feature.LastChange;
-            var deviceString = feature.DisplayedStatus;
-
-            RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-            Log.Verbose("Recording {@record}", recordData);
-
-            await collector.Record(recordData).ConfigureAwait(false);
         }
 
         private void UpdateDebugLevel()
