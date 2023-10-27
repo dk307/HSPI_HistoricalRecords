@@ -27,7 +27,7 @@ namespace HSPI_HistoricalRecordsTest
 
             //set device retention to 10s
             mockHsController.Setup(x => x.GetINISetting("Settings", "DeviceSettings", null, PlugInData.SettingFileName)).Returns(deviceRefId.ToString());
-            mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "DeviceRefId", null, PlugInData.SettingFileName)).Returns(deviceRefId.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "refId", refId.ToString());
             mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "IsTracked", null, PlugInData.SettingFileName)).Returns(true.ToString());
             mockHsController.Setup(x => x.GetINISetting(deviceRefId.ToString(), "RetentionPeriod", null, PlugInData.SettingFileName)).Returns(TimeSpan.FromSeconds(2).ToString("c"));
 
