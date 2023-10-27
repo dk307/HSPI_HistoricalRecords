@@ -88,6 +88,7 @@ namespace Hspi
             {
                 return result.IsTracked;
             }
+
             return true;
         }
 
@@ -101,6 +102,7 @@ namespace Hspi
                     LogLevel = logEventLevel;
                     return true;
                 }
+
                 return false;
             }
 

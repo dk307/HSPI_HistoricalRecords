@@ -69,7 +69,6 @@ namespace Hspi.Device
                                                .WithMiscFlags(EMiscFlag.StatusOnly)
                                                .WithMiscFlags(EMiscFlag.SetDoesNotChangeLastChange)
                                                .WithExtraData(plugExtraData)
-                                               .WithDisplayType(EFeatureDisplayType.Important)
                                                .PrepareForHsDevice(newDevice);
 
             switch (data.StatisticsFunction)

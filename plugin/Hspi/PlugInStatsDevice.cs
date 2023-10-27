@@ -21,12 +21,18 @@ namespace Hspi
 
     internal partial class PlugIn : HspiBase
     {
-        public string GetStatisticDeviceDataAsJson(object refIdString)
+        public string? GetStatisticDeviceDataAsJson(object refIdString)
         {
             var refId = Hspi.Utils.TypeConverter.TryGetFromObject<int>(refIdString)
                 ?? throw new ArgumentException(null, nameof(refIdString));
 
-            return StatisticsDevice.GetDataFromFeatureAsJson(HomeSeerSystem, refId);
+            if (!HomeSeerSystem.IsRefDevice(refId))
+            {
+                // data is stored in feature
+                return StatisticsDevice.GetDataFromFeatureAsJson(HomeSeerSystem, refId);
+            }
+
+            return null;
         }
 
         public List<int> GetTrackedDeviceList()

@@ -75,7 +75,7 @@ namespace Hspi
                 {
                     ["ref"] = refId,
                     ["records"] = recordCounts.TryGetValue((long)refId, out var count) ? count : 0,
-                    ["monitored"] = featureCachedDataProvider.IsMonitoried(refId),
+                    ["monitorableType"] = featureCachedDataProvider.IsMonitorableTypeFeature(refId),
                     ["tracked"] = settingsPages.IsTracked(refId)
                 };
                 result.Add(row);
@@ -87,7 +87,7 @@ namespace Hspi
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
         {
             CheckNotNull(featureCachedDataProvider);
-            bool hasPage = featureCachedDataProvider.IsMonitoried(devOrFeatRef) || IsThisPlugInFeature(devOrFeatRef);
+            bool hasPage = featureCachedDataProvider.IsMonitorableTypeFeature(devOrFeatRef) || IsThisPlugInFeature(devOrFeatRef);
             return hasPage;
         }
 
