@@ -1095,7 +1095,7 @@ namespace HSPI_HistoricalRecordsTest
             }
         }
 
-        private int newRefId = 9485;
+        private int newRefId = 948504;
         private readonly ConcurrentDictionary<int, NewFeatureData> createdFeatures = new();
         private readonly ConcurrentDictionary<int, NewDeviceData> createdDevices = new();
         private readonly string appPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());

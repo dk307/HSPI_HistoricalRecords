@@ -165,6 +165,8 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
+            TestHelper.WaitTillTotalRecords(plugIn, trackedDeviceRefId, 1);
+
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
                                            trackedDeviceRefId, 10, "10", aTime.AddMinutes(-10), 1);

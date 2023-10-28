@@ -30,6 +30,8 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
+            TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1);
+
             for (var i = 0; i < 100; i++)
             {
                 TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
