@@ -17,7 +17,7 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.SetupFeature(refId, 1.1);
             using (PlugInLifeCycle plugInLifeCycle1 = new(plugin1))
             {
-                TestHelper.WaitTillTotalRecords(plugin1, refId, 1);
+                Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin1, refId, 1));
             }
 
             mockHsController.RemoveFeatureOrDevice(refId);
@@ -26,7 +26,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using (PlugInLifeCycle plugInLifeCycle2 = new(plugin2))
             {
-                TestHelper.WaitTillTotalRecords(plugin2, refId, 0);
+                Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin2, refId, 0));
             }
         }
     }
