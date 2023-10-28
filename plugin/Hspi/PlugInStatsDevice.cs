@@ -81,7 +81,8 @@ namespace Hspi
             var refId = GetJsonValue<int>(jsonData, "ref");
             var dataJObject = GetJsonValue<JObject>(jsonData, "data");
             JsonSerializer serializer = new();
-            var statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ?? throw new ArgumentException(nameof(data));
+            var statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ??
+                                       throw new ArgumentException(nameof(data));
 
             StatisticsDevice.EditDevice(HomeSeerSystem, refId, statisticsDeviceData);
 

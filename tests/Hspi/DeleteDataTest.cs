@@ -24,10 +24,8 @@ namespace HSPI_HistoricalRecordsTest
             var plugin2 = TestHelper.CreatePlugInMock();
             TestHelper.UpdatePluginHsGet(plugin2, mockHsController);
 
-            using (PlugInLifeCycle plugInLifeCycle2 = new(plugin2))
-            {
-                Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin2, refId, 0));
-            }
+            using PlugInLifeCycle plugInLifeCycle2 = new(plugin2);
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin2, refId, 0));
         }
     }
 }
