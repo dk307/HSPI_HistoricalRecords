@@ -111,11 +111,10 @@ namespace HSPI_HistoricalRecordsTest
             var added = new List<RecordData>();
             for (int i = 0; i < addedRecordCount; i++)
             {
-                mockHsController.SetupDevOrFeatureValue(refId, EProperty.Value, (double)i);
-                mockHsController.SetupDevOrFeatureValue(refId, EProperty.DisplayedStatus, i.ToString());
-                mockHsController.SetupDevOrFeatureValue(refId, EProperty.LastChange, aTime.AddSeconds(i));
-                added.Add(TestHelper.RaiseHSEventAndWait(plugin, Constants.HSEvent.VALUE_CHANGE,
-                                                         mockHsController, refId, i + 1));
+                added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                                         refId,
+                                                         i, i.ToString(), aTime.AddSeconds(i),
+                                                         i + 1));
             }
 
             Assert.AreEqual(plugin.Object.GetTotalRecords(refId), addedRecordCount);

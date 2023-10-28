@@ -87,8 +87,8 @@ namespace HSPI_HistoricalRecordsTest
             return (mockPlugin, mockHsController);
         }
 
-        public static void CreateMockPlugInAndHsController(out Mock<PlugIn> plugin,
-                                                           out Mock<IHsController> mockHsController)
+        public static void CreateMockPlugInAndMoqHsController(out Mock<PlugIn> plugin,
+                                                              out Mock<IHsController> mockHsController)
         {
             plugin = TestHelper.CreatePlugInMock();
             mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -198,6 +198,24 @@ namespace HSPI_HistoricalRecordsTest
             RaiseHSEvent(plugin, mockHsController, eventType, feature, value, status, lastChange);
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, expectedCount));
             return new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
+        }
+
+        public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
+                                                    FakeHSController mockHsController,
+                                                    Constants.HSEvent eventType,
+                                                    int refId,
+                                                    double value,
+                                                    string status,
+                                                    DateTime lastChange,
+                                                    int expectedCount)
+        {
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.Value, value);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.DisplayedStatus, status);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.LastChange, lastChange);
+
+            RaiseHSEvent(plugin, eventType, refId);
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, expectedCount));
+            return new RecordData(refId, value, status, ((DateTimeOffset)lastChange).ToUnixTimeSeconds());
         }
 
         public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
@@ -318,6 +336,7 @@ namespace HSPI_HistoricalRecordsTest
                 mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, change.Key)).Returns(change.Value);
                 feature.Changes.Add(change.Key, change.Value);
             }
+
             return feature;
         }
 
@@ -346,6 +365,7 @@ namespace HSPI_HistoricalRecordsTest
                 Thread.Yield();
                 result = func();
             }
+
             return result;
         }
 

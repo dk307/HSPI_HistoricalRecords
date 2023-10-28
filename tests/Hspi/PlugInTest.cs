@@ -183,7 +183,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetJuiDeviceConfigPageErrored()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndMoqHsController(out var plugin, out var mockHsController);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
@@ -246,7 +246,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void InitFirstTime()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndMoqHsController(out var plugin, out var mockHsController);
 
             Assert.IsTrue(plugin.Object.InitIO());
             plugin.Object.ShutdownIO();

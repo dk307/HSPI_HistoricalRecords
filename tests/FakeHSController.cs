@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -29,6 +31,10 @@ namespace HSPI_HistoricalRecordsTest
         DateTime IHsController.Sunrise => throw new NotImplementedException();
 
         DateTime IHsController.Sunset => throw new NotImplementedException();
+
+        public IReadOnlyDictionary<int, NewDeviceData> CreatedDevices => createdDevices;
+
+        public IReadOnlyDictionary<int, NewFeatureData> CreatedFeatures => createdFeatures;
 
         void IHsController.AddActionRunScript(int @ref, string script, string method, string parms) => throw new NotImplementedException();
 
@@ -69,7 +75,7 @@ namespace HSPI_HistoricalRecordsTest
                 throw new NotImplementedException();
             }
 
-            iniFile.Remove(sectionName);
+            iniFile.TryRemove(sectionName, out var _);
         }
 
         void IHsController.ClearStatusControlsByRef(int featRef)
@@ -89,7 +95,11 @@ namespace HSPI_HistoricalRecordsTest
 
         int IHsController.CreateDevice(NewDeviceData deviceData)
         {
-            throw new NotImplementedException();
+            int refId = newRefId++;
+            createdDevices[refId] = deviceData;
+            deviceOrFeatureData[refId] = new ConcurrentDictionary<EProperty, object>(deviceData.Device);
+            SetupDevOrFeatureValue(refId, EProperty.Relationship, ERelationship.Feature);
+            return refId;
         }
 
         int IHsController.CreateEventWithNameInGroup(string name, string group)
@@ -99,7 +109,11 @@ namespace HSPI_HistoricalRecordsTest
 
         int IHsController.CreateFeatureForDevice(NewFeatureData featureData)
         {
-            throw new NotImplementedException();
+            int refId = newRefId++;
+            createdFeatures[refId] = featureData;
+            deviceOrFeatureData[refId] = new ConcurrentDictionary<EProperty, object>(featureData.Feature);
+            SetupDevOrFeatureValue(refId, EProperty.Relationship, ERelationship.Feature);
+            return refId;
         }
 
         string IHsController.CreateVar(string name)
@@ -426,7 +440,7 @@ namespace HSPI_HistoricalRecordsTest
 
         HsFeature IHsController.GetFeatureByRef(int featRef)
         {
-            throw new NotImplementedException();
+            return GetFeature(featRef);
         }
 
         List<string> IHsController.GetFirstLocationList()
@@ -453,7 +467,7 @@ namespace HSPI_HistoricalRecordsTest
 
             if (iniFile.TryGetValue(section, out var iniSection))
             {
-                return iniSection;
+                return iniSection.ToDictionary(x => x.Key, x => x.Value);
             }
 
             return new Dictionary<string, string>();
@@ -527,6 +541,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 return value;
             }
+
             Assert.Fail();
             return null;
         }
@@ -550,6 +565,7 @@ namespace HSPI_HistoricalRecordsTest
 
                     return true;
                 }
+
                 return false;
             }).Select(x => x.Key).ToList();
         }
@@ -681,6 +697,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 return (ERelationship)relationship == ERelationship.Device;
             }
+
             return false;
         }
 
@@ -780,6 +797,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 throw new NotImplementedException();
             }
+
             return true;
         }
 
@@ -860,7 +878,7 @@ namespace HSPI_HistoricalRecordsTest
 
         public void SetipIniSettingsSection(string sectionName, Dictionary<string, string> settingsFromIni)
         {
-            iniFile[sectionName] = settingsFromIni;
+            iniFile[sectionName] = new ConcurrentDictionary<string, string>(settingsFromIni);
         }
 
         void IHsController.SetNameForCategoryById(string id, string name)
@@ -879,19 +897,29 @@ namespace HSPI_HistoricalRecordsTest
                                  DateTime? lastChange = null,
                                  string deviceInterface = null)
         {
-            var properties = new Dictionary<EProperty, object>() {
-                    { EProperty.Ref, deviceRefId },
-                    { EProperty.DeviceType, new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Device } },
-                    { EProperty.Relationship, ERelationship.Device },
-                    { EProperty.StatusGraphics, new List<StatusGraphic>() },
-                    { EProperty.PlugExtraData, new PlugExtraData() },
-                    { EProperty.Interface, deviceInterface ?? "Z-Wave" },
-                    { EProperty.Value, value },
-                    { EProperty.DisplayedStatus, displayString },
-                    { EProperty.LastChange, lastChange ?? DateTime.Now },
-                };
+            var properties = new ConcurrentDictionary<EProperty, object>();
+            properties[EProperty.Ref] = deviceRefId;
+            properties[EProperty.DeviceType] = new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Device };
+            properties[EProperty.Relationship] = ERelationship.Device;
+            properties[EProperty.StatusGraphics] = new List<StatusGraphic>();
+            properties[EProperty.PlugExtraData] = new PlugExtraData();
+            properties[EProperty.Interface] = deviceInterface ?? "Z-Wave";
+            properties[EProperty.Value] = value;
+            properties[EProperty.DisplayedStatus] = displayString;
+            properties[EProperty.LastChange] = lastChange ?? new DateTime(2000, 1, 1, 1, 1, 1, DateTimeKind.Local);
 
             deviceOrFeatureData[deviceRefId] = properties;
+        }
+
+        public object GetFeatureValue(int devOrFeatRef, EProperty property)
+        {
+            if (deviceOrFeatureData.TryGetValue(devOrFeatRef, out var keyValues) &&
+                keyValues.TryGetValue(property, out var value))
+            {
+                return value;
+            }
+
+            return null;
         }
 
         public void SetupDevOrFeatureValue(int devOrFeatRef, EProperty property, object value)
@@ -902,31 +930,28 @@ namespace HSPI_HistoricalRecordsTest
             }
             else
             {
-                var dict2 = new Dictionary<EProperty, object>
-                    {
-                        { property, value }
-                    };
+                var dict2 = new ConcurrentDictionary<EProperty, object>();
+                dict2[property] = value;
                 deviceOrFeatureData[devOrFeatRef] = dict2;
             }
         }
 
         public void SetupFeature(int deviceRefId,
-                                                 double value,
+                                 double value,
                                  string displayString = null,
                                  DateTime? lastChange = null,
                                  string featureInterface = null)
         {
-            var properties = new Dictionary<EProperty, object>() {
-                    { EProperty.Ref, deviceRefId },
-                    { EProperty.DeviceType, new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Feature } },
-                    { EProperty.Relationship, ERelationship.Feature },
-                    { EProperty.StatusGraphics, new List<StatusGraphic>() },
-                    { EProperty.PlugExtraData, new PlugExtraData() },
-                    { EProperty.Interface, featureInterface ?? "Z-Wave" },
-                    { EProperty.Value, value },
-                    { EProperty.DisplayedStatus, displayString },
-                    { EProperty.LastChange, lastChange ?? DateTime.Now },
-                };
+            var properties = new ConcurrentDictionary<EProperty, object>();
+            properties[EProperty.Ref] = deviceRefId;
+            properties[EProperty.DeviceType] = new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Feature };
+            properties[EProperty.Relationship] = ERelationship.Feature;
+            properties[EProperty.StatusGraphics] = new List<StatusGraphic>();
+            properties[EProperty.PlugExtraData] = new PlugExtraData();
+            properties[EProperty.Interface] = featureInterface ?? "Z-Wave";
+            properties[EProperty.Value] = value;
+            properties[EProperty.DisplayedStatus] = displayString;
+            properties[EProperty.LastChange] = lastChange ?? new DateTime(2000, 1, 1, 1, 1, 1, DateTimeKind.Local);
 
             deviceOrFeatureData[deviceRefId] = properties;
         }
@@ -939,10 +964,8 @@ namespace HSPI_HistoricalRecordsTest
             }
             else
             {
-                var dict2 = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        { key, value }
-                    };
+                var dict2 = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                dict2[key] = value;
                 iniFile[section] = dict2;
             }
         }
@@ -1019,12 +1042,14 @@ namespace HSPI_HistoricalRecordsTest
 
         bool IHsController.UpdateFeatureValueByRef(int featRef, double value)
         {
-            throw new NotImplementedException();
+            SetupDevOrFeatureValue(featRef, EProperty.Value, value);
+            return true;
         }
 
         bool IHsController.UpdateFeatureValueStringByRef(int featRef, string value)
         {
-            throw new NotImplementedException();
+            SetupDevOrFeatureValue(featRef, EProperty.DisplayedStatus, value);
+            return true;
         }
 
         string IHsController.UpdatePlugAction(string plugId, int evRef, TrigActInfo actInfo)
@@ -1039,7 +1064,7 @@ namespace HSPI_HistoricalRecordsTest
 
         void IHsController.UpdatePropertyByRef(int devOrFeatRef, EProperty property, object value)
         {
-            throw new NotImplementedException();
+            SetupDevOrFeatureValue(devOrFeatRef, property, value);
         }
 
         string IHsController.Version()
@@ -1070,8 +1095,12 @@ namespace HSPI_HistoricalRecordsTest
             }
         }
 
+        private int newRefId = 9485;
+        private readonly ConcurrentDictionary<int, NewFeatureData> createdFeatures = new();
+        private readonly ConcurrentDictionary<int, NewDeviceData> createdDevices = new();
         private readonly string appPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        private readonly SortedDictionary<int, Dictionary<EProperty, object>> deviceOrFeatureData = new();
-        private readonly SortedDictionary<string, Dictionary<string, string>> iniFile = new(StringComparer.OrdinalIgnoreCase);
+
+        private readonly ConcurrentDictionary<int, ConcurrentDictionary<EProperty, object>> deviceOrFeatureData = new();
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> iniFile = new(StringComparer.OrdinalIgnoreCase);
     }
 }
