@@ -221,6 +221,24 @@ namespace HSPI_HistoricalRecordsTest
             return nowTime;
         }
 
+        public static void SetupStatisticsDevice(StatisticsFunction statisticsFunction,
+                                                                                                                                                          Mock<PlugIn> plugIn,
+                                          FakeHSController hsControllerMock,
+                                          DateTime aTime,
+                                          int statsDeviceRefId,
+                                          int trackedFeatureRefId)
+        {
+            Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
+            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
+
+            hsControllerMock.SetupFeature(statsDeviceRefId, 12.132, featureInterface: PlugInData.PlugInId);
+            hsControllerMock.SetupFeature(trackedFeatureRefId, 2);
+
+            PlugExtraData plugExtraData = new();
+            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeatureRefId},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDurationSeconds\":600,\"RefreshIntervalSeconds\":30}}");
+            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.PlugExtraData, plugExtraData);
+        }
+
         public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();

@@ -8,7 +8,6 @@ using HomeSeer.PluginSdk.Devices;
 using Hspi;
 using Hspi.Device;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -158,7 +157,7 @@ namespace HSPI_HistoricalRecordsTest
 
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 10;
-            SetupStatisticsDevice(statisticsFunction, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsDevice(statisticsFunction, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
@@ -203,7 +202,7 @@ namespace HSPI_HistoricalRecordsTest
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 99;
 
-            SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
@@ -238,7 +237,7 @@ namespace HSPI_HistoricalRecordsTest
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 100;
 
-            SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
@@ -285,7 +284,7 @@ namespace HSPI_HistoricalRecordsTest
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 100;
 
-            SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
@@ -322,7 +321,7 @@ namespace HSPI_HistoricalRecordsTest
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 100;
 
-            SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
@@ -337,24 +336,6 @@ namespace HSPI_HistoricalRecordsTest
 
             // not more tracking after delete
             Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
-        }
-
-        private static void SetupStatisticsDevice(StatisticsFunction statisticsFunction,
-                                                  Mock<PlugIn> plugIn,
-                                                  FakeHSController hsControllerMock,
-                                                  DateTime aTime,
-                                                  int statsDeviceRefId,
-                                                  int trackedFeatureRefId)
-        {
-            Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
-            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
-
-            hsControllerMock.SetupFeature(statsDeviceRefId, 12.132, featureInterface: PlugInData.PlugInId);
-            hsControllerMock.SetupFeature(trackedFeatureRefId, 2);
-
-            PlugExtraData plugExtraData = new();
-            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeatureRefId},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDurationSeconds\":600,\"RefreshIntervalSeconds\":30}}");
-            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.PlugExtraData, plugExtraData);
         }
 
         private readonly CancellationTokenSource cancellationTokenSource = new();

@@ -29,7 +29,7 @@ namespace Hspi
         {
             var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
 
-            var feature = HomeSeerSystem.GetFeatureByRef(refId);
+            var feature = new HsFeatureData(HomeSeerSystem, refId);
 
             List<string> displays = new()
             {
@@ -42,6 +42,25 @@ namespace Hspi
             }
 
             return displays;
+
+            static bool ShouldShowChart(HsFeatureData feature)
+            {
+                if (IsOnlyOnOffFeature(feature) && !HasAnyRangeGraphics(feature))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+            static bool IsOnlyOnOffFeature(HsFeatureData feature)
+            {
+                return feature.StatusControls.TrueForAll(x => x.ControlUse is EControlUse.On or EControlUse.Off);
+            }
+
+            static bool HasAnyRangeGraphics(HsFeatureData feature)
+            {
+                return feature.StatusGraphics.Exists(x => x.IsRange);
+            }
         }
 
         public List<object?> GetDeviceStatsForPage(object? refIdString)
@@ -149,26 +168,6 @@ namespace Hspi
             catch (Exception ex)
             {
                 throw new ArgumentException(tokenStr + " is not correct", ex);
-            }
-        }
-
-        private static bool ShouldShowChart(HsFeature feature)
-        {
-            if (IsOnlyOnOffFeature(feature) && !HasAnyRangeGraphics(feature))
-            {
-                return false;
-            }
-
-            return true;
-
-            static bool IsOnlyOnOffFeature(HsFeature feature)
-            {
-                return feature.StatusControls.Values.TrueForAll(x => x.ControlUse is EControlUse.On or EControlUse.Off);
-            }
-
-            static bool HasAnyRangeGraphics(HsFeature feature)
-            {
-                return feature.StatusGraphics.Values.Exists(x => x.IsRange);
             }
         }
 

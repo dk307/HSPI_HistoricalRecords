@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using HomeSeer.PluginSdk;
+using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HSPI_HistoricalRecordsTest
@@ -6,6 +9,26 @@ namespace HSPI_HistoricalRecordsTest
     [TestClass]
     public class DeleteDataTest
     {
+        [TestMethod]
+        public void DeleteRecordsOnTrackedFeatureDelete()
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            int refId = 10002;
+
+            hsControllerMock.SetupFeature(refId, 100);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugIn, refId, 1));
+
+            plugIn.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE,
+                                  new object[] { null, null, null, refId, 2 });
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugIn, refId, 0));
+        }
+
         [TestMethod]
         public void DeleteOrphanDataOnStart()
         {
