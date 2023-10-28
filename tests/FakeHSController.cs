@@ -14,11 +14,18 @@ using HomeSeer.PluginSdk.Events;
 using HomeSeer.PluginSdk.Logging;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Serilog.Events;
 
 namespace HSPI_HistoricalRecordsTest
 {
     internal class FakeHSController : IHsController
     {
+        public FakeHSController()
+        {
+            // log level to verbose for tests
+            SetupIniValue("Settings", SettingsPages.LoggingLevelId, ((int)LogEventLevel.Verbose).ToString());
+        }
+
         double IHsController.APIVersion => 4;
 
         int IHsController.DeviceCount => throw new NotImplementedException();
@@ -875,7 +882,7 @@ namespace HSPI_HistoricalRecordsTest
             throw new NotImplementedException();
         }
 
-        public void SetipIniSettingsSection(string sectionName, Dictionary<string, string> settingsFromIni)
+        public void SetupIniSettingsSection(string sectionName, Dictionary<string, string> settingsFromIni)
         {
             iniFile[sectionName] = new ConcurrentDictionary<string, string>(settingsFromIni);
         }

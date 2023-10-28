@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using HomeSeer.PluginSdk;
+using HomeSeer.PluginSdk.Devices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Serilog.Events;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -52,7 +55,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
-            DateTime nowTime = DateTime.Now;
+            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
 
             int ref1 = 42;
             int ref2 = 43;
@@ -78,6 +81,61 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(stats.ContainsKey("Size"));
             Assert.AreEqual("20", stats["Total records"]);
             Assert.AreEqual("20", stats["Total records from last 24 hr"]);
+        }
+
+        [TestMethod]
+        public void GetDeviceStatsForPage()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
+
+            int refId = 1110;
+            mockHsController.SetupFeature(refId, 10, "10.0 lux", lastChange: nowTime);
+
+            List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusGraphics, statusGraphics);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, 1));
+
+            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                         refId, 11, "11.0 lux", nowTime.AddMinutes(1), 2);
+
+            var list = plugin.Object.GetDeviceStatsForPage(refId).ToList();
+
+            var expected = new List<object>
+            {
+                0L,
+                -60L,
+                true,
+                1,
+                "lux"
+            };
+
+            CollectionAssert.AreEqual(expected, list);
+        }
+
+        [TestMethod]
+        public void GetFeatureRefIdsForDevice()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            mockHsController.SetupDevice(100);
+            mockHsController.SetupFeature(103, 0);
+            mockHsController.SetupFeature(101, 0);
+            mockHsController.SetupFeature(102, 0);
+
+            HashSet<int> value = new() { 103, 101, 102 };
+            mockHsController.SetupDevOrFeatureValue(100,
+                                                    HomeSeer.PluginSdk.Devices.EProperty.AssociatedDevices,
+                                                    value);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            var list = plugin.Object.GetFeatureRefIdsForDevice(100).ToList();
+            CollectionAssert.AreEqual(value.ToList(), list);
         }
     }
 }

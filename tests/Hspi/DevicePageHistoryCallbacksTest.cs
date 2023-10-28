@@ -221,10 +221,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
-            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
-            plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
-            DateTime nowTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
-            mockClock.Setup(x => x.Now).Returns(nowTime);
+            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
 
             int refId = 42;
             mockHsController.SetupFeature(refId, 1.1, displayString: "1.1", lastChange: nowTime.AddSeconds(-100));

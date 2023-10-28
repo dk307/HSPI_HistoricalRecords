@@ -18,7 +18,7 @@ namespace HSPI_HistoricalRecordsTest
         public void GetRecordsWithoutGrouping(FillStrategy fillStrategy)
         {
             var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin, new Dictionary<string, string>());
+            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
 
             DateTime time = DateTime.Now;
 
@@ -61,7 +61,7 @@ namespace HSPI_HistoricalRecordsTest
         public void GetRecordsWithGroupingAndLOCF()
         {
             var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin, new Dictionary<string, string>());
+            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
 
             DateTime time = DateTime.Now;
 
@@ -117,7 +117,7 @@ namespace HSPI_HistoricalRecordsTest
         public void GraphCallbackArgumentChecks(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();
-            TestHelper.SetupHsControllerAndSettings2(plugin, new Dictionary<string, string>());
+            TestHelper.SetupHsControllerAndSettings2(plugin);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 

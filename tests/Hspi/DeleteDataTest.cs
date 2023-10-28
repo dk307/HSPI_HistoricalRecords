@@ -10,7 +10,7 @@ namespace HSPI_HistoricalRecordsTest
         public void DeleteOrphanDataOnStart()
         {
             var plugin1 = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin1, new Dictionary<string, string>());
+            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin1);
 
             int refId = 1000;
 

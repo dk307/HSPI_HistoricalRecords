@@ -28,7 +28,7 @@ namespace HSPI_HistoricalRecordsTest
         public void AddDevice(StatisticsFunction function)
         {
             var plugIn = TestHelper.CreatePlugInMock();
-            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn, new Dictionary<string, string>());
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             int trackedRefId = 1039423;
             hsControllerMock.SetupFeature(trackedRefId, 1.132);
@@ -129,7 +129,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var plugIn = TestHelper.CreatePlugInMock();
 
-            TestHelper.SetupHsControllerAndSettings2(plugIn, new Dictionary<string, string>());
+            TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
@@ -152,7 +152,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn, new Dictionary<string, string>());
+                TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
@@ -196,7 +196,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn, new Dictionary<string, string>());
+                TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
@@ -231,7 +231,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn, new Dictionary<string, string>());
+                TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
@@ -278,7 +278,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn, new Dictionary<string, string>());
+                TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
@@ -315,7 +315,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn, new Dictionary<string, string>());
+                TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 

@@ -90,7 +90,7 @@ namespace HSPI_HistoricalRecordsTest
                                                             out FakeHSController mockHsController)
         {
             plugin = TestHelper.CreatePlugInMock();
-            mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin, new Dictionary<string, string>());
+            mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
         }
 
         public static void CreateMockPlugInAndMoqHsController(out Mock<PlugIn> plugin,
@@ -201,20 +201,24 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         public static FakeHSController SetupHsControllerAndSettings2(Mock<PlugIn> mockPlugin,
-                                                                     Dictionary<string, string> settingsFromIni)
+                                                                     Dictionary<string, string> settingsFromIni = null)
         {
             var fakeHsController = new FakeHSController();
-            fakeHsController.SetipIniSettingsSection("Settings", settingsFromIni);
+            if (settingsFromIni != null)
+            {
+                fakeHsController.SetupIniSettingsSection("Settings", settingsFromIni);
+            }
             UpdatePluginHsGet(mockPlugin, fakeHsController);
             return fakeHsController;
         }
 
-        public static void UpdatePluginHsGet(Mock<PlugIn> mockPlugin, FakeHSController fakeHsController)
+        public static DateTime SetUpMockSystemClockForCurrentTime(Mock<PlugIn> plugin)
         {
-            // set mock homeseer via reflection
-            Type plugInType = typeof(AbstractPlugin);
-            var method = plugInType.GetMethod("set_HomeSeerSystem", BindingFlags.NonPublic | BindingFlags.SetProperty | BindingFlags.Instance);
-            method.Invoke(mockPlugin.Object, new object[] { fakeHsController as IHsController });
+            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
+            plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
+            DateTime nowTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+            mockClock.Setup(x => x.Now).Returns(nowTime);
+            return nowTime;
         }
 
         public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)
@@ -234,6 +238,14 @@ namespace HSPI_HistoricalRecordsTest
         public static bool TimedWaitTillTrue(Func<bool> func)
         {
             return TimedWaitTillTrue(func, TimeSpan.FromSeconds(30));
+        }
+
+        public static void UpdatePluginHsGet(Mock<PlugIn> mockPlugin, FakeHSController fakeHsController)
+        {
+            // set mock homeseer via reflection
+            Type plugInType = typeof(AbstractPlugin);
+            var method = plugInType.GetMethod("set_HomeSeerSystem", BindingFlags.NonPublic | BindingFlags.SetProperty | BindingFlags.Instance);
+            method.Invoke(mockPlugin.Object, new object[] { fakeHsController as IHsController });
         }
 
         public static HtmlAgilityPack.HtmlDocument VerifyHtmlValid(string html)
