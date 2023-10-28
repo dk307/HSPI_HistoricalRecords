@@ -7,7 +7,6 @@ using System.Reflection;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Identification;
 using HomeSeer.PluginSdk.Logging;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -148,32 +147,6 @@ namespace HSPI_HistoricalRecordsTest
             return result;
         }
 
-        public static void RaiseHSEvent(Mock<PlugIn> plugin, Mock<IHsController> mockHsController, Constants.HSEvent eventType, HsFeature feature, double value, string status, DateTime lastChange)
-        {
-            feature.Changes[EProperty.Value] = value;
-            feature.Changes[EProperty.DisplayedStatus] = status;
-            feature.Changes[EProperty.LastChange] = lastChange;
-
-            RaiseHSEvent(plugin, mockHsController, feature, eventType);
-        }
-
-        public static void RaiseHSEvent(Mock<PlugIn> plugin, Mock<IHsController> mockHsController, HsFeature feature, Constants.HSEvent eventType)
-        {
-            foreach (var change in feature.Changes)
-            {
-                mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, change.Key)).Returns(change.Value);
-            }
-
-            if (eventType == Constants.HSEvent.VALUE_CHANGE)
-            {
-                plugin.Object.HsEvent(Constants.HSEvent.VALUE_CHANGE, new object[] { null, null, null, null, feature.Ref });
-            }
-            else
-            {
-                plugin.Object.HsEvent(Constants.HSEvent.STRING_CHANGE, new object[] { null, null, null, feature.Ref });
-            }
-        }
-
         public static void RaiseHSEvent(Mock<PlugIn> plugin, Constants.HSEvent eventType, int refId)
         {
             if (eventType == Constants.HSEvent.VALUE_CHANGE)
@@ -184,20 +157,6 @@ namespace HSPI_HistoricalRecordsTest
             {
                 plugin.Object.HsEvent(Constants.HSEvent.STRING_CHANGE, new object[] { null, null, null, refId });
             }
-        }
-
-        public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
-                                                     Mock<IHsController> mockHsController,
-                                                     Constants.HSEvent eventType,
-                                                     HsFeature feature,
-                                                     double value,
-                                                     string status,
-                                                     DateTime lastChange,
-                                                     int expectedCount)
-        {
-            RaiseHSEvent(plugin, mockHsController, eventType, feature, value, status, lastChange);
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, expectedCount));
-            return new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
         }
 
         public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
@@ -216,69 +175,6 @@ namespace HSPI_HistoricalRecordsTest
             RaiseHSEvent(plugin, eventType, refId);
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, expectedCount));
             return new RecordData(refId, value, status, ((DateTimeOffset)lastChange).ToUnixTimeSeconds());
-        }
-
-        public static RecordData RaiseHSEventAndWait(Mock<PlugIn> plugin,
-                                                     Constants.HSEvent eventType,
-                                                     FakeHSController mockHsController,
-                                                     int refId,
-                                                     int expectedCount)
-        {
-            var feature = mockHsController.GetFeature(refId);
-            RaiseHSEvent(plugin, eventType, refId);
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, expectedCount));
-            return new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
-        }
-
-        public static void SetupEPropertySet(Mock<IHsController> mockHsController,
-                                             SortedDictionary<int, Dictionary<EProperty, object>> deviceOrFeatureData,
-                                             Action<int, EProperty, object> updateValueCallback = null)
-        {
-            mockHsController.Setup(x => x.UpdateFeatureValueByRef(It.IsAny<int>(), It.IsAny<double>()))
-                .Returns((int devOrFeatRef, double value) =>
-                {
-                    AddValue(devOrFeatRef, EProperty.Value, value);
-                    updateValueCallback?.Invoke(devOrFeatRef, EProperty.Value, value);
-                    return true;
-                });
-
-            mockHsController.Setup(x => x.UpdateFeatureValueStringByRef(It.IsAny<int>(), It.IsAny<string>()))
-                .Returns((int devOrFeatRef, string value) =>
-                {
-                    AddValue(devOrFeatRef, EProperty.StatusString, value);
-                    updateValueCallback?.Invoke(devOrFeatRef, EProperty.StatusString, value);
-                    return true;
-                });
-
-            mockHsController.Setup(x => x.UpdatePropertyByRef(It.IsAny<int>(), It.IsAny<EProperty>(), It.IsAny<object>()))
-                .Callback((int devOrFeatRef, EProperty property, object value) =>
-                {
-                    AddValue(devOrFeatRef, property, value);
-                    updateValueCallback?.Invoke(devOrFeatRef, property, value);
-                });
-
-            mockHsController.Setup(x => x.UpdatePropertyByRef(It.IsAny<int>(), It.IsAny<EProperty>(), It.IsAny<object>()))
-                 .Callback((int devOrFeatRef, EProperty property, object value) =>
-                 {
-                     AddValue(devOrFeatRef, property, value);
-                     updateValueCallback?.Invoke(devOrFeatRef, property, value);
-                 });
-
-            void AddValue(int devOrFeatRef, EProperty property, object value)
-            {
-                if (deviceOrFeatureData.TryGetValue(devOrFeatRef, out var dict))
-                {
-                    dict[property] = value;
-                }
-                else
-                {
-                    var dict2 = new Dictionary<EProperty, object>
-                    {
-                        { property, value }
-                    };
-                    deviceOrFeatureData[devOrFeatRef] = dict2;
-                }
-            }
         }
 
         public static Mock<IHsController> SetupHsControllerAndSettings(Mock<PlugIn> mockPlugin,
@@ -317,42 +213,6 @@ namespace HSPI_HistoricalRecordsTest
             method.Invoke(mockPlugin.Object, new object[] { fakeHsController as IHsController });
 
             return fakeHsController;
-        }
-
-        public static HsFeature SetupHsFeature(Mock<IHsController> mockHsController, int deviceRefId,
-                                                IDictionary<EProperty, object> changes)
-        {
-            HsFeature feature = new(deviceRefId);
-
-            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.Interface)).Returns("Z-Wave");
-            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.DeviceType)).Returns(new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Feature });
-            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.Relationship)).Returns(ERelationship.Feature);
-            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.StatusGraphics)).Returns(new List<StatusGraphic>());
-            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, EProperty.PlugExtraData)).Returns(new PlugExtraData());
-            mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Returns(feature);
-
-            foreach (var change in changes)
-            {
-                mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, change.Key)).Returns(change.Value);
-                feature.Changes.Add(change.Key, change.Value);
-            }
-
-            return feature;
-        }
-
-        public static HsFeature SetupHsFeature(Mock<IHsController> mockHsController,
-                                int deviceRefId,
-                                double value,
-                                string displayString = null,
-                                DateTime? lastChange = null,
-                                string featureInterface = null)
-        {
-            return SetupHsFeature(mockHsController, deviceRefId, new Dictionary<EProperty, object>() {
-                    { EProperty.Interface, featureInterface },
-                    { EProperty.Value, value },
-                    { EProperty.DisplayedStatus, displayString },
-                    { EProperty.LastChange, lastChange ?? DateTime.Now },
-                });
         }
 
         public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)
