@@ -204,15 +204,17 @@ namespace HSPI_HistoricalRecordsTest
                                                                      Dictionary<string, string> settingsFromIni)
         {
             var fakeHsController = new FakeHSController();
-
             fakeHsController.SetipIniSettingsSection("Settings", settingsFromIni);
+            UpdatePluginHsGet(mockPlugin, fakeHsController);
+            return fakeHsController;
+        }
 
+        public static void UpdatePluginHsGet(Mock<PlugIn> mockPlugin, FakeHSController fakeHsController)
+        {
             // set mock homeseer via reflection
             Type plugInType = typeof(AbstractPlugin);
             var method = plugInType.GetMethod("set_HomeSeerSystem", BindingFlags.NonPublic | BindingFlags.SetProperty | BindingFlags.Instance);
             method.Invoke(mockPlugin.Object, new object[] { fakeHsController as IHsController });
-
-            return fakeHsController;
         }
 
         public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)

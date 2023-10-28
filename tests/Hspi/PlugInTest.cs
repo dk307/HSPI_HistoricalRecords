@@ -122,6 +122,48 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [DataTestMethod]
+        [DataRow("96%", "%")]
+        [DataRow("96 %", "%")]
+        [DataRow("-96 W", "W")]
+        [DataRow("93dkfe6 W", null)]
+        [DataRow("96 kW hours", "kW hours")]
+        [DataRow("96 F", "F")]
+        [DataRow("96234857", null)]
+        [DataRow("apple", null)]
+        public void GetFeatureUnitForDifferentTypes(string displayStatus, string unit)
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            mockHsController.SetupFeature(100, 0);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            mockHsController.SetupDevOrFeatureValue(100, EProperty.DisplayedStatus, displayStatus);
+            var unitFound = plugin.Object.GetFeatureUnit(100);
+            Assert.AreEqual(unit, unitFound);
+        }
+
+        [TestMethod]
+        public void GetJuiDeviceConfigPageErrored()
+        {
+            TestHelper.CreateMockPlugInAndMoqHsController(out var plugin, out var mockHsController);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            int deviceRefId = 10;
+
+            string errorMessage = "sdfsd dfgdfg erter";
+            mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Throws(new Exception(errorMessage));
+
+            string pageJson = plugin.Object.GetJuiDeviceConfigPage(deviceRefId);
+
+            var result = (JObject)JsonConvert.DeserializeObject(pageJson);
+
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result["views"][0]["value"], errorMessage);
+        }
+
+        [DataTestMethod]
         [DataRow(PlugInData.PlugInId, "editdevice")]
         [DataRow("", "devicehistoricalrecords")]
         public void GetJuiDeviceConfigPageForDevice(string deviceInterface, string page)
@@ -181,26 +223,6 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void GetJuiDeviceConfigPageErrored()
-        {
-            TestHelper.CreateMockPlugInAndMoqHsController(out var plugin, out var mockHsController);
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-
-            int deviceRefId = 10;
-
-            string errorMessage = "sdfsd dfgdfg erter";
-            mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Throws(new Exception(errorMessage));
-
-            string pageJson = plugin.Object.GetJuiDeviceConfigPage(deviceRefId);
-
-            var result = (JObject)JsonConvert.DeserializeObject(pageJson);
-
-            Assert.IsNotNull(result);
-            Assert.IsNotNull(result["views"][0]["value"], errorMessage);
-        }
-
-        [TestMethod]
         public void GetPrecision()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -221,28 +243,6 @@ namespace HSPI_HistoricalRecordsTest
 
             var precision2 = plugin.Object.GetFeaturePrecision(refId);
             Assert.AreEqual(1, precision2);
-        }
-
-        [DataTestMethod]
-        [DataRow("96%", "%")]
-        [DataRow("96 %", "%")]
-        [DataRow("-96 W", "W")]
-        [DataRow("93dkfe6 W", null)]
-        [DataRow("96 kW hours", "kW hours")]
-        [DataRow("96 F", "F")]
-        [DataRow("96234857", null)]
-        [DataRow("apple", null)]
-        public void GetFeatureUnitForDifferentTypes(string displayStatus, string unit)
-        {
-            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
-
-            mockHsController.SetupFeature(100, 0);
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-
-            mockHsController.SetupDevOrFeatureValue(100, EProperty.DisplayedStatus, displayStatus);
-            var unitFound = plugin.Object.GetFeatureUnit(100);
-            Assert.AreEqual(unit, unitFound);
         }
 
         [TestMethod]
