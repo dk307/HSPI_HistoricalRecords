@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
@@ -12,7 +11,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Nito.AsyncEx;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -165,7 +163,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
-            TestHelper.WaitTillTotalRecords(plugIn, trackedDeviceRefId, 1);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId, 1);
 
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
@@ -188,23 +186,9 @@ namespace HSPI_HistoricalRecordsTest
                     break;
             }
 
-            WaitTillExpectedValue(hsControllerMock, statsDeviceRefId, ExpectedValue);
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsDeviceRefId, ExpectedValue);
 
             Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsDeviceRefId, EProperty.InvalidValue));
-        }
-
-        private static void WaitTillExpectedValue(FakeHSController hsControllerMock, int statsDeviceRefId, double expectedValue)
-        {
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
-            {
-                var value = hsControllerMock.GetFeatureValue(statsDeviceRefId, EProperty.Value);
-                if (value is double doubleValue)
-                {
-                    return doubleValue == expectedValue;
-                }
-
-                return false;
-            }));
         }
 
         //[TestMethod]

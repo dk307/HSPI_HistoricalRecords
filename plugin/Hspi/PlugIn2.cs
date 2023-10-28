@@ -117,6 +117,12 @@ namespace Hspi
             return count;
         }
 
+        internal long DeleteAllRecords(int refId)
+        {
+            var count = Collector.DeleteAllRecordsForRef(refId).WaitAndUnwrapException(ShutdownCancellationToken);
+            return count;
+        }
+
         internal bool IsFeatureTracked(int refId)
         {
             CheckNotNull(settingsPages);

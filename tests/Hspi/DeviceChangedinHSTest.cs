@@ -24,11 +24,11 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            TestHelper.WaitTillTotalRecords(plugin, refId, 1);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
 
             DateTime now = DateTime.Now;
             var data = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, eventType, refId,
-                                                      100, displayStatus, now, 2);
+                                                      100, displayStatus, now, 1);
 
             Assert.AreEqual(100, data.DeviceValue);
             Assert.AreEqual(expectedString, data.DeviceString);
@@ -89,7 +89,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            TestHelper.WaitTillTotalRecords(plugin, refId, 1);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
 
             mockHsController.SetupDevOrFeatureValue(refId, EProperty.Value, 2.34);
             mockHsController.SetupDevOrFeatureValue(refId, EProperty.DisplayedStatus, "2.34");
@@ -156,7 +156,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, deviceRefId, 1);
 
             // disable tracking
             plugin.Object.PostBackProc("updatedevicesettings", $"{{\"refId\":\"{deviceRefId}\",\"tracked\":0}}", string.Empty, 0);
@@ -170,7 +170,7 @@ namespace HSPI_HistoricalRecordsTest
 
             // this is not a good test as there is no good event to wait to ensure nothing was recorded
 
-            Assert.AreEqual(1, plugin.Object.GetTotalRecords(deviceRefId));
+            Assert.AreEqual(0, plugin.Object.GetTotalRecords(deviceRefId));
         }
     }
 }

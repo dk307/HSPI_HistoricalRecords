@@ -87,18 +87,18 @@ namespace HSPI_HistoricalRecordsTest
             return (mockPlugin, mockHsController);
         }
 
-        public static void CreateMockPlugInAndMoqHsController(out Mock<PlugIn> plugin,
-                                                              out Mock<IHsController> mockHsController)
-        {
-            plugin = TestHelper.CreatePlugInMock();
-            mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
-        }
-
         public static void CreateMockPlugInAndHsController2(out Mock<PlugIn> plugin,
                                                             out FakeHSController mockHsController)
         {
             plugin = TestHelper.CreatePlugInMock();
             mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin, new Dictionary<string, string>());
+        }
+
+        public static void CreateMockPlugInAndMoqHsController(out Mock<PlugIn> plugin,
+                                                                      out Mock<IHsController> mockHsController)
+        {
+            plugin = TestHelper.CreatePlugInMock();
+            mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
         }
 
         public static Mock<ISystemClock> CreateMockSystemClock(Mock<PlugIn> plugIn)
@@ -380,6 +380,27 @@ namespace HSPI_HistoricalRecordsTest
             htmlDocument.LoadHtml(html);
             Assert.AreEqual(0, htmlDocument.ParseErrors.Count());
             return htmlDocument;
+        }
+
+        public static void WaitForRecordCountAndDeleteAll(Mock<PlugIn> plugIn, int trackedDeviceRefId, int count)
+        {
+            TestHelper.WaitTillTotalRecords(plugIn, trackedDeviceRefId, count);
+            Assert.AreEqual(count, plugIn.Object.DeleteAllRecords(trackedDeviceRefId));
+        }
+
+        public static void WaitTillExpectedValue(FakeHSController hsControllerMock,
+                                                  int statsDeviceRefId, double expectedValue)
+        {
+            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            {
+                var value = hsControllerMock.GetFeatureValue(statsDeviceRefId, EProperty.Value);
+                if (value is double doubleValue)
+                {
+                    return doubleValue == expectedValue;
+                }
+
+                return false;
+            }));
         }
 
         public static bool WaitTillTotalRecords(Mock<PlugIn> plugin, int refId, long count)

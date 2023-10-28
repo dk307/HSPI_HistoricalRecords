@@ -30,7 +30,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, deviceRefId, 1);
 
             for (var i = 0; i < 100; i++)
             {
