@@ -236,6 +236,8 @@ namespace HSPI_HistoricalRecordsTest
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
+            mockHsController.SetupFeature(100, 0);
+
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             mockHsController.SetupDevOrFeatureValue(100, EProperty.DisplayedStatus, displayStatus);

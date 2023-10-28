@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -143,7 +142,7 @@ namespace HSPI_HistoricalRecordsTest
 
         bool IHsController.DeleteDevice(int devRef)
         {
-            throw new NotImplementedException();
+            return deviceOrFeatureData.TryRemove(devRef, out var _);
         }
 
         bool IHsController.DeleteDevicesByInterface(string interfaceName)
@@ -158,7 +157,7 @@ namespace HSPI_HistoricalRecordsTest
 
         bool IHsController.DeleteFeature(int featRef)
         {
-            throw new NotImplementedException();
+            return deviceOrFeatureData.TryRemove(featRef, out var _);
         }
 
         bool IHsController.DeleteImageFile(string targetFile)
@@ -511,7 +510,7 @@ namespace HSPI_HistoricalRecordsTest
 
         string IHsController.GetNameByRef(int devOrFeatRef)
         {
-            throw new NotImplementedException();
+            return (string)GetFeatureValue(devOrFeatRef, EProperty.Name);
         }
 
         int IHsController.GetOsType()
@@ -930,10 +929,13 @@ namespace HSPI_HistoricalRecordsTest
             }
             else
             {
-                var dict2 = new ConcurrentDictionary<EProperty, object>();
-                dict2[property] = value;
-                deviceOrFeatureData[devOrFeatRef] = dict2;
+                throw new Exception($"{devOrFeatRef} not setup");
             }
+        }
+
+        public bool RemoveFeatureOrDevice(int devOrDeatRef)
+        {
+            return deviceOrFeatureData.TryRemove(devOrDeatRef, out var _);
         }
 
         public void SetupFeature(int deviceRefId,

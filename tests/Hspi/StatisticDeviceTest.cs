@@ -317,35 +317,34 @@ namespace HSPI_HistoricalRecordsTest
         //    StringAssert.Contains((string)result2["error"], $"Device/Feature {trackedFeature.Ref} not a plugin feature");
         //}
 
-        //[TestMethod]
-        //public void StatisticsDeviceIsDeleted()
-        //{
-        //    var plugIn = TestHelper.CreatePlugInMock();
-        //    var hsControllerMock =
-        //        TestHelper.SetupHsControllerAndSettings(plugIn, new Dictionary<string, string>());
+        [TestMethod]
+        public void StatisticsDeviceIsDeleted()
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock =
+                TestHelper.SetupHsControllerAndSettings2(plugIn, new Dictionary<string, string>());
 
-        //    DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
-        //    int statsDeviceRefId = 1000;
-        //    AsyncManualResetEvent updated = new();
+            int statsDeviceRefId = 1000;
+            int trackedDeviceRefId = 100;
 
-        //    SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
-        //                          statsDeviceRefId, updated, out var statsFeature, out var trackedFeature,
-        //                          out var _);
+            SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, trackedDeviceRefId);
 
-        //    using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
-        //    Assert.IsTrue(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() => plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
 
-        //    hsControllerMock.Setup(x => x.GetRefsByInterface(PlugInData.PlugInId, It.IsAny<bool>())).Returns(new List<int>());
-        //    plugIn.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE,
-        //                          new object[] { null, null, null, statsDeviceRefId, 2 });
+            Assert.IsTrue(hsControllerMock.RemoveFeatureOrDevice(statsDeviceRefId));
+            plugIn.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE,
+                                  new object[] { null, null, null, statsDeviceRefId, 2 });
 
-        //    TestHelper.TimedWaitTillTrue(() => !plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() => !plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
 
-        //    // not more tracking after delete
-        //    Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
-        //}
+            // not more tracking after delete
+            Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+        }
 
         private static void SetupStatisticsDevice(StatisticsFunction statisticsFunction, Mock<PlugIn> plugIn,
                                                   FakeHSController hsControllerMock,
