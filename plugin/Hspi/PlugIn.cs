@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
@@ -37,7 +39,7 @@ namespace Hspi
 
         public IDictionary<string, string> GetDatabaseStats()
         {
-            return Collector.GetDatabaseStats();
+            return Collector.GetDatabaseStats().WaitAndUnwrapException();
         }
 
         public override string GetJuiDeviceConfigPage(int devOrFeatRef)
@@ -59,15 +61,35 @@ namespace Hspi
             }
         }
 
-        public IList<KeyValuePair<long, long>> GetTop10RecordsStats()
+        public List<Dictionary<string, object>> GetAllDevicesProperties()
         {
-            return Collector.GetTop10RecordsStats();
+            var recordCounts = Collector.GetRecordsWithCount(int.MaxValue)
+                                        .WaitAndUnwrapException()
+                                        .ToDictionary(x => x.Key, x => x.Value);
+
+            CheckNotNull(featureCachedDataProvider);
+            CheckNotNull(settingsPages);
+
+            List<Dictionary<string, object>> result = new();
+            foreach (var refId in HomeSeerSystem.GetAllRefs())
+            {
+                Dictionary<string, object> row = new()
+                {
+                    ["ref"] = refId,
+                    ["records"] = recordCounts.TryGetValue((long)refId, out var count) ? count : 0,
+                    ["monitorableType"] = featureCachedDataProvider.IsMonitorableTypeFeature(refId),
+                    ["tracked"] = settingsPages.IsTracked(refId)
+                };
+                result.Add(row);
+            }
+
+            return result;
         }
 
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
         {
             CheckNotNull(featureCachedDataProvider);
-            bool hasPage = featureCachedDataProvider.IsMonitoried(devOrFeatRef) || IsThisPlugInFeature(devOrFeatRef);
+            bool hasPage = featureCachedDataProvider.IsMonitorableTypeFeature(devOrFeatRef) || IsThisPlugInFeature(devOrFeatRef);
             return hasPage;
         }
 
@@ -83,6 +105,7 @@ namespace Hspi
                 {
                     return;
                 }
+
                 Log.Warning("Error in recording event with {error}", ex.GetFullMessage());
             }
         }
@@ -101,6 +124,7 @@ namespace Hspi
                 statisticsDeviceUpdater?.Dispose();
                 collector?.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
@@ -115,20 +139,19 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
-                CheckNotNull(settingsPages);
                 collector = new SqliteDatabaseCollector(settingsPages, CreateClock(), ShutdownCancellationToken);
                 statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId);
+                HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a statistics device");
+                HomeSeerSystem.RegisterFeaturePage(this.Id, "alldevices.html", "Device statistics");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
-                HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a database statistics device");
 
                 Utils.TaskHelper.StartAsyncWithErrorChecking("All device values collection",
                                                              RecordAllDevices,
                                                              ShutdownCancellationToken);
-
                 Log.Information("Plugin Started");
             }
             catch (Exception ex)
@@ -179,15 +202,23 @@ namespace Hspi
                 int deviceRefId = ConvertToInt32(3);
                 await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
             }
-            else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 3) && ConvertToInt32(1) == 0)
+            else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 4) && ConvertToInt32(1) == 0)
             {
                 int refId = ConvertToInt32(3);
                 featureCachedDataProvider?.Invalidate(refId);
 
                 const int DeleteDevice = 2;
-                if (ConvertToInt32(4) == DeleteDevice && (statisticsDeviceUpdater?.HasRefId(refId) ?? false))
+                if (ConvertToInt32(4) == DeleteDevice)
                 {
-                    RestartStatisticsDeviceUpdate();
+                    // currently these events are only for devices not features
+                    if ((statisticsDeviceUpdater?.HasRefId(refId) ?? false))
+                    {
+                        RestartStatisticsDeviceUpdate();
+                    }
+                    else
+                    {
+                        await Collector.DeleteAllRecordsForRef(refId).ConfigureAwait(false);
+                    }
                 }
             }
 
@@ -204,11 +235,18 @@ namespace Hspi
 
         private async Task RecordAllDevices()
         {
-            var deviceEnumerator = HomeSeerSystem.GetAllRefs();
+            var deviceEnumerator = HomeSeerSystem.GetAllRefs().ToImmutableHashSet();
             foreach (var refId in deviceEnumerator)
             {
                 await RecordDeviceValue(refId).ConfigureAwait(false);
                 ShutdownCancellationToken.ThrowIfCancellationRequested();
+            }
+
+            // remove the records for devices which were deleted
+            var dbRefIds = await Collector.GetRefIdsWithRecords().ConfigureAwait(false);
+            foreach (var refId in dbRefIds.Where(refId => !deviceEnumerator.Contains((int)refId)))
+            {
+                await Collector.DeleteAllRecordsForRef(refId).ConfigureAwait(false);
             }
         }
 
@@ -217,26 +255,20 @@ namespace Hspi
             if (IsFeatureTracked(deviceRefId))
             {
                 var feature = new HsFeatureData(HomeSeerSystem, deviceRefId);
-                await RecordDeviceValue(feature).ConfigureAwait(false);
+
+                var deviceValue = feature.Value;
+                var lastChange = feature.LastChange;
+                var deviceString = feature.DisplayedStatus;
+
+                RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
+                Log.Verbose("Recording {@record}", recordData);
+
+                await Collector.Record(recordData).ConfigureAwait(false);
             }
             else
             {
                 Log.Verbose("Not adding {refId} to db as it is not tracked", deviceRefId);
             }
-        }
-
-        private async Task RecordDeviceValue(HsFeatureData feature)
-        {
-            CheckNotNull(collector);
-
-            var deviceValue = feature.Value;
-            var lastChange = feature.LastChange;
-            var deviceString = feature.DisplayedStatus;
-
-            RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-            Log.Verbose("Recording {@record}", recordData);
-
-            await collector.Record(recordData).ConfigureAwait(false);
         }
 
         private void UpdateDebugLevel()

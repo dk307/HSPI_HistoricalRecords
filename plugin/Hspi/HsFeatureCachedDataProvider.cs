@@ -15,7 +15,7 @@ namespace Hspi
         public HsFeatureCachedDataProvider(IHsController hs)
         {
             this.homeSeerSystem = hs;
-            monitoredFeatureCache = new HsFeatureCachedProperty<bool>(x => IsMonitoredFeature(x));
+            monitorableTypeFeatureCache = new HsFeatureCachedProperty<bool>(x => IsMonitorableTypeFeature2(x));
             featureUnitCache = new HsFeatureCachedProperty<string?>(x => GetFeatureUnit(x));
             featurePrecisionCache = new HsFeatureCachedProperty<int>(x => GetFeaturePrecision(x));
         }
@@ -33,13 +33,13 @@ namespace Hspi
         public void Invalidate(int refId)
         {
             featureUnitCache.Invalidate(refId);
-            monitoredFeatureCache.Invalidate(refId);
+            monitorableTypeFeatureCache.Invalidate(refId);
             featurePrecisionCache.Invalidate(refId);
         }
 
-        public bool IsMonitoried(int refId)
+        public bool IsMonitorableTypeFeature(int refId)
         {
-            return monitoredFeatureCache.Get(refId);
+            return monitorableTypeFeatureCache.Get(refId);
         }
 
         private static ImmutableSortedSet<string> CreateFeatureUnitsSet()
@@ -123,7 +123,7 @@ namespace Hspi
             return (T)homeSeerSystem.GetPropertyByRef(refId, prop);
         }
 
-        private bool IsMonitoredFeature(int refId)
+        private bool IsMonitorableTypeFeature2(int refId)
         {
             bool monitored = !IsTimerOrCounter(refId) &&
                              !IsSameDeviceInterface(refId);
@@ -160,6 +160,6 @@ namespace Hspi
         private readonly HsFeatureCachedProperty<int> featurePrecisionCache;
         private readonly HsFeatureCachedProperty<string?> featureUnitCache;
         private readonly IHsController homeSeerSystem;
-        private readonly HsFeatureCachedProperty<bool> monitoredFeatureCache;
+        private readonly HsFeatureCachedProperty<bool> monitorableTypeFeatureCache;
     }
 }

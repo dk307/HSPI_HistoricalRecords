@@ -29,7 +29,7 @@ namespace Hspi
         {
             var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
 
-            var feature = HomeSeerSystem.GetFeatureByRef(refId);
+            var feature = new HsFeatureData(HomeSeerSystem, refId);
 
             List<string> displays = new()
             {
@@ -42,6 +42,25 @@ namespace Hspi
             }
 
             return displays;
+
+            static bool ShouldShowChart(HsFeatureData feature)
+            {
+                if (IsOnlyOnOffFeature(feature) && !HasAnyRangeGraphics(feature))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+            static bool IsOnlyOnOffFeature(HsFeatureData feature)
+            {
+                return feature.StatusControls.TrueForAll(x => x.ControlUse is EControlUse.On or EControlUse.Off);
+            }
+
+            static bool HasAnyRangeGraphics(HsFeatureData feature)
+            {
+                return feature.StatusGraphics.Exists(x => x.IsRange);
+            }
         }
 
         public List<object?> GetDeviceStatsForPage(object? refIdString)
@@ -55,6 +74,14 @@ namespace Hspi
             result.Add(GetFeatureUnit(refId) ?? string.Empty);
 
             return result;
+        }
+
+        public IList<int> GetFeatureRefIdsForDevice(object? refIdString)
+        {
+            var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
+            var hashSet = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
+            hashSet.Add(refId);
+            return hashSet.ToList();
         }
 
         public override string PostBackProc(string page, string data, string user, int userRights)
@@ -109,12 +136,18 @@ namespace Hspi
             return count;
         }
 
+        internal long DeleteAllRecords(int refId)
+        {
+            var count = Collector.DeleteAllRecordsForRef(refId).WaitAndUnwrapException(ShutdownCancellationToken);
+            return count;
+        }
+
         internal bool IsFeatureTracked(int refId)
         {
             CheckNotNull(settingsPages);
             CheckNotNull(featureCachedDataProvider);
             return settingsPages.IsTracked(refId) &&
-                     featureCachedDataProvider.IsMonitoried(refId);
+                     featureCachedDataProvider.IsMonitorableTypeFeature(refId);
         }
 
         protected virtual ISystemClock CreateClock() => new SystemClock();
@@ -138,24 +171,6 @@ namespace Hspi
             }
         }
 
-        private static bool ShouldShowChart(HsFeature feature)
-        {
-            if (IsOnlyOnOffFeature(feature) && !HasAnyRangeGraphics(feature))
-            {
-                return false;
-            }
-            return true;
-
-            static bool IsOnlyOnOffFeature(HsFeature feature)
-            {
-                return feature.StatusControls.Values.TrueForAll(x => x.ControlUse == EControlUse.On || x.ControlUse == EControlUse.Off);
-            }
-            static bool HasAnyRangeGraphics(HsFeature feature)
-            {
-                return feature.StatusGraphics.Values.Exists(x => x.IsRange);
-            }
-        }
-
         private static string WriteExceptionResultAsJson(Exception ex)
         {
             StringBuilder stb = new();
@@ -173,12 +188,12 @@ namespace Hspi
 
         private string CreateTrackedDeviceConfigPage(int devOrFeatRef, string iFrameName)
         {
-            GetRefAndFeatureIds(devOrFeatRef, out var @ref, out var feature);
+            DetermineDeviceAndFeatureRefIds(devOrFeatRef, out var parentRefId, out var featureRefId);
 
             StringBuilder stb = new();
             stb.Append("<script>$('#save_device_config').hide();</script>");
 
-            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?ref={@ref}&feature={feature}");
+            string iFrameUrl = Invariant($"{CreatePlugInUrl(iFrameName)}?ref={parentRefId}&feature={featureRefId}");
 
             // iframeSizer.min.js
             stb.Append($"<script src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
@@ -200,21 +215,20 @@ namespace Hspi
             {
                 return "/" + Id + "/" + fileName;
             }
+        }
 
-            void GetRefAndFeatureIds(int devOrFeatRef, out int @ref, out int feature)
+        private void DetermineDeviceAndFeatureRefIds(int devOrFeatRef, out int parentRefId, out int featureRefId)
+        {
+            bool isDevice = HomeSeerSystem.IsRefDevice(devOrFeatRef);
+            if (isDevice)
             {
-                bool isDevice = HomeSeerSystem.IsRefDevice(devOrFeatRef);
-
-                if (isDevice)
-                {
-                    @ref = devOrFeatRef;
-                    feature = devOrFeatRef;
-                }
-                else
-                {
-                    @ref = ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).First();
-                    feature = devOrFeatRef;
-                }
+                parentRefId = devOrFeatRef;
+                featureRefId = devOrFeatRef;
+            }
+            else
+            {
+                parentRefId = ((HashSet<int>)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, EProperty.AssociatedDevices)).First();
+                featureRefId = devOrFeatRef;
             }
         }
 

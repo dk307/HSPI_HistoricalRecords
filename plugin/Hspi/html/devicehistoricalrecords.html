@@ -40,31 +40,9 @@
 	displayMax=queries['displayMax'] ?? ""
 	displayPeriod=queries['displayPeriod'] ?? ""
 	
-	# get list of features for devices in order
-	childrenRefIds=[]
-	device=device_by_ref refId
-	if device
-		featureList=device.display_priority ?? device.children
-		
-		for child in featureList
-			childrenRefIds = childrenRefIds | array.add child.ref
-		end
-		
-		# add root if not added for HS3 devices
-		if device.version < 4
-			refIdInt=string.to_int refId
-			if !(childrenRefIds | array.contains refIdInt)
-				childrenRefIds = childrenRefIds | array.add refIdInt
-			end
-		end
-		
-		featureIdInt=string.to_int featureId
-		if ((childrenRefIds | array.contains featureIdInt))
-		else
-			featureId=childrenRefIds[0]
-		end
-	end
-		
+	# get list of features for devices
+	childrenRefIds=plugin_function 'HistoricalRecords' 'GetFeatureRefIdsForDevice'[refId]
+
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[featureId]
 	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[featureId]
 
@@ -163,7 +141,7 @@ function getRangeString(min, max) {
 }
 </script>
 	
-<body class="body homeseer-skin ml-0 mr-0" style="min-height: 4rem" aria-busy="true">	
+<body class="body homeseer-skin ml-0 mr-0" style="min-height: 3rem" aria-busy="true">	
 <!-- refId={{refId}}<BR> -->
 <!-- featureId={{featureId}}<BR> -->
 <!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
@@ -225,7 +203,7 @@ function getRangeString(min, max) {
 			</div>
 			<ul class="navbar-nav ml-auto nav-flex-icons nav-right"  >
 			  <li class="nav-item">	  
-				<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change tracking options for device" id="idModalEditLink"  href="#">
+				<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change tracking options for the device" id="idModalEditLink"  href="#">
 				  <i class="fa fa-edit"></i>
 				</a>
 			  </li>
@@ -257,7 +235,7 @@ function getRangeString(min, max) {
 
 		{{needDataTables=false}}
 		{{if displaySelect=="table"}}
-			<table id="dt-persistence" class="table table-striped"  width="100%">	
+			<table id="dt-persistence" class="table table-sm mb-0 table-striped"  width="100%">	
 				<thead>
 					<tr>
 						<th>Time</th>
@@ -276,7 +254,7 @@ function getRangeString(min, max) {
 				<button id="btnGroupDropCurve" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Curve</button>
 				<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
 				  <a class="dropdown-item"  onclick="chartFunction(1)">Step</a>
-				  <a class="dropdown-item"  onclick="chartFunction(2)">Curve</a>
+				  <a class="dropdown-item"  onclick="chartFunction(2)">Linear</a>
 				</div>
 			  </div>
 			  <!-- <div class="btn-group" role="group"> -->
@@ -301,16 +279,17 @@ function getRangeString(min, max) {
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title" id="lblModalEdit">Tracked Device Options</h5>
+				<h5 class="modal-title" id="lblModalEdit">Device Options</h5>
 			</div>
 			<div class="modal-body">
 				<form>
-					<input type="hidden" id="ref" value="{{featureId}}"/>
+					<input type="hidden" id="deviceOptionsRef" value="{{featureId}}"/>
 					<div class="row mt-1 mb-1 no-gutters">
 						<div class="form-check form-switch">
-						<div class="custom-control custom-switch">
-						  <input type="checkbox" class="custom-control-input" id="idTrackedFeature" {{if deviceTracked}} checked {{end}}>
-						  <label class="custom-control-label" for="idTrackedFeature">Track this device values</label>
+							<div class="form-check form-check-inline">
+								<input type="checkbox" class="form-check-input" id="idTrackedFeature" name="idTrackedFeature" {{if deviceTracked}} checked {{end}}>
+								<label class="form-check-label" for="idTrackedFeature">Track this device values</label>
+							</div>            
 						</div>
 					</div>					 
 				</form>
@@ -338,7 +317,7 @@ function getRangeString(min, max) {
 <script type="text/javascript" src="/HistoricalRecords/hammer.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/chartjs-plugin-zoom.min.js"></script>
 {{end}}
-<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script><script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
 
 <script>
 $(function() {
@@ -368,7 +347,7 @@ $(function() {
 	$(document).on('click', '#btnOk', {}, async function (e) {
 		$('#modalEdit').modal('hide');
 		var data = {
-			refId: $('#ref').val(),
+			refId: $('#deviceOptionsRef').val(),
 			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
 		};
 		await ajaxPostPlugIn("updatedevicesettings", data, null );
@@ -405,6 +384,8 @@ function setUpPersistanceTable() {
 	order: [[0, 'desc']],
 	paging: true,
 	processing: true,
+	responsive: true,
+	stateSave: false,
     serverSide: true,
 	  ajax: {
         url: '../HistoricalRecords/historyrecords',
@@ -590,11 +571,6 @@ $(document).ready(function () {
 			maintainAspectRatio: false,
 			plugins: {
 			    zoom: zoomOptions,
-				title: {
-					display: true,
-					position: 'top',
-					text: '{{device_name_full featureId | html.escape}}'
-				},
 				legend: {
 					display: false
 				},	

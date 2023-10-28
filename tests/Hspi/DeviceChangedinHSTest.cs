@@ -4,7 +4,6 @@ using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -17,52 +16,51 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void DeviceValueUpdateIsRecorded(Constants.HSEvent eventType, string displayStatus, string expectedString)
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController,
-                                                          35673,
-                                                          1.132,
-                                                          displayString: displayStatus,
-                                                          lastChange: DateTime.Now - TimeSpan.FromDays(6));
+            int refId = 35673;
+            mockHsController.SetupFeature(refId, 1.132, displayString: displayStatus,
+                                                        lastChange: DateTime.Now - TimeSpan.FromDays(6));
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, eventType);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
 
-            RecordData recordData = new(feature.Ref, feature.Value,
-                                                     expectedString,
-                                                     ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds());
-            TestHelper.CheckRecordedValue(plugin, feature.Ref, recordData, 100, 1);
+            DateTime now = DateTime.Now;
+            var data = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, eventType, refId,
+                                                      100, displayStatus, now, 1);
+
+            Assert.AreEqual(100, data.DeviceValue);
+            Assert.AreEqual(expectedString, data.DeviceString);
+            Assert.AreEqual(((DateTimeOffset)now).ToUnixTimeSeconds(), data.UnixTimeSeconds);
         }
 
         [TestMethod]
         public void MultipleDeviceValueUpdatesAreRecorded()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
             DateTime time = DateTime.Now;
 
-            var feature = TestHelper.SetupHsFeature(mockHsController,
-                                     35673,
-                                     1.1,
-                                     displayString: "1.1",
-                                     lastChange: time);
+            int refId = 35673;
+            mockHsController.SetupFeature(refId, 1.1, displayString: "1.1", lastChange: time);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
-            List<RecordData> expected = new();
 
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
-            expected.Add(new RecordData(feature.Ref, feature.Value, feature.DisplayedStatus, ((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds()));
+            TestHelper.WaitTillTotalRecords(plugin, refId, 1);
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
+            List<RecordData> expected = new()
+            {
+                new RecordData(refId, 1.1, "1.1", ((DateTimeOffset)time).ToUnixTimeSeconds())
+            };
 
-            AddNewChange(expected, 1.2, time.AddSeconds(1));
-            AddNewChange(expected, 1.3, time.AddSeconds(2));
-            AddNewChange(expected, 1.3, time.AddSeconds(3));
-            AddNewChange(expected, 1.8, time.AddSeconds(4));
-            AddNewChange(expected, 11.8, time.AddSeconds(5));
+            for (int i = 0; i < 5; i++)
+            {
+                expected.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId,
+                                               1.0 + 0.1 * i, "", time.AddSeconds(i + 1), expected.Count + 1));
+            }
 
-            var records = TestHelper.GetHistoryRecords(plugin, feature.Ref, 100);
+            var records = TestHelper.GetHistoryRecords(plugin, refId, 100);
             records.Reverse();
 
             Assert.AreEqual(expected.Count, records.Count);
@@ -77,44 +75,31 @@ namespace HSPI_HistoricalRecordsTest
                 Assert.AreEqual(record.DeviceValue, expectedRecord.DeviceValue);
                 Assert.AreEqual(record.DeviceString, expectedRecord.DeviceString);
             }
-
-            void AddNewChange(IList<RecordData> expected, double value, DateTime lastChange)
-            {
-                var added = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, value, value.ToString(), lastChange, expected.Count + 1);
-                expected.Add(added);
-            }
         }
 
         [TestMethod]
         public void SameSecondChangesAreOverwritten()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
             DateTime time = DateTime.Now;
 
-            var feature = TestHelper.SetupHsFeature(mockHsController,
-                                     35673,
-                                     1.1,
-                                     displayString: "1.1",
-                                     lastChange: time);
+            int refId = 35673;
+            mockHsController.SetupFeature(refId, 1.1, displayString: "1.1", lastChange: time);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
-
-            feature.Changes[EProperty.Value] = 834D;
-            feature.Changes[EProperty.DisplayedStatus] = "34324";
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.Value, 2.34);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.DisplayedStatus, "2.34");
             // No time change is done here
 
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
-
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, feature.Ref, 1));
+            TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.VALUE_SET, refId);
 
             Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
             {
-                var records = TestHelper.GetHistoryRecords(plugin, feature.Ref, 100);
+                var records = TestHelper.GetHistoryRecords(plugin, refId, 100);
                 Assert.IsNotNull(records);
                 if (records.Count == 0)
                 {
@@ -123,10 +108,10 @@ namespace HSPI_HistoricalRecordsTest
 
                 Assert.AreEqual(1, records.Count);
 
-                return (feature.Ref == records[0].DeviceRefId) &&
-                       (feature.Value == records[0].DeviceValue) &&
-                       (feature.DisplayedStatus == records[0].DeviceString) &&
-                       (((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds() == records[0].UnixTimeSeconds);
+                return (refId == records[0].DeviceRefId) &&
+                       (2.34 == records[0].DeviceValue) &&
+                       ("2.34" == records[0].DeviceString) &&
+                       (((DateTimeOffset)time).ToUnixTimeSeconds() == records[0].UnixTimeSeconds);
             }));
         }
 
@@ -136,20 +121,21 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("countername")]
         public void TimerOrCounterChangeIsNotRecorded(string plugInExtraKey)
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
-            HsFeature feature = TestHelper.SetupHsFeature(mockHsController, 673, 1);
+            int refId = 673;
+            mockHsController.SetupFeature(673, 1);
 
             var data = new PlugExtraData();
             data.AddNamed(plugInExtraKey, "123");
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.PlugExtraData)).Returns(data);
-            mockHsController.Setup(x => x.GetPropertyByRef(feature.Ref, EProperty.Interface)).Returns(string.Empty);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.PlugExtraData, data);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.Interface, string.Empty);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            TestHelper.RaiseHSEvent(plugin, mockHsController, feature, Constants.HSEvent.VALUE_CHANGE);
+            TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.VALUE_CHANGE, refId);
 
-            var records = TestHelper.GetHistoryRecords(plugin, feature.Ref);
+            var records = TestHelper.GetHistoryRecords(plugin, refId);
             Assert.IsTrue(records.Count == 0);
 
             // this is not a good test as maynot actually end up waiting for failure
@@ -158,27 +144,28 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void UnTrackedDeviceIsNotStored()
         {
-            TestHelper.CreateMockPlugInAndHsController(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
             DateTime time = DateTime.Now;
 
             int deviceRefId = 35673;
-            var feature = TestHelper.SetupHsFeature(mockHsController,
-                                     deviceRefId,
+            mockHsController.SetupFeature(deviceRefId,
                                      1.1,
                                      displayString: "1.1",
                                      lastChange: time);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            mockHsController.Setup(x => x.SaveINISetting(deviceRefId.ToString(), It.IsAny<string>(), It.IsAny<string>(), PlugInData.SettingFileName));
-            plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"35673\",\"tracked\":0}", string.Empty, 0);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, deviceRefId, 1);
+
+            // disable tracking
+            plugin.Object.PostBackProc("updatedevicesettings", $"{{\"refId\":\"{deviceRefId}\",\"tracked\":0}}", string.Empty, 0);
 
             Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId));
 
             for (var i = 0; i < 100; i++)
             {
-                TestHelper.RaiseHSEvent(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, feature, i, "33", feature.LastChange.AddSeconds(7));
+                TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.VALUE_CHANGE, deviceRefId);
             }
 
             // this is not a good test as there is no good event to wait to ensure nothing was recorded

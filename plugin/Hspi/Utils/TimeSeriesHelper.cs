@@ -16,6 +16,7 @@ namespace Hspi.Utils
             {
                 throw new ArgumentOutOfRangeException(nameof(minUnixTimeSeconds));
             }
+
             this.minUnixTimeSeconds = minUnixTimeSeconds;
             this.maxUnixTimeSeconds = maxUnixTimeSeconds + 1; // make max inclusive
             this.timeAndValues = timeAndValues;

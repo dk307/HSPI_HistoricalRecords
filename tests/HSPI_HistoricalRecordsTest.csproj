@@ -19,7 +19,7 @@
     <TestProjectType>UnitTest</TestProjectType>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>11.0</LangVersion>
     <SonarQubeTestProject>True</SonarQubeTestProject>
     <TargetFrameworkProfile />
   </PropertyGroup>
@@ -44,12 +44,12 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\plugin\shared\Hspi\CompilerHelper.cs">
-      <Link>shared\CompilerHelper.cs</Link>
-    </Compile>
     <Compile Include="..\plugin\shared\tests\ExceptionHelperTest.cs">
       <Link>shared\ExceptionHelperTest.cs</Link>
     </Compile>
+    <Compile Include="FakeHSController.cs" />
+    <Compile Include="Hspi\ScrbianFunctionsTest.cs" />
+    <Compile Include="Hspi\DeleteDataTest.cs" />
     <Compile Include="Hspi\StatisticDeviceTest.cs" />
     <Compile Include="Hspi\GraphCallbacksTest.cs" />
     <Compile Include="Hspi\PruningTest.cs" />
@@ -104,6 +104,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Drawing" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

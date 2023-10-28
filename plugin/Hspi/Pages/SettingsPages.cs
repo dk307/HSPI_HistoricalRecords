@@ -16,7 +16,8 @@ namespace Hspi
         {
             this.dbPath = Path.Combine(hs.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
 
-            if (!Enum.TryParse<LogEventLevel>(collection[SettingPageId].GetViewById<SelectListView>(LoggingLevelId).GetSelectedOptionKey(), out LogEventLevel logEventLevel))
+            var logLevelStr = collection[SettingPageId].GetViewById<SelectListView>(LoggingLevelId).GetSelectedOptionKey();
+            if (!Enum.TryParse<LogEventLevel>(logLevelStr, out LogEventLevel logEventLevel))
             {
                 LogLevel = LogEventLevel.Information;
             }
@@ -88,6 +89,7 @@ namespace Hspi
             {
                 return result.IsTracked;
             }
+
             return true;
         }
 
@@ -101,6 +103,7 @@ namespace Hspi
                     LogLevel = logEventLevel;
                     return true;
                 }
+
                 return false;
             }
 

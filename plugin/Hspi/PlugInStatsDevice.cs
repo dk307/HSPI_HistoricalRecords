@@ -21,7 +21,7 @@ namespace Hspi
 
     internal partial class PlugIn : HspiBase
     {
-        public string GetStatisticDeviceDataAsJson(object refIdString)
+        public string? GetStatisticDeviceDataAsJson(object refIdString)
         {
             var refId = Hspi.Utils.TypeConverter.TryGetFromObject<int>(refIdString)
                 ?? throw new ArgumentException(null, nameof(refIdString));
@@ -81,7 +81,8 @@ namespace Hspi
             var refId = GetJsonValue<int>(jsonData, "ref");
             var dataJObject = GetJsonValue<JObject>(jsonData, "data");
             JsonSerializer serializer = new();
-            var statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ?? throw new ArgumentException(nameof(data));
+            var statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ??
+                                       throw new ArgumentException(nameof(data));
 
             StatisticsDevice.EditDevice(HomeSeerSystem, refId, statisticsDeviceData);
 

@@ -20,7 +20,7 @@ namespace Hspi.Utils
             List<string> results = new();
             foreach (var element in list)
             {
-                if (results.Count == 0 || results[results.Count - 1] != element)
+                if (results.Count == 0 || results[^1] != element)
                 {
                     results.Add(element);
                 }
@@ -31,9 +31,9 @@ namespace Hspi.Utils
 
         public static bool IsCancelException(this Exception ex)
         {
-            return (ex is TaskCanceledException) ||
-                   (ex is OperationCanceledException) ||
-                   (ex is ObjectDisposedException);
+            return ex is TaskCanceledException or
+                   OperationCanceledException or
+                   ObjectDisposedException;
         }
 
         private static List<string> GetMessageList(Exception ex)
@@ -46,6 +46,7 @@ namespace Hspi.Utils
                     {
                         list.AddRange(GetMessageList(innerException));
                     }
+
                     break;
 
                 default:

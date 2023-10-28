@@ -18,26 +18,27 @@ namespace HSPI_HistoricalRecordsTest
         public void GetRecordsWithoutGrouping(FillStrategy fillStrategy)
         {
             var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
 
             DateTime time = DateTime.Now;
 
             int deviceRefId = 35673;
-            var feature = TestHelper.SetupHsFeature(mockHsController,
-                                     deviceRefId,
+            mockHsController.SetupFeature(deviceRefId,
                                      1.1,
                                      displayString: "1.1",
                                      lastChange: time);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, deviceRefId, 1);
+
             for (var i = 0; i < 100; i++)
             {
                 TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                        feature, i, "33", time.AddSeconds(i * 5), i + 1);
+                                        deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange).ToUnixTimeMilliseconds()}, fill:'{fillStrategy}'}}";
+            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)mockHsController.GetFeature(deviceRefId).LastChange).ToUnixTimeMilliseconds()}, fill:'{fillStrategy}'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
@@ -60,26 +61,27 @@ namespace HSPI_HistoricalRecordsTest
         public void GetRecordsWithGroupingAndLOCF()
         {
             var plugin = TestHelper.CreatePlugInMock();
-            var mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
 
             DateTime time = DateTime.Now;
 
             int deviceRefId = 35673;
-            var feature = TestHelper.SetupHsFeature(mockHsController,
-                                     deviceRefId,
+            mockHsController.SetupFeature(deviceRefId,
                                      1.1,
                                      displayString: "1.1",
                                      lastChange: time);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, deviceRefId, 1);
+
             for (var i = 0; i < PlugIn.MaxGraphPoints * 2; i++)
             {
                 TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                        feature, i, "33", time.AddSeconds(i * 5), i + 1);
+                                        deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)feature.LastChange.AddSeconds(4)).ToUnixTimeMilliseconds()}, fill:'locf'}}";
+            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)mockHsController.GetFeature(deviceRefId).LastChange.AddSeconds(4)).ToUnixTimeMilliseconds()}, fill:'locf'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
@@ -115,7 +117,7 @@ namespace HSPI_HistoricalRecordsTest
         public void GraphCallbackArgumentChecks(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();
-            TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
+            TestHelper.SetupHsControllerAndSettings2(plugin);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 

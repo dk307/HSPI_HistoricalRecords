@@ -5,7 +5,7 @@ using Destructurama.Attributed;
 
 namespace Hspi.Database
 {
-    public sealed record TimeAndValue(long UnixTimeSeconds, double DeviceValue)
+    public sealed record TimeAndValue(long UnixTimeSeconds, in double DeviceValue)
     {
         [NotLogged]
         public long UnixTimeMilliSeconds => UnixTimeSeconds * 1000;
