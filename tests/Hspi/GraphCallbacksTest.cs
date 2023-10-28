@@ -73,6 +73,8 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, deviceRefId, 1);
+
             for (var i = 0; i < PlugIn.MaxGraphPoints * 2; i++)
             {
                 TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
