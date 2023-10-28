@@ -282,11 +282,16 @@ namespace HSPI_HistoricalRecordsTest
 
             List<int> hsFeatures = new();
 
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
             for (int i = 0; i < 15; i++)
             {
                 mockHsController.SetupFeature(1307 + i, 1.1, displayString: "1.1", lastChange: nowTime);
                 hsFeatures.Add(1307 + i);
+            }
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+            for (int i = 0; i < 15; i++)
+            {
+                TestHelper.WaitForRecordCountAndDeleteAll(plugin, hsFeatures[i], 1);
                 for (int j = 0; j < i; j++)
                 {
                     TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
