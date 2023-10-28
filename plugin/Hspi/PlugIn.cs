@@ -63,7 +63,9 @@ namespace Hspi
 
         public List<Dictionary<string, object>> GetAllDevicesProperties()
         {
-            var recordCounts = Collector.GetRecordsWithCount(int.MaxValue).WaitAndUnwrapException().ToDictionary(x => x.Key, x => x.Value);
+            var recordCounts = Collector.GetRecordsWithCount(int.MaxValue)
+                                        .WaitAndUnwrapException()
+                                        .ToDictionary(x => x.Key, x => x.Value);
 
             CheckNotNull(featureCachedDataProvider);
             CheckNotNull(settingsPages);
@@ -259,7 +261,7 @@ namespace Hspi
                 var deviceString = feature.DisplayedStatus;
 
                 RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-                Log.Information("Recording {@record}", recordData);
+                Log.Verbose("Recording {@record}", recordData);
 
                 await Collector.Record(recordData).ConfigureAwait(false);
             }

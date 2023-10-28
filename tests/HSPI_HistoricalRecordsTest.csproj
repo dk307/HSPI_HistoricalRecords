@@ -48,6 +48,7 @@
       <Link>shared\ExceptionHelperTest.cs</Link>
     </Compile>
     <Compile Include="FakeHSController.cs" />
+    <Compile Include="Hspi\ScrbianFunctionsTest.cs" />
     <Compile Include="Hspi\DeleteDataTest.cs" />
     <Compile Include="Hspi\StatisticDeviceTest.cs" />
     <Compile Include="Hspi\GraphCallbacksTest.cs" />

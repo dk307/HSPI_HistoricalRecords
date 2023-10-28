@@ -418,7 +418,7 @@ namespace Hspi.Database
                 var record = await queue.DequeueAsync(shutdownToken).ConfigureAwait(false);
                 try
                 {
-                    Log.Information("Adding to database: {@record}", record);
+                    Log.Verbose("Adding to database: {@record}", record);
                     await InsertRecord(record).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (!ex.IsCancelException())
@@ -432,7 +432,6 @@ namespace Hspi.Database
         }
 
         private const string AllRefOldestRecordsSql = "SELECT ref, MIN(ts), COUNT(*) FROM history GROUP BY ref";
-
         private const string DeleteAllRecordByRefSql = "DELETE from history where ref=$ref";
         private const string DeleteOldRecordByRefSql = "DELETE from history where ref=$ref and ts<$time AND ts NOT IN ( SELECT ts FROM history WHERE ref=$ref ORDER BY ts DESC LIMIT $limit)";
         private const string EarliestAndOldestRecordSql = "SELECT MIN(ts), MAX(ts) FROM history WHERE ref=?";

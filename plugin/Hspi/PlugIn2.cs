@@ -60,7 +60,7 @@ namespace Hspi
         public IList<int> GetFeatureRefIdsForDevice(object? refIdString)
         {
             var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
-            HashSet<int> hashSet = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
+            var hashSet = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
             hashSet.Add(refId);
             return hashSet.ToList();
         }
