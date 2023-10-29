@@ -26,6 +26,7 @@ namespace Hspi
         {
         }
 
+        public override int AccessLevel => (int)EAccessLevel.RequiresLicense;
         public override bool SupportsConfigDevice => true;
         public override bool SupportsConfigDeviceAll => true;
         public override bool SupportsConfigFeature => true;
@@ -36,27 +37,6 @@ namespace Hspi
             {
                 CheckNotNull(collector);
                 return collector;
-            }
-        }
-
-        public IDictionary<string, string> GetDatabaseStats() => Collector.GetDatabaseStats().WaitAndUnwrapException();
-
-        public override string GetJuiDeviceConfigPage(int devOrFeatRef)
-        {
-            try
-            {
-                string iFrameName = IsThisPlugInFeature(devOrFeatRef) ? "editdevice.html" : "devicehistoricalrecords.html";
-                return CreateTrackedDeviceConfigPage(devOrFeatRef, iFrameName);
-            }
-            catch (Exception ex)
-            {
-                Log.Error("Failed to create page for {deviceRef} with error:{error}", devOrFeatRef, ex.GetFullMessage());
-                var page = PageFactory.CreateDeviceConfigPage(PlugInData.PlugInId, PlugInData.PlugInName);
-                page = page.WithView(new LabelView("exception", string.Empty, ex.GetFullMessage())
-                {
-                    LabelType = HomeSeer.Jui.Types.ELabelType.Preformatted
-                });
-                return page.Page.ToJsonString();
             }
         }
 
@@ -83,6 +63,27 @@ namespace Hspi
             }
 
             return result;
+        }
+
+        public IDictionary<string, string> GetDatabaseStats() => Collector.GetDatabaseStats().WaitAndUnwrapException();
+
+        public override string GetJuiDeviceConfigPage(int devOrFeatRef)
+        {
+            try
+            {
+                string iFrameName = IsThisPlugInFeature(devOrFeatRef) ? "editdevice.html" : "devicehistoricalrecords.html";
+                return CreateTrackedDeviceConfigPage(devOrFeatRef, iFrameName);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to create page for {deviceRef} with error:{error}", devOrFeatRef, ex.GetFullMessage());
+                var page = PageFactory.CreateDeviceConfigPage(PlugInData.PlugInId, PlugInData.PlugInName);
+                page = page.WithView(new LabelView("exception", string.Empty, ex.GetFullMessage())
+                {
+                    LabelType = HomeSeer.Jui.Types.ELabelType.Preformatted
+                });
+                return page.Page.ToJsonString();
+            }
         }
 
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
@@ -123,8 +124,6 @@ namespace Hspi
 
             base.Dispose(disposing);
         }
-
-        public override int AccessLevel => (int)EAccessLevel.RequiresLicense;
 
         protected override void Initialize()
         {
@@ -202,6 +201,16 @@ namespace Hspi
             }
             else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 4) && ConvertToInt32(1) == 0)
             {
+                await HandleConfigChange().ConfigureAwait(false);
+            }
+
+            int ConvertToInt32(int index)
+            {
+                return Convert.ToInt32(parameters[index], CultureInfo.InvariantCulture);
+            }
+
+            async Task HandleConfigChange()
+            {
                 int refId = ConvertToInt32(3);
                 featureCachedDataProvider?.Invalidate(refId);
 
@@ -218,11 +227,6 @@ namespace Hspi
                         await Collector.DeleteAllRecordsForRef(refId).ConfigureAwait(false);
                     }
                 }
-            }
-
-            int ConvertToInt32(int index)
-            {
-                return Convert.ToInt32(parameters[index], CultureInfo.InvariantCulture);
             }
         }
 
