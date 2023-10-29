@@ -110,7 +110,7 @@ namespace Hspi
             }
         }
 
-        public void PruneDatabase() => Collector.PruneNow();
+        public void PruneDatabase() => Collector.DoMaintainance();
 
         protected override void BeforeReturnStatus()
         {
