@@ -409,7 +409,7 @@ namespace Hspi.Database
             ugly.exec(sqliteConnection, "PRAGMA auto_vacuum=INCREMENTAL");
             ugly.exec(sqliteConnection, "PRAGMA integrity_check");
 
-            ugly.wal_autocheckpoint(sqliteConnection, 100);
+            ugly.wal_autocheckpoint(sqliteConnection, 512);
 
             ugly.exec(sqliteConnection, "BEGIN TRANSACTION");
 
@@ -433,7 +433,7 @@ namespace Hspi.Database
             {
                 if (sqlite3_threadsafe() == 0)
                 {
-                    throw new SystemException(@"Sqlite is not thread safe");
+                    throw new ApplicationException(@"Sqlite is not thread safe");
                 }
 
                 if (Version.TryParse(sqlite3_libversion().utf8_to_string(), out var version))
@@ -441,7 +441,7 @@ namespace Hspi.Database
                     var minSupportedVersion = new Version(3, 37);
                     if (version < minSupportedVersion)
                     {
-                        throw new SystemException("Sqlite version on machine is too old. Need 3.37+");
+                        throw new ApplicationException("Sqlite version on machine is too old. Need 3.37+");
                     }
                 }
             }

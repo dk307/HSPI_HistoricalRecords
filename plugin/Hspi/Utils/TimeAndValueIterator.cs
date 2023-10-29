@@ -17,6 +17,7 @@ namespace Hspi.Utils
             {
                 current = listEnumertor.Current;
             }
+
             if (listEnumertor.MoveNext())
             {
                 next = listEnumertor.Current;
