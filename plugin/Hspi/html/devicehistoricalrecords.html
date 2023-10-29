@@ -452,7 +452,7 @@ $(document).ready(function () {
 		   refId : {{featureId}},
 		   min: min,
 		   max: max,
-		   fill: chart.data.datasets[0].stepped ? "locf" : 'linear',
+		   fill: chart.data.datasets[0].stepped ? 0 : 1,
 		};
 		
 		ajaxPostPlugIn("graphrecords", formObject, function (result) {	 
