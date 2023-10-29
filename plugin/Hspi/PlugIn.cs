@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
+using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
 using Hspi.Device;
 using Hspi.Utils;
@@ -25,6 +26,7 @@ namespace Hspi
         {
         }
 
+        public override bool SupportsConfigDevice => true;
         public override bool SupportsConfigDeviceAll => true;
         public override bool SupportsConfigFeature => true;
 
@@ -37,10 +39,7 @@ namespace Hspi
             }
         }
 
-        public IDictionary<string, string> GetDatabaseStats()
-        {
-            return Collector.GetDatabaseStats().WaitAndUnwrapException();
-        }
+        public IDictionary<string, string> GetDatabaseStats() => Collector.GetDatabaseStats().WaitAndUnwrapException();
 
         public override string GetJuiDeviceConfigPage(int devOrFeatRef)
         {
@@ -112,10 +111,7 @@ namespace Hspi
 
         public void PruneDatabase() => Collector.DoMaintainance();
 
-        protected override void BeforeReturnStatus()
-        {
-            this.Status = PluginStatus.Ok();
-        }
+        protected override void BeforeReturnStatus() => this.Status = PluginStatus.Ok();
 
         protected override void Dispose(bool disposing)
         {
@@ -127,6 +123,8 @@ namespace Hspi
 
             base.Dispose(disposing);
         }
+
+        public override int AccessLevel => (int)EAccessLevel.RequiresLicense;
 
         protected override void Initialize()
         {

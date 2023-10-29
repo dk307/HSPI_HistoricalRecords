@@ -4,6 +4,7 @@ using System.IO;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Types;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -307,11 +308,19 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void VerifyAccessLevel()
+        {
+            var plugin = new PlugIn();
+            Assert.AreEqual((int)EAccessLevel.RequiresLicense, plugin.AccessLevel);
+        }
+
+        [TestMethod]
         public void VerifySupportsConfigDeviceAll()
         {
             var plugin = new PlugIn();
             Assert.IsTrue(plugin.SupportsConfigDeviceAll);
             Assert.IsTrue(plugin.SupportsConfigFeature);
+            Assert.IsTrue(plugin.SupportsConfigDevice);
         }
     }
 }
