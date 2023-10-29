@@ -404,7 +404,7 @@ namespace Hspi.Database
             ugly.exec(sqliteConnection, "PRAGMA journal_mode=WAL");
             ugly.exec(sqliteConnection, Invariant($"PRAGMA journal_size_limit={32 * 1024 * 1024}")); //32 MB
             ugly.exec(sqliteConnection, "PRAGMA synchronous=normal");
-            ugly.exec(sqliteConnection, "PRAGMA locking_mode=NORMAL");
+            ugly.exec(sqliteConnection, "PRAGMA locking_mode=EXCLUSIVE");
             ugly.exec(sqliteConnection, "PRAGMA temp_store=MEMORY");
             ugly.exec(sqliteConnection, "PRAGMA auto_vacuum=INCREMENTAL");
             ugly.exec(sqliteConnection, "PRAGMA integrity_check");
