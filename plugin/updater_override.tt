@@ -13,7 +13,7 @@
     "UC": 63,
     "ZipFile": "HSPI_HistoricalRecords_<#=version#>.zip",
     "Author": "dk307",
-    "Price": "Free",
+    "Price": "25",
     "ReleaseNotesURL": "https://github.com/dk307/HSPI_HistoricalRecords",
     "ShortDescription": "Displays Historical Records for device For Homeseer 4",
     "SupportURL": "https://github.com/dk307/HSPI_HistoricalRecords/issues",

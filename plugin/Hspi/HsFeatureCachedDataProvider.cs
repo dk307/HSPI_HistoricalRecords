@@ -53,10 +53,10 @@ namespace Hspi
                 "F", "C", "K", "°F", "°C", "°K",
                 "lux", "lx",
                 "%",
-                "A",
+                "A", "Amp",
                 "ppm", "ppb",
                 "db", "dbm",
-                "μs", "ms", "s", "min",
+                "μs", "ms", "s", "min", "hr",
                 "g", "kg", "mg", "uq", "oz", "lb",
             };
 

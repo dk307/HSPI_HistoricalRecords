@@ -131,7 +131,7 @@ namespace HSPI_HistoricalRecordsTest
 
         [TestMethod]
         [DynamicData(nameof(GetDatatableCallbackTotalData), DynamicDataSourceType.Method)]
-        public void DatatableCallbackTotal(Func<HsFeature, List<RecordData>, string> createString, int addedRecordCount, int total)
+        public void DatatableCallbackTotalCorrect(Func<HsFeature, List<RecordData>, string> createString, int addedRecordCount, int total)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
@@ -167,11 +167,11 @@ namespace HSPI_HistoricalRecordsTest
 
         [TestMethod]
         [DynamicData(nameof(GetDatatableCallbacksData), DynamicDataSourceType.Method)]
-        public void DatatableCallbackTotalData(Func<HsFeature, List<RecordData>, string> createString, Func<List<RecordData>, List<RecordData>> filter)
+        public void DatatableCallbackDataCorrect(Func<HsFeature, List<RecordData>, string> createString, Func<List<RecordData>, List<RecordData>> filter)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
-            DateTime nowTime = DateTime.Now;
+            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
 
             int refId = 948;
             mockHsController.SetupFeature(refId, 1.1, displayString: "1.1", lastChange: nowTime);
@@ -184,9 +184,9 @@ namespace HSPI_HistoricalRecordsTest
             {
                 double val = 1000 - i;
                 DateTime lastChange = nowTime.AddMinutes(i * i);
-                var feature2 = mockHsController.GetFeature(refId);
-                durations[((DateTimeOffset)feature2.LastChange).ToUnixTimeSeconds()] =
-                                (long)(lastChange - feature2.LastChange).TotalSeconds;
+                var featureLastTime = (DateTime)mockHsController.GetFeatureValue(refId, EProperty.LastChange);
+                durations[((DateTimeOffset)featureLastTime).ToUnixTimeSeconds()] =
+                                (long)(lastChange - featureLastTime).TotalSeconds;
 
                 added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
                                                          refId, val, val.ToString(), lastChange, i + 1));

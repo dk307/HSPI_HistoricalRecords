@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace Hspi.Utils
 {
     [Serializable]
-    public sealed class HsDeviceInvalidException : Exception
+    public sealed class HsDeviceInvalidException : ApplicationException
     {
         public HsDeviceInvalidException()
         {
@@ -18,7 +18,8 @@ namespace Hspi.Utils
         {
         }
 
-        protected HsDeviceInvalidException(SerializationInfo info, StreamingContext context) : base(info, context)
+        private HsDeviceInvalidException(SerializationInfo serializationInfo, StreamingContext streamingContext) :
+            base(serializationInfo, streamingContext)
         {
         }
     }

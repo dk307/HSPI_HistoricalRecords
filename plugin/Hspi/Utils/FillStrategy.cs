@@ -7,8 +7,8 @@ namespace Hspi.Utils
         /// <summary>
         /// Last observation carried forward
         /// </summary>
-        LOCF,
+        LOCF = 0,
 
-        Linear
+        Linear = 1
     }
 }

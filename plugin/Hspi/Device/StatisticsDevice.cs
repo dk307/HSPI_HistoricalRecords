@@ -37,7 +37,7 @@ namespace Hspi.Device
 
             this.deviceData = GetPlugExtraData<StatisticsDeviceData>(hs, refId, DataKey);
 
-            Utils.TaskHelper.StartAsyncWithErrorChecking($"Update RefId:{refId}", UpdateDevice, combinedToken.Token);
+            Utils.TaskHelper.StartAsyncWithErrorChecking($"Refreshing Task for {NameForLog}", UpdateDevice, combinedToken.Token);
         }
 
         public int RefId { get; }
@@ -259,7 +259,9 @@ namespace Hspi.Device
 
         private const string DataKey = "data";
         private readonly SqliteDatabaseCollector collector;
+#pragma warning disable CA2213 // Disposable fields should be disposed
         private readonly CancellationTokenSource combinedToken;
+#pragma warning restore CA2213 // Disposable fields should be disposed
         private readonly StatisticsDeviceData deviceData;
         private readonly IHsController HS;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;

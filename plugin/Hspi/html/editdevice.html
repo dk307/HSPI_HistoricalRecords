@@ -23,6 +23,8 @@
 	}}
 	
 <body class="body homeseer-skin ml-0 mr-0" aria-busy="true">
+
+{{if jsonDataString}}
 	<div class="row mt-1 mb-1">
 		<div class="md-form col-md alert alert-danger" role="alert" id="error-message-div" style="display: none;">		 
 		</div>
@@ -49,8 +51,8 @@
 			 <div class="form-outline">
 				<span class="font-weight-bold">Select statistical function</span>
 				<select id="function" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
-					<option value="averagelinear" selected >Average Linear</option>	
-					<option value="averagestep">Average Step</option>	
+					<option value="1" selected >Average Linear</option>	
+					<option value="0">Average Step</option>	
 				</select> 		
 			</div>
 		</div>
@@ -193,6 +195,10 @@ $(document).ready(function () {
 	});		
 });
 </script>
+
+{{else}}
+Invalid device
+{{end}}
 
 </body>
 </html>

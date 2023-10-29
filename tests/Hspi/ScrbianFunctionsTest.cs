@@ -4,13 +4,46 @@ using System.Linq;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
+using Hspi;
+using Hspi.Device;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
 
 namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
     public class ScrbianFunctionsTest
     {
+        [DataTestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void GetStatisticDeviceDataAsJson(bool isDevice)
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            int statsDeviceRefId = 10300;
+            int statsFeatureRefId = 10300;
+            int trackedDeviceRefId = 100;
+
+            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
+                                             statsDeviceRefId, trackedDeviceRefId);
+
+            hsControllerMock.SetupDevice(102984);
+            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsDeviceRefId });
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            var data = ((PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.PlugExtraData)).GetNamed("data");
+
+            // get return function value for feature
+            string json = plugIn.Object.GetStatisticDeviceDataAsJson(isDevice ? statsDeviceRefId : statsFeatureRefId);
+            Assert.AreEqual(JsonConvert.DeserializeObject<StatisticsDeviceData>(data),
+                            JsonConvert.DeserializeObject<StatisticsDeviceData>(json));
+        }
+
         [TestMethod]
         public void GetAllDevicesProperties()
         {

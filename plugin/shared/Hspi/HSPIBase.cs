@@ -35,6 +35,7 @@ namespace Hspi
                 {
                     cancellationTokenSource.Dispose();
                 }
+
                 disposedValue = true;
             }
         }

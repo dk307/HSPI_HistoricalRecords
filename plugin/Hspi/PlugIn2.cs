@@ -12,7 +12,6 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
 using Hspi.Database;
 using Hspi.Utils;
-using Humanizer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Nito.AsyncEx.Synchronous;
@@ -288,15 +287,12 @@ namespace Hspi
 
             static FillStrategy GetFillStrategy(JObject? jsonData)
             {
-                try
+                var fillStrategy = GetJsonValue<int>(jsonData, "fill");
+                if (!Enum.IsDefined(typeof(FillStrategy), fillStrategy))
                 {
-                    var fillStrategyStr = GetJsonValue<string>(jsonData, "fill");
-                    return fillStrategyStr.DehumanizeTo<FillStrategy>();
+                    throw new ArgumentException("fill is not correct");
                 }
-                catch (NoMatchFoundException ex)
-                {
-                    throw new ArgumentException("fill is not correct", ex);
-                }
+                return (FillStrategy)fillStrategy;
             }
         }
 

@@ -38,7 +38,7 @@ namespace HSPI_HistoricalRecordsTest
                                         deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)mockHsController.GetFeature(deviceRefId).LastChange).ToUnixTimeMilliseconds()}, fill:'{fillStrategy}'}}";
+            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)mockHsController.GetFeature(deviceRefId).LastChange).ToUnixTimeMilliseconds()}, fill:'{(int)fillStrategy}'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
@@ -81,7 +81,7 @@ namespace HSPI_HistoricalRecordsTest
                                         deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)mockHsController.GetFeature(deviceRefId).LastChange.AddSeconds(4)).ToUnixTimeMilliseconds()}, fill:'locf'}}";
+            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)mockHsController.GetFeature(deviceRefId).LastChange.AddSeconds(4)).ToUnixTimeMilliseconds()}, fill:'0'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
@@ -114,6 +114,7 @@ namespace HSPI_HistoricalRecordsTest
         [DataRow("{{refId1:{0}}}", "refId is not correct")]
         [DataRow("{{ refId:{0}, min:11, max:99}}", "fill is not correct")]
         [DataRow("{{ refId:{0}, min:11, max:99, fill:'rt'}}", "fill is not correct")]
+        [DataRow("{{ refId:{0}, min:11, max:99, fill:'5'}}", "fill is not correct")]
         public void GraphCallbackArgumentChecks(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();
