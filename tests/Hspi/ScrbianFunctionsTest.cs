@@ -84,7 +84,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void GetAllowedDisplaysForNormalFeature()
+        public void GetAllowedDisplaysForNoRangeFeature()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
@@ -98,11 +98,11 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
             var list = plugin.Object.GetAllowedDisplays(refId);
-            StringAssert.Equals(new List<string>() { "table", "chart" }, list);
+            CollectionAssert.AreEqual(new List<string>() { "table" }, list);
         }
 
         [TestMethod]
-        public void GetAllowedDisplaysForOnOffFeature()
+        public void GetAllowedDisplaysForFeatureWithRange()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
@@ -111,51 +111,6 @@ namespace HSPI_HistoricalRecordsTest
             int refId = 1110;
             mockHsController.SetupFeature(refId, 10, "10.0 lux", lastChange: nowTime);
 
-            List<StatusControl> onOffFeature = new()
-            {
-                new StatusControl(EControlType.Button)
-                {
-                    ControlUse = EControlUse.Off,
-                    TargetValue = 0,
-                },
-                new StatusControl(EControlType.Button)
-                {
-                    ControlUse = EControlUse.On,
-                    TargetValue = 255,
-                }
-            };
-            mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusControls, onOffFeature);
-            mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusGraphics, new List<StatusGraphic>());
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-            var list = plugin.Object.GetAllowedDisplays(refId);
-            StringAssert.Equals(new List<string>() { "table" }, list);
-        }
-
-        [TestMethod]
-        public void GetAllowedDisplaysForOnOffFeatureWithRange()
-        {
-            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
-
-            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
-
-            int refId = 1110;
-            mockHsController.SetupFeature(refId, 10, "10.0 lux", lastChange: nowTime);
-
-            List<StatusControl> onOffFeature = new()
-            {
-                new StatusControl(EControlType.Button)
-                {
-                    ControlUse = EControlUse.Off,
-                    TargetValue = 0,
-                },
-                new StatusControl(EControlType.Button)
-                {
-                    ControlUse = EControlUse.On,
-                    TargetValue = 255,
-                }
-            };
-            mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusControls, onOffFeature);
             List<StatusGraphic> graphics = new List<StatusGraphic>()
             {
                 new StatusGraphic("path", new ValueRange(0, 100))
@@ -164,7 +119,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
             var list = plugin.Object.GetAllowedDisplays(refId);
-            StringAssert.Equals(new List<string>() { "table", "chart" }, list);
+            CollectionAssert.AreEqual(new List<string>() { "table", "chart" }, list);
         }
 
         [TestMethod]

@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using System.Web;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Controls;
 using Hspi.Database;
 using Hspi.Utils;
 using Newtonsoft.Json;
@@ -24,7 +23,7 @@ namespace Hspi
 {
     internal partial class PlugIn : HspiBase
     {
-        public IList<string> GetAllowedDisplays(object? refIdString)
+        public List<string> GetAllowedDisplays(object? refIdString)
         {
             var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
 
@@ -44,21 +43,18 @@ namespace Hspi
 
             static bool ShouldShowChart(HsFeatureData feature)
             {
-                if (IsOnlyOnOffFeature(feature) && !HasAnyRangeGraphics(feature))
+                if (HasAnyRangeGraphics(feature))
                 {
-                    return false;
+                    return true;
                 }
 
-                return true;
-            }
-            static bool IsOnlyOnOffFeature(HsFeatureData feature)
-            {
-                return feature.StatusControls.TrueForAll(x => x.ControlUse is EControlUse.On or EControlUse.Off);
+                return false;
             }
 
             static bool HasAnyRangeGraphics(HsFeatureData feature)
             {
-                return feature.StatusGraphics.Exists(x => x.IsRange);
+                List<StatusGraphic> statusGraphics = feature.StatusGraphics;
+                return statusGraphics.Any(x => x.IsRange);
             }
         }
 
