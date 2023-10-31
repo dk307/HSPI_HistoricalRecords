@@ -4,14 +4,13 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
 using Hspi.Device;
 using Hspi.Utils;
-using Nito.AsyncEx.Synchronous;
 using Serilog;
 using Constants = HomeSeer.PluginSdk.Constants;
 
@@ -43,7 +42,6 @@ namespace Hspi
         public List<Dictionary<string, object>> GetAllDevicesProperties()
         {
             var recordCounts = Collector.GetRecordsWithCount(int.MaxValue)
-                                        .WaitAndUnwrapException()
                                         .ToDictionary(x => x.Key, x => x.Value);
 
             CheckNotNull(featureCachedDataProvider);
@@ -65,7 +63,7 @@ namespace Hspi
             return result;
         }
 
-        public IDictionary<string, string> GetDatabaseStats() => Collector.GetDatabaseStats().WaitAndUnwrapException();
+        public IDictionary<string, string> GetDatabaseStats() => Collector.GetDatabaseStats();
 
         public override string GetJuiDeviceConfigPage(int devOrFeatRef)
         {
@@ -97,7 +95,7 @@ namespace Hspi
         {
             try
             {
-                HSEventImpl(eventType, @params).WaitAndUnwrapException(ShutdownCancellationToken);
+                HSEventImpl(eventType, @params);
             }
             catch (Exception ex)
             {
@@ -146,9 +144,7 @@ namespace Hspi
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "alldevices.html", "Device statistics");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
 
-                Utils.TaskHelper.StartAsyncWithErrorChecking("All device values collection",
-                                                             RecordAllDevices,
-                                                             ShutdownCancellationToken);
+                new Thread(RecordAllDevices).Start();
                 Log.Information("Plugin Started");
             }
             catch (Exception ex)
@@ -187,21 +183,21 @@ namespace Hspi
             }
         }
 
-        private async Task HSEventImpl(Constants.HSEvent eventType, object[] parameters)
+        private void HSEventImpl(Constants.HSEvent eventType, object[] parameters)
         {
             if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
             {
                 int deviceRefId = ConvertToInt32(4);
-                await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
+                RecordDeviceValue(deviceRefId);
             }
             else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
             {
                 int deviceRefId = ConvertToInt32(3);
-                await RecordDeviceValue(deviceRefId).ConfigureAwait(false);
+                RecordDeviceValue(deviceRefId);
             }
             else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 4) && ConvertToInt32(1) == 0)
             {
-                await HandleConfigChange().ConfigureAwait(false);
+                HandleConfigChange();
             }
 
             int ConvertToInt32(int index)
@@ -209,7 +205,7 @@ namespace Hspi
                 return Convert.ToInt32(parameters[index], CultureInfo.InvariantCulture);
             }
 
-            async Task HandleConfigChange()
+            void HandleConfigChange()
             {
                 int refId = ConvertToInt32(3);
                 featureCachedDataProvider?.Invalidate(refId);
@@ -224,7 +220,7 @@ namespace Hspi
                     }
                     else
                     {
-                        await Collector.DeleteAllRecordsForRef(refId).ConfigureAwait(false);
+                        Collector.DeleteAllRecordsForRef(refId);
                     }
                 }
             }
@@ -235,24 +231,36 @@ namespace Hspi
             return (string)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, HomeSeer.PluginSdk.Devices.EProperty.Interface) == this.Id;
         }
 
-        private async Task RecordAllDevices()
+        private void RecordAllDevices()
         {
-            var deviceEnumerator = HomeSeerSystem.GetAllRefs().ToImmutableHashSet();
-            foreach (var refId in deviceEnumerator)
+            try
             {
-                await RecordDeviceValue(refId).ConfigureAwait(false);
-                ShutdownCancellationToken.ThrowIfCancellationRequested();
-            }
+                Log.Debug("Starting RecordAllDevices");
 
-            // remove the records for devices which were deleted
-            var dbRefIds = await Collector.GetRefIdsWithRecords().ConfigureAwait(false);
-            foreach (var refId in dbRefIds.Where(refId => !deviceEnumerator.Contains((int)refId)))
+                var deviceEnumerator = HomeSeerSystem.GetAllRefs().ToImmutableHashSet();
+                foreach (var refId in deviceEnumerator)
+                {
+                    RecordDeviceValue(refId);
+                    ShutdownCancellationToken.ThrowIfCancellationRequested();
+                }
+
+                // remove the records for devices which were deleted
+                var dbRefIds = Collector.GetRefIdsWithRecords();
+                foreach (var refId in dbRefIds.Where(refId => !deviceEnumerator.Contains((int)refId)))
+                {
+                    Collector.DeleteAllRecordsForRef(refId);
+                    ShutdownCancellationToken.ThrowIfCancellationRequested();
+                }
+
+                Log.Debug("Finished RecordAllDevices");
+            }
+            catch (Exception ex) when (!ex.IsCancelException())
             {
-                await Collector.DeleteAllRecordsForRef(refId).ConfigureAwait(false);
+                Log.Warning("Error in RecordAllDevices with {error}", ex.GetFullMessage());
             }
         }
 
-        private async Task RecordDeviceValue(int deviceRefId)
+        private void RecordDeviceValue(int deviceRefId)
         {
             if (IsFeatureTracked(deviceRefId))
             {
@@ -265,7 +273,7 @@ namespace Hspi
                 RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
                 Log.Verbose("Recording {@record}", recordData);
 
-                await Collector.Record(recordData).ConfigureAwait(false);
+                Collector.Record(recordData);
             }
             else
             {

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
-using System.Threading.Tasks;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Identification;
@@ -10,9 +9,9 @@ using Hspi.Database;
 using Hspi.Utils;
 using Humanizer;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using Serilog;
 using Serilog.Events;
+
 using static System.FormattableString;
 
 #nullable enable
@@ -36,13 +35,27 @@ namespace Hspi.Device
             this.combinedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             this.deviceData = GetPlugExtraData<StatisticsDeviceData>(hs, refId, DataKey);
+            timer = new Timer(UpdateDeviceValueFromDatabase, null, 0, RefreshInterval);
 
-            Utils.TaskHelper.StartAsyncWithErrorChecking($"Refreshing Task for {NameForLog}", UpdateDevice, combinedToken.Token);
+            combinedToken.Token.Register(() =>
+            {
+                timer?.Dispose();
+            });
         }
 
         public int RefId { get; }
 
         private string NameForLog => GetNameForLog(HS, RefId);
+
+        private int RefreshInterval
+        {
+            get
+            {
+                var refreshInterval = Math.Max(deviceData.RefreshIntervalSeconds * 1000, 1000);
+                var refreshInterval2 = (int)Math.Min(refreshInterval, int.MaxValue);
+                return refreshInterval2;
+            }
+        }
 
         public static int CreateDevice(IHsController hsController, string name, StatisticsDeviceData data)
         {
@@ -136,12 +149,13 @@ namespace Hspi.Device
 
         public void Dispose()
         {
+            timer?.Dispose();
             combinedToken.Cancel();
         }
 
         public void UpdateNow()
         {
-            updateNowEvent.Set();
+            timer.Change(0, RefreshInterval);
         }
 
         private static string GetNameForLog(IHsController hsController, int refId)
@@ -189,48 +203,6 @@ namespace Hspi.Device
             return stringData;
         }
 
-        private async Task UpdateDevice()
-        {
-            var shutdownToken = combinedToken.Token;
-            while (!shutdownToken.IsCancellationRequested)
-            {
-                try
-                {
-                    var max = systemClock.Now.ToUnixTimeSeconds();
-                    var min = max - this.deviceData.FunctionDurationSeconds;
-
-                    if (min < 0)
-                    {
-                        throw new ArgumentException("Duration too long");
-                    }
-
-                    var result = await TimeAndValueQueryHelper.Average(collector,
-                                                                       deviceData.TrackedRef,
-                                                                       min,
-                                                                       max,
-                                                                       this.deviceData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear).ConfigureAwait(false);
-                    if (result.HasValue)
-                    {
-                        var precision = hsFeatureCachedDataProvider.GetPrecision(deviceData.TrackedRef);
-                        result = Math.Round(result.Value, precision);
-                    }
-
-                    UpdateDeviceValue(result);
-                }
-                catch (Exception ex) when (!ex.IsCancelException())
-                {
-                    Log.Warning("Failed to update device:{name} with {error}}", NameForLog, ExceptionHelper.GetFullMessage(ex));
-                }
-
-                var eventWaitTask = updateNowEvent.WaitAsync(shutdownToken);
-
-                //validate passed intervals, must be between 1000 and int.maxValue ms
-                var refreshInterval = Math.Max(deviceData.RefreshIntervalSeconds * 1000, 1000);
-                var refreshInterval2 = (int)Math.Min(refreshInterval, int.MaxValue);
-                await Task.WhenAny(Task.Delay(refreshInterval2, shutdownToken), eventWaitTask).ConfigureAwait(false);
-            }
-        }
-
         private void UpdateDeviceValue(in double? data)
         {
             if (Log.IsEnabled(LogEventLevel.Information))
@@ -257,6 +229,40 @@ namespace Hspi.Device
             }
         }
 
+        private void UpdateDeviceValueFromDatabase(object state)
+        {
+            try
+            {
+                var max = systemClock.Now.ToUnixTimeSeconds();
+                var min = max - this.deviceData.FunctionDurationSeconds;
+
+                if (min < 0)
+                {
+                    throw new ArgumentException("Duration too long");
+                }
+
+                var result = TimeAndValueQueryHelper.Average(collector,
+                                                             deviceData.TrackedRef,
+                                                             min,
+                                                             max,
+                                                             this.deviceData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear);
+                if (result.HasValue)
+                {
+                    var precision = hsFeatureCachedDataProvider.GetPrecision(deviceData.TrackedRef);
+                    result = Math.Round(result.Value, precision);
+                }
+
+                UpdateDeviceValue(result);
+            }
+            catch (Exception ex)
+            {
+                if (!ex.IsCancelException())
+                {
+                    Log.Warning("Failed to update device:{name} with {error}}", NameForLog, ExceptionHelper.GetFullMessage(ex));
+                }
+            }
+        }
+
         private const string DataKey = "data";
         private readonly SqliteDatabaseCollector collector;
 #pragma warning disable CA2213 // Disposable fields should be disposed
@@ -266,6 +272,6 @@ namespace Hspi.Device
         private readonly IHsController HS;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
         private readonly ISystemClock systemClock;
-        private readonly AsyncAutoResetEvent updateNowEvent = new(false);
+        private readonly System.Threading.Timer timer;
     }
 }

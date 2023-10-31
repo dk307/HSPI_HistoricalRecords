@@ -58,6 +58,7 @@ namespace Hspi.Utils
                             list.AddRange(GetMessageList(ex.InnerException));
                         }
                     }
+
                     break;
             }
 

@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Web;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk.Devices;
@@ -13,7 +12,6 @@ using Hspi.Database;
 using Hspi.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Nito.AsyncEx.Synchronous;
 using Serilog;
 using static System.FormattableString;
 
@@ -54,7 +52,7 @@ namespace Hspi
             static bool HasAnyRangeGraphics(HsFeatureData feature)
             {
                 List<StatusGraphic> statusGraphics = feature.StatusGraphics;
-                return statusGraphics.Any(x => x.IsRange);
+                return statusGraphics.Exists(x => x.IsRange);
             }
         }
 
@@ -86,8 +84,8 @@ namespace Hspi
             {
                 return page switch
                 {
-                    "historyrecords" => HandleHistoryRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
-                    "graphrecords" => HandleGraphRecords(data).WaitAndUnwrapException(ShutdownCancellationToken),
+                    "historyrecords" => HandleHistoryRecords(data),
+                    "graphrecords" => HandleGraphRecords(data),
                     "updatedevicesettings" => HandleUpdateDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
                     "deviceedit" => HandleDeviceEdit(data),
@@ -103,7 +101,7 @@ namespace Hspi
 
         internal IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
         {
-            var data = Collector.GetEarliestAndOldestRecordTimeDate(refId).WaitAndUnwrapException(ShutdownCancellationToken);
+            var data = Collector.GetEarliestAndOldestRecordTimeDate(refId);
 
             var now = CreateClock().Now;
 
@@ -127,13 +125,13 @@ namespace Hspi
 
         internal long GetTotalRecords(int refId)
         {
-            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue).WaitAndUnwrapException(ShutdownCancellationToken);
+            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue);
             return count;
         }
 
         internal long DeleteAllRecords(int refId)
         {
-            var count = Collector.DeleteAllRecordsForRef(refId).WaitAndUnwrapException(ShutdownCancellationToken);
+            var count = Collector.DeleteAllRecordsForRef(refId);
             return count;
         }
 
@@ -227,7 +225,7 @@ namespace Hspi
             }
         }
 
-        private async Task<string> HandleGraphRecords(string data)
+        private string HandleGraphRecords(string data)
         {
             var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
@@ -246,8 +244,8 @@ namespace Hspi
             bool shouldGroup = groupBySeconds >= 5;
 
             var queryData = shouldGroup ?
-                            await TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy).ConfigureAwait(false) :
-                            await Collector.GetGraphValues(refId, min / 1000, max / 1000).ConfigureAwait(false);
+                             TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy) :
+                             Collector.GetGraphValues(refId, min / 1000, max / 1000);
 
             CheckNotNull(featureCachedDataProvider);
             StringBuilder stb = new();
@@ -288,11 +286,12 @@ namespace Hspi
                 {
                     throw new ArgumentException("fill is not correct");
                 }
+
                 return (FillStrategy)fillStrategy;
             }
         }
 
-        private async Task<string> HandleHistoryRecords(string data)
+        private string HandleHistoryRecords(string data)
         {
             Log.Debug("HandleHistoryRecords {data}", data);
 
@@ -318,19 +317,19 @@ namespace Hspi
                     throw new ArgumentException("max < min");
                 }
 
-                totalResultsCount = await Collector.GetRecordsCount(refId, min, max).ConfigureAwait(false);
+                totalResultsCount = Collector.GetRecordsCount(refId, min, max);
             }
             else
             {
                 throw new ArgumentException("min/max not specified");
             }
 
-            var queryData = await Collector.GetRecords(refId,
+            var queryData = Collector.GetRecords(refId,
                                                        min,
                                                        max,
                                                        start,
                                                        length,
-                                                       sortOrder).ConfigureAwait(false);
+                                                       sortOrder);
 
             using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
             using var jsonWriter = new JsonTextWriter(stringWriter);

@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Hspi.Utils;
 using Humanizer;
-using Nito.AsyncEx;
+using Nito.Disposables;
 using Serilog;
 using SQLitePCL;
 using SQLitePCL.Ugly;
@@ -53,8 +52,11 @@ namespace Hspi.Database
             allRefOldestRecordsCommand = CreateStatement(AllRefOldestRecordsSql);
             deleteOldRecordByRefCommand = CreateStatement(DeleteOldRecordByRefSql);
             deleteAllRecordByRefCommand = CreateStatement(DeleteAllRecordByRefSql);
-            Utils.TaskHelper.StartAsyncWithErrorChecking("DB update records", UpdateRecords, shutdownToken);
-            Utils.TaskHelper.StartAsyncWithErrorChecking("Maintain DB", Maintenance, shutdownToken);
+
+            var recordUpdateThread = new Thread(UpdateRecords);
+            recordUpdateThread.Start();
+
+            maintainanceTimer = new Timer(Maintenance, null, 0, 60 * 60 * 1000);
 
             static void CreateDBDirectory(string dbPath)
             {
@@ -66,12 +68,12 @@ namespace Hspi.Database
             }
         }
 
-        public async Task<long> DeleteAllRecordsForRef(long refId)
+        public long DeleteAllRecordsForRef(long refId)
         {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+            using var lock2 = CreateAutoUnlockForDBConnection();
 
             var stmt = deleteAllRecordByRefCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.step_done(stmt);
 
@@ -91,15 +93,18 @@ namespace Hspi.Database
             deleteOldRecordByRefCommand.Dispose();
             deleteAllRecordByRefCommand.Dispose();
             sqliteConnection?.Dispose();
+            maintainanceTimer.Dispose();
+            connectionLock.Dispose();
+            queue.Dispose();
         }
 
         public void DoMaintainance()
         {
             Log.Information("Maintainance for database triggered");
-            maintainanceNowEvent.Set();
+            maintainanceTimer.Change(0, MaintainanceIntervalMs);
         }
 
-        public async Task<IDictionary<string, string>> GetDatabaseStats()
+        public IDictionary<string, string> GetDatabaseStats()
         {
             return new Dictionary<string, string>()
             {
@@ -107,8 +112,8 @@ namespace Hspi.Database
                 { "Sqlite version",  raw.sqlite3_libversion().utf8_to_string() },
                 { "Sqlite memory used",  raw.sqlite3_memory_used().Bytes().Humanize() },
                 { "Size",   GetTotalFileSize().Bytes().Humanize() },
-                { "Total records",  (await GetTotalRecords().ConfigureAwait(false)).ToString("N0") },
-                { "Total records from last 24 hr",  (await GetTotalRecordsInLastDay().ConfigureAwait(false)).ToString("N0") },
+                { "Total records",   GetTotalRecords().ToString("N0") },
+                { "Total records from last 24 hr",    GetTotalRecordsInLastDay().ToString("N0") },
             };
 
             long GetTotalFileSize()
@@ -131,25 +136,25 @@ namespace Hspi.Database
                 }
             }
 
-            async Task<long> GetTotalRecords()
+            long GetTotalRecords()
             {
-                using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+                using var lock2 = CreateAutoUnlockForDBConnection();
                 return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history");
             }
 
-            async Task<long> GetTotalRecordsInLastDay()
+            long GetTotalRecordsInLastDay()
             {
-                using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+                using var lock2 = CreateAutoUnlockForDBConnection();
                 return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>(STRFTIME('%s')-86400)");
             }
         }
 
-        public async Task<Tuple<DateTimeOffset, DateTimeOffset>> GetEarliestAndOldestRecordTimeDate(long refId)
+        public Tuple<DateTimeOffset, DateTimeOffset> GetEarliestAndOldestRecordTimeDate(long refId)
         {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+            using var lock2 = CreateAutoUnlockForDBConnection();
             var stmt = getEarliestAndOldestRecordCommand;
 
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.step(stmt);
 
@@ -165,20 +170,21 @@ namespace Hspi.Database
         /// <param name="minUnixTimeSeconds"></param>
         /// <param name="maxUnixTimeSeconds"></param>
         /// <returns></returns>
-        public async Task<IList<TimeAndValue>> GetGraphValues(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        public IList<TimeAndValue> GetGraphValues(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
             List<TimeAndValue> records = new();
-            await IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, (x) => records.AddRange(x)).ConfigureAwait(false);
+            IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, (x) => records.AddRange(x));
             return records;
         }
 
-        public async Task<IList<RecordDataAndDuration>> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
+        public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
                                                                 long start, long length, ResultSortBy sortBy)
         {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+            using var lock2 = CreateAutoUnlockForDBConnection();
+
             var stmt = getHistoryCommand;
 
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
             ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
@@ -205,12 +211,11 @@ namespace Hspi.Database
             return records;
         }
 
-        public async Task<long> GetRecordsCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        public long GetRecordsCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-
+            using var lock2 = CreateAutoUnlockForDBConnection();
             var stmt = getRecordHistoryCountCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
             ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
@@ -219,9 +224,10 @@ namespace Hspi.Database
             return stmt.column<long>(0);
         }
 
-        public async Task<IList<KeyValuePair<long, long>>> GetRecordsWithCount(int limit)
+        public IList<KeyValuePair<long, long>> GetRecordsWithCount(int limit)
         {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+            using var lock2 = CreateAutoUnlockForDBConnection();
+
             var records = new List<KeyValuePair<long, long>>();
             using var stmt = CreateStatement("SELECT ref, COUNT(*) as rcount FROM history GROUP BY ref ORDER BY rcount DESC LIMIT ?");
 
@@ -234,11 +240,10 @@ namespace Hspi.Database
             return records;
         }
 
-        public async Task<IList<long>> GetRefIdsWithRecords()
+        public IList<long> GetRefIdsWithRecords()
         {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-
             var records = new List<long>();
+            using var lock2 = CreateAutoUnlockForDBConnection();
             using var stmt = CreateStatement("SELECT DISTINCT ref FROM history");
 
             while (ugly.step(stmt) != SQLITE_DONE)
@@ -256,12 +261,11 @@ namespace Hspi.Database
         /// <param name="minUnixTimeSeconds"></param>
         /// <param name="maxUnixTimeSeconds"></param>
         /// <param name="iterator">Function called for iteration</param>
-        public async Task IterateGraphValues(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds, Action<IEnumerable<TimeAndValue>> iterator)
+        public void IterateGraphValues(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds, Action<IEnumerable<TimeAndValue>> iterator)
         {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
-
+            using var lock2 = CreateAutoUnlockForDBConnection();
             var stmt = getTimeAndValueCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
             ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
@@ -279,9 +283,21 @@ namespace Hspi.Database
             }
         }
 
-        public async Task Record(RecordData recordData)
+        public void Record(in RecordData recordData)
         {
-            await queue.EnqueueAsync(recordData).ConfigureAwait(false);
+            queue.Add(recordData);
+        }
+
+        private IDisposable CreateAutoUnlockForDBConnection()
+        {
+            connectionLock.Wait(shutdownToken);
+            return Disposable.Create(() => connectionLock.Release());
+        }
+
+        private static IDisposable CreateStatementAutoReset(sqlite3_stmt stmt)
+        {
+            ugly.reset(stmt);
+            return Disposable.Create(() => ugly.reset(stmt));
         }
 
         private sqlite3_stmt CreateStatement(string sql)
@@ -290,11 +306,11 @@ namespace Hspi.Database
             return command;
         }
 
-        private async Task InsertRecord(RecordData record)
+        private void InsertRecord(in RecordData record)
         {
-            using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+            using var lock2 = CreateAutoUnlockForDBConnection();
             sqlite3_stmt stmt = insertCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, record.TimeStamp.ToUnixTimeSeconds());
             ugly.bind_int64(stmt, 2, record.DeviceRefId);
             ugly.bind_double(stmt, 3, record.DeviceValue);
@@ -302,95 +318,81 @@ namespace Hspi.Database
             ugly.step_done(stmt);
         }
 
-        private async Task Maintenance()
+        private void Maintenance(object state)
         {
-            while (!shutdownToken.IsCancellationRequested)
+            try
             {
-                try
+                Log.Information("Starting maintaining database");
+
+                using var lock2 = CreateAutoUnlockForDBConnection();
+                var deletedCount = PruneRecords();
+                if (deletedCount > 0)
                 {
-                    Log.Information("Starting maintaining database");
+                    VacuumFreePages();
+                }
 
-                    using var dbLock = await connectionLock.LockAsync(shutdownToken).ConfigureAwait(false);
+                ugly.exec(sqliteConnection, "PRAGMA optimize");
 
-                    var deletedCount = PruneRecords();
-                    if (deletedCount > 0)
+                Log.Information("Finished maintaining database");
+            }
+            catch (Exception ex)
+            {
+                if (!ex.IsCancelException())
+                {
+                    Log.Warning("Failed to do maintainance with {error}", ExceptionHelper.GetFullMessage(ex));
+                }
+            }
+        }
+
+        private int PruneRecord(long refId, long recordsToKeep, long cutoffUnixTimeSeconds)
+        {
+            var stmt = deleteOldRecordByRefCommand;
+            using var stmtRest = CreateStatementAutoReset(stmt);
+            ugly.bind_int64(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, cutoffUnixTimeSeconds);
+            ugly.bind_int64(stmt, 3, recordsToKeep);
+            ugly.step_done(stmt);
+
+            var changesCount = ugly.changes(sqliteConnection);
+            Log.Information("Removed {rows} row(s) for device:{refId} in database", changesCount, refId);
+            return changesCount;
+        }
+
+        private long PruneRecords()
+        {
+            try
+            {
+                Log.Debug("Start Pruning older records");
+                var recordsToKeep = settings.MinRecordsToKeep;
+                allRefOldestRecordsCommand.reset();
+
+                long deletedCount = 0;
+                DateTimeOffset now = systemClock.Now;
+                while ((ugly.step(allRefOldestRecordsCommand) != SQLITE_DONE) &&
+                       !shutdownToken.IsCancellationRequested)
+                {
+                    // order: SELECT time, MIN(TS) FROM history
+                    var refId = ugly.column_int64(allRefOldestRecordsCommand, 0);
+                    var oldestRecordUnixTimeSeconds = ugly.column_int64(allRefOldestRecordsCommand, 1);
+                    var totalRecords = ugly.column_int64(allRefOldestRecordsCommand, 2);
+
+                    var cutoffTime = now - settings.GetDeviceRetentionPeriod(refId);
+                    var cutoffUnixTimeSeconds = cutoffTime.ToUnixTimeSeconds();
+                    bool hasRecordsNeedingPruning = oldestRecordUnixTimeSeconds <= cutoffUnixTimeSeconds && totalRecords > recordsToKeep;
+                    if (hasRecordsNeedingPruning)
                     {
-                        VacuumFreePages();
+                        Log.Debug("Pruning device:{refId} in database", refId);
+                        deletedCount += PruneRecord(refId, recordsToKeep, cutoffUnixTimeSeconds);
                     }
-
-                    ugly.exec(sqliteConnection, "PRAGMA optimize");
-
-                    Log.Information("Finished maintaining database");
-                }
-                catch (Exception ex) when (!ex.IsCancelException())
-                {
-                    Log.Warning("Failed to do maintainance with {error}}", ExceptionHelper.GetFullMessage(ex));
                 }
 
-                var eventWaitTask = maintainanceNowEvent.WaitAsync(shutdownToken);
-                await Task.WhenAny(Task.Delay(TimeSpan.FromHours(1), shutdownToken), eventWaitTask).ConfigureAwait(false);
+                Log.Debug("Finished pruning older records");
+                return deletedCount;
             }
-
-            int PruneRecord(long refId, long recordsToKeep, long cutoffUnixTimeSeconds)
+            catch (Exception ex) when (!ex.IsCancelException())
             {
-                var stmt = deleteOldRecordByRefCommand;
-                using var stmtRest = new StatementReset(stmt);
-                ugly.bind_int64(stmt, 1, refId);
-                ugly.bind_int64(stmt, 2, cutoffUnixTimeSeconds);
-                ugly.bind_int64(stmt, 3, recordsToKeep);
-                ugly.step_done(stmt);
-
-                var changesCount = ugly.changes(sqliteConnection);
-                Log.Information("Removed {rows} row(s) for device:{refId} in database", changesCount, refId);
-                return changesCount;
-            }
-
-            long PruneRecords()
-            {
-                try
-                {
-                    Log.Debug("Start Pruning older records");
-                    var recordsToKeep = settings.MinRecordsToKeep;
-                    allRefOldestRecordsCommand.reset();
-
-                    long deletedCount = 0;
-                    DateTimeOffset now = systemClock.Now;
-                    while (ugly.step(allRefOldestRecordsCommand) != SQLITE_DONE)
-                    {
-                        // order: SELECT time, MIN(TS) FROM history
-                        var refId = ugly.column_int64(allRefOldestRecordsCommand, 0);
-                        var oldestRecordUnixTimeSeconds = ugly.column_int64(allRefOldestRecordsCommand, 1);
-                        var totalRecords = ugly.column_int64(allRefOldestRecordsCommand, 2);
-
-                        var cutoffTime = now - settings.GetDeviceRetentionPeriod(refId);
-                        var cutoffUnixTimeSeconds = cutoffTime.ToUnixTimeSeconds();
-                        bool hasRecordsNeedingPruning = oldestRecordUnixTimeSeconds <= cutoffUnixTimeSeconds && totalRecords > recordsToKeep;
-                        if (hasRecordsNeedingPruning)
-                        {
-                            Log.Debug("Pruning device:{refId} in database", refId);
-                            deletedCount += PruneRecord(refId, recordsToKeep, cutoffUnixTimeSeconds);
-                        }
-                    }
-
-                    Log.Debug("Finished pruning older records");
-                    return deletedCount;
-                }
-                catch (Exception ex) when (!ex.IsCancelException())
-                {
-                    Log.Warning("Failed to do pruning with {error}}", ExceptionHelper.GetFullMessage(ex));
-                    return 0;
-                }
-            }
-
-            void VacuumFreePages()
-            {
-                var freePages = ugly.query_scalar<long>(sqliteConnection, "PRAGMA freelist_count");
-
-                if (freePages > 0)
-                {
-                    Log.Debug("Vacuuming {count} Pages from database", freePages);
-                    ugly.exec(sqliteConnection, "PRAGMA incremental_vacuum");
-                }
+                Log.Warning("Failed to do pruning with {error}}", ExceptionHelper.GetFullMessage(ex));
+                return 0;
             }
         }
 
@@ -447,37 +449,46 @@ namespace Hspi.Database
             }
         }
 
-        private async Task UpdateRecords()
+        private void UpdateRecords()
         {
+            Log.Debug("Starting records update thread");
             while (!shutdownToken.IsCancellationRequested)
             {
-                var record = await queue.DequeueAsync(shutdownToken).ConfigureAwait(false);
                 try
                 {
-                    Log.Verbose("Adding to database: {@record}", record);
-                    await InsertRecord(record).ConfigureAwait(false);
+                    var record = queue.Take(shutdownToken);
+                    try
+                    {
+                        Log.Verbose("Adding to database: {@record}", record);
+                        InsertRecord(record);
+                    }
+                    catch (Exception ex) when (!ex.IsCancelException())
+                    {
+                        Log.Warning("Failed to update {record} with {error}}", record, ExceptionHelper.GetFullMessage(ex));
+                    }
                 }
-                catch (Exception ex) when (!ex.IsCancelException())
+                catch (Exception ex)
                 {
-                    Log.Warning("Failed to update {record} with {error}}", record, ExceptionHelper.GetFullMessage(ex));
-
-                    await queue.EnqueueAsync(record, shutdownToken).ConfigureAwait(false);
-                    await Task.Delay(TimeSpan.FromSeconds(30), shutdownToken).ConfigureAwait(false);
+                    if (!ex.IsCancelException())
+                    {
+                        Log.Warning("Error in records update thread : {error}", ex.GetFullMessage());
+                        shutdownToken.WaitHandle.WaitOne(30 * 1000);
+                    }
                 }
             }
+
+            Log.Debug("Finish records update thread");
         }
 
-        private sealed class StatementReset : IDisposable
+        private void VacuumFreePages()
         {
-            public StatementReset(sqlite3_stmt stmt)
+            var freePages = ugly.query_scalar<long>(sqliteConnection, "PRAGMA freelist_count");
+
+            if (freePages > 0)
             {
-                this.stmt = stmt;
-                ugly.reset(stmt);
+                Log.Debug("Vacuuming {count} Pages from database", freePages);
+                ugly.exec(sqliteConnection, "PRAGMA incremental_vacuum");
             }
-
-            void IDisposable.Dispose() => ugly.reset(stmt);
-
-            private readonly sqlite3_stmt stmt;
         }
 
         private const string AllRefOldestRecordsSql = "SELECT ref, MIN(ts), COUNT(*) FROM history GROUP BY ref";
@@ -492,6 +503,7 @@ namespace Hspi.Database
               SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
 
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
+        private const int MaintainanceIntervalMs = 60 * 1000 * 1000;
         private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
 
         private const string RecordsHistorySql = @"
@@ -509,7 +521,7 @@ namespace Hspi.Database
                 LIMIT $limit OFFSET $offset";
 
         private readonly sqlite3_stmt allRefOldestRecordsCommand;
-        private readonly AsyncLock connectionLock = new();
+        private readonly SemaphoreSlim connectionLock = new(1, 1);
         private readonly sqlite3_stmt deleteAllRecordByRefCommand;
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
         private readonly sqlite3_stmt getEarliestAndOldestRecordCommand;
@@ -517,8 +529,8 @@ namespace Hspi.Database
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;
-        private readonly AsyncAutoResetEvent maintainanceNowEvent = new(false);
-        private readonly AsyncProducerConsumerQueue<RecordData> queue = new();
+        private readonly Timer maintainanceTimer;
+        private readonly RecordDataProducerConsumerQueue queue = new();
         private readonly IDBSettings settings;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;

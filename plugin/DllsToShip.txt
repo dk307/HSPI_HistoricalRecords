@@ -3,9 +3,6 @@ Humanizer.dll
 Microsoft.Win32.Primitives.dll
 netstandard.dll
 Newtonsoft.Json.dll
-Nito.AsyncEx.Coordination.dll
-Nito.AsyncEx.Tasks.dll
-Nito.Collections.Deque.dll
 Nito.Disposables.dll
 Serilog.dll
 Serilog.Sinks.Console.dll

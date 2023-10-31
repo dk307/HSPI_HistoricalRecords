@@ -208,6 +208,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 fakeHsController.SetupIniSettingsSection("Settings", settingsFromIni);
             }
+
             UpdatePluginHsGet(mockPlugin, fakeHsController);
             return fakeHsController;
         }
@@ -241,16 +242,7 @@ namespace HSPI_HistoricalRecordsTest
 
         public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
-            bool result = func();
-            while (!result && stopwatch.Elapsed < wait)
-            {
-                Thread.Yield();
-                result = func();
-            }
-
-            return result;
+            return SpinWait.SpinUntil(func, wait);
         }
 
         public static bool TimedWaitTillTrue(Func<bool> func)

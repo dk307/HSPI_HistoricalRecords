@@ -6,10 +6,36 @@ using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HSPI_HistoricalRecordsTest
+
 {
     [TestClass]
     public class DeviceChangedinHSTest
     {
+        [TestMethod]
+        public void RecordALargeNumberOfEvents()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
+
+            DateTime time = DateTime.Now;
+
+            int deviceRefId = 35673;
+            mockHsController.SetupFeature(deviceRefId,
+                                     1.1,
+                                     displayString: "1.1",
+                                     lastChange: time);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, deviceRefId, 1);
+
+            for (var i = 0; i < 1024; i++)
+            {
+                TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                        deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1);
+            }
+        }
+
         [DataTestMethod]
         [DataRow(Constants.HSEvent.VALUE_CHANGE, "abcd", "abcd")]
         [DataRow(Constants.HSEvent.STRING_CHANGE, "abcd3", "abcd3")]
