@@ -6,9 +6,9 @@ using System.Threading;
 
 namespace Hspi.Database
 {
-    internal sealed class ProducerConsumerQueue<T> : IDisposable
+    internal sealed class RecordDataProducerConsumerQueue : IDisposable
     {
-        public void Add(in T t)
+        public void Add(in RecordData t)
         {
             queue.Enqueue(t);
             addedEvent.Set();
@@ -19,9 +19,9 @@ namespace Hspi.Database
             addedEvent.Dispose();
         }
 
-        public T Take(CancellationToken cancellationToken)
+        public RecordData Take(CancellationToken cancellationToken)
         {
-            T result;
+            RecordData result;
             while (!queue.TryDequeue(out result))
             {
                 WaitHandle.WaitAny(new WaitHandle[] { addedEvent, cancellationToken.WaitHandle }, -1, true);
@@ -32,6 +32,6 @@ namespace Hspi.Database
         }
 
         private readonly AutoResetEvent addedEvent = new(false);
-        private readonly ConcurrentQueue<T> queue = new();
+        private readonly ConcurrentQueue<RecordData> queue = new();
     }
 }

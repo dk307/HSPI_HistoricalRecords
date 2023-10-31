@@ -54,10 +54,9 @@ namespace Hspi.Database
             deleteAllRecordByRefCommand = CreateStatement(DeleteAllRecordByRefSql);
 
             var recordUpdateThread = new Thread(UpdateRecords);
-            var maintenanceThread = new Thread(Maintenance);
-
             recordUpdateThread.Start();
-            maintenanceThread.Start();
+
+            maintainanceTimer = new Timer(Maintenance, null, 0, 60 * 60 * 1000);
 
             static void CreateDBDirectory(string dbPath)
             {
@@ -74,7 +73,7 @@ namespace Hspi.Database
             using var lock2 = CreateAutoUnlockForDBConnection();
 
             var stmt = deleteAllRecordByRefCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.step_done(stmt);
 
@@ -94,15 +93,15 @@ namespace Hspi.Database
             deleteOldRecordByRefCommand.Dispose();
             deleteAllRecordByRefCommand.Dispose();
             sqliteConnection?.Dispose();
-            maintainanceNowEvent?.Dispose();
-            queue.Dispose();
+            maintainanceTimer.Dispose();
             connectionLock.Dispose();
+            queue.Dispose();
         }
 
         public void DoMaintainance()
         {
             Log.Information("Maintainance for database triggered");
-            maintainanceNowEvent.Set();
+            maintainanceTimer.Change(0, MaintainanceIntervalMs);
         }
 
         public IDictionary<string, string> GetDatabaseStats()
@@ -155,7 +154,7 @@ namespace Hspi.Database
             using var lock2 = CreateAutoUnlockForDBConnection();
             var stmt = getEarliestAndOldestRecordCommand;
 
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.step(stmt);
 
@@ -185,7 +184,7 @@ namespace Hspi.Database
 
             var stmt = getHistoryCommand;
 
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
             ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
@@ -216,7 +215,7 @@ namespace Hspi.Database
         {
             using var lock2 = CreateAutoUnlockForDBConnection();
             var stmt = getRecordHistoryCountCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
             ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
@@ -266,7 +265,7 @@ namespace Hspi.Database
         {
             using var lock2 = CreateAutoUnlockForDBConnection();
             var stmt = getTimeAndValueCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
             ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
@@ -295,6 +294,12 @@ namespace Hspi.Database
             return Disposable.Create(() => connectionLock.Release());
         }
 
+        private static IDisposable CreateStatementAutoReset(sqlite3_stmt stmt)
+        {
+            ugly.reset(stmt);
+            return Disposable.Create(() => ugly.reset(stmt));
+        }
+
         private sqlite3_stmt CreateStatement(string sql)
         {
             var command = ugly.prepare_v3(sqliteConnection, sql, SQLITE_PREPARE_PERSISTENT);
@@ -305,7 +310,7 @@ namespace Hspi.Database
         {
             using var lock2 = CreateAutoUnlockForDBConnection();
             sqlite3_stmt stmt = insertCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, record.TimeStamp.ToUnixTimeSeconds());
             ugly.bind_int64(stmt, 2, record.DeviceRefId);
             ugly.bind_double(stmt, 3, record.DeviceValue);
@@ -313,43 +318,36 @@ namespace Hspi.Database
             ugly.step_done(stmt);
         }
 
-        private void Maintenance()
+        private void Maintenance(object state)
         {
-            while (!shutdownToken.IsCancellationRequested)
+            try
             {
-                try
+                Log.Information("Starting maintaining database");
+
+                using var lock2 = CreateAutoUnlockForDBConnection();
+                var deletedCount = PruneRecords();
+                if (deletedCount > 0)
                 {
-                    Log.Information("Starting maintaining database");
-
-                    using var lock2 = CreateAutoUnlockForDBConnection();
-                    var deletedCount = PruneRecords();
-                    if (deletedCount > 0)
-                    {
-                        VacuumFreePages();
-                    }
-
-                    ugly.exec(sqliteConnection, "PRAGMA optimize");
-
-                    Log.Information("Finished maintaining database");
-                }
-                catch (Exception ex)
-                {
-                    if (!ex.IsCancelException())
-                    {
-                        Log.Warning("Failed to do maintainance with {error}", ExceptionHelper.GetFullMessage(ex));
-                    }
+                    VacuumFreePages();
                 }
 
-                WaitHandle[] waitHandles = new WaitHandle[] { maintainanceNowEvent, shutdownToken.WaitHandle };
-                TimeSpan timeout = TimeSpan.FromHours(1);
-                WaitHandle.WaitAny(waitHandles, timeout);
+                ugly.exec(sqliteConnection, "PRAGMA optimize");
+
+                Log.Information("Finished maintaining database");
+            }
+            catch (Exception ex)
+            {
+                if (!ex.IsCancelException())
+                {
+                    Log.Warning("Failed to do maintainance with {error}", ExceptionHelper.GetFullMessage(ex));
+                }
             }
         }
 
         private int PruneRecord(long refId, long recordsToKeep, long cutoffUnixTimeSeconds)
         {
             var stmt = deleteOldRecordByRefCommand;
-            using var stmtRest = new StatementReset(stmt);
+            using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.bind_int64(stmt, 2, cutoffUnixTimeSeconds);
             ugly.bind_int64(stmt, 3, recordsToKeep);
@@ -370,7 +368,8 @@ namespace Hspi.Database
 
                 long deletedCount = 0;
                 DateTimeOffset now = systemClock.Now;
-                while (ugly.step(allRefOldestRecordsCommand) != SQLITE_DONE)
+                while ((ugly.step(allRefOldestRecordsCommand) != SQLITE_DONE) &&
+                       !shutdownToken.IsCancellationRequested)
                 {
                     // order: SELECT time, MIN(TS) FROM history
                     var refId = ugly.column_int64(allRefOldestRecordsCommand, 0);
@@ -492,19 +491,6 @@ namespace Hspi.Database
             }
         }
 
-        private sealed class StatementReset : IDisposable
-        {
-            public StatementReset(sqlite3_stmt stmt)
-            {
-                this.stmt = stmt;
-                ugly.reset(stmt);
-            }
-
-            void IDisposable.Dispose() => ugly.reset(stmt);
-
-            private readonly sqlite3_stmt stmt;
-        }
-
         private const string AllRefOldestRecordsSql = "SELECT ref, MIN(ts), COUNT(*) FROM history GROUP BY ref";
         private const string DeleteAllRecordByRefSql = "DELETE from history where ref=$ref";
         private const string DeleteOldRecordByRefSql = "DELETE from history where ref=$ref and ts<$time AND ts NOT IN ( SELECT ts FROM history WHERE ref=$ref ORDER BY ts DESC LIMIT $limit)";
@@ -517,6 +503,7 @@ namespace Hspi.Database
               SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
 
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
+        private const int MaintainanceIntervalMs = 60 * 1000 * 1000;
         private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
 
         private const string RecordsHistorySql = @"
@@ -542,8 +529,8 @@ namespace Hspi.Database
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;
-        private readonly AutoResetEvent maintainanceNowEvent = new(false);
-        private readonly ProducerConsumerQueue<RecordData> queue = new();
+        private readonly Timer maintainanceTimer;
+        private readonly RecordDataProducerConsumerQueue queue = new();
         private readonly IDBSettings settings;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;
