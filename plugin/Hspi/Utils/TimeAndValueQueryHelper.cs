@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using Hspi.Database;
 
 #nullable enable
@@ -9,7 +8,7 @@ namespace Hspi.Utils
 {
     internal static class TimeAndValueQueryHelper
     {
-        public static async Task<IEnumerable<TimeAndValue>> GetGroupedGraphValues(SqliteDatabaseCollector collector,
+        public static IEnumerable<TimeAndValue> GetGroupedGraphValues(SqliteDatabaseCollector collector,
                                                                             int refId,
                                                                             long minUnixTimeSeconds,
                                                                             long maxUnixTimeSeconds,
@@ -17,7 +16,7 @@ namespace Hspi.Utils
                                                                             FillStrategy fillStrategy)
         {
             IEnumerable<TimeAndValue>? result = null;
-            await collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup).ConfigureAwait(false);
+            collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup);
             Debug.Assert(result != null);
             return result!;
 
@@ -29,7 +28,7 @@ namespace Hspi.Utils
             }
         }
 
-        public static async Task<double?> Average(SqliteDatabaseCollector collector,
+        public static double? Average(SqliteDatabaseCollector collector,
                                                  int refId,
                                                  long minUnixTimeSeconds,
                                                  long maxUnixTimeSeconds,
@@ -37,7 +36,7 @@ namespace Hspi.Utils
         {
             double? result = null;
 
-            await collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup).ConfigureAwait(false);
+            collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup);
             return result;
 
             // this is called under db lock

@@ -111,7 +111,7 @@ namespace HSPI_HistoricalRecordsTest
             int refId = 1110;
             mockHsController.SetupFeature(refId, 10, "10.0 lux", lastChange: nowTime);
 
-            List<StatusGraphic> graphics = new List<StatusGraphic>()
+            List<StatusGraphic> graphics = new()
             {
                 new StatusGraphic("path", new ValueRange(0, 100))
             };
