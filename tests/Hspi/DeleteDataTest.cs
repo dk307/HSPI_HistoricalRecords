@@ -30,6 +30,25 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void HandleDeleteRecords()
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            int refId = 10002;
+
+            hsControllerMock.SetupFeature(refId, 100);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugIn, refId, 1));
+
+            plugIn.Object.PostBackProc("deletedevicerecords", $"{{ref:{refId}}}", string.Empty, 0);
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugIn, refId, 0));
+        }
+
+        [TestMethod]
         public void DeleteOrphanDataOnStart()
         {
             var plugin1 = TestHelper.CreatePlugInMock();

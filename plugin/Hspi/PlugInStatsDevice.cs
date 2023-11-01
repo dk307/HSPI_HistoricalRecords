@@ -32,9 +32,11 @@ namespace Hspi
             {
                 // find child
                 var children = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
-                if (children.Count == 1) {
+                if (children.Count == 1)
+                {
                     refId = children.First();
-                } else
+                }
+                else
                 {
                     throw new HsDeviceInvalidException($"{refId} has invalid number of features({children.Count})");
                 }
@@ -71,6 +73,15 @@ namespace Hspi
             jsonWriter.Close();
 
             return stb.ToString();
+        }
+
+        private string HandleDeleteRecords(string data)
+        {
+            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var refId = GetJsonValue<int>(jsonData, "ref");
+
+            DeleteAllRecords(refId);
+            return "{}";
         }
 
         private string HandleDeviceCreate(string data)

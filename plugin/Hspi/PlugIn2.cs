@@ -89,6 +89,7 @@ namespace Hspi
                     "updatedevicesettings" => HandleUpdateDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
                     "deviceedit" => HandleDeviceEdit(data),
+                    "deletedevicerecords" => HandleDeleteRecords(data),
                     _ => base.PostBackProc(page, data, user, userRights),
                 };
             }
