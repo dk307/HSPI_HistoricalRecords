@@ -63,8 +63,9 @@
                 <td>{{item["records"]}}</td> 
                 <td>{{if item["tracked"] && item["monitorableType"]}}Yes{{else}}No{{end}}</td> 
                 <td>{{if item["monitorableType"]}}
-					<a class="deviceoptions" data-refId='{{item["ref"]}}' data-tracked='{{item["tracked"]}}' data-mdb-toggle="tooltip" title="Change tracking options for the device" onclick="javascript:showDeviceOptions(this)" href="#{{item["ref"]}}">
-					  <i class="fa fa-edit"></i>
+					<a class="fas fa-lg fa-point fa-sliders-h" data-refId='{{item["ref"]}}' data-tracked='{{item["tracked"]}}' data-mdb-toggle="tooltip" title="Change tracking options for the device" onclick="javascript:showDeviceOptions(this)">				  
+					</a>
+					<a  class="far fa-lg fa-point fa-trash-alt" data-refId='{{item["ref"]}}' data-tracked='{{item["tracked"]}}' data-mdb-toggle="tooltip" title="Delete all records for the device" onclick="javascript:deleteRecords(this)">					  
 					</a>
 					{{end}}
 				</td> 
@@ -157,6 +158,33 @@ function showDeviceOptions(e){
 	$("#idTrackedFeature").prop('checked', tracked == "true");
 	
 	$('#modalEdit').modal('show');
+};
+
+function deleteRecords(e){
+	const refId = $(e).attr('data-refId');
+		
+	swal.fire({
+			title: 'Confirmation',
+			text: 'Do you want to delete all records for the device ?',
+			position: 'top',
+			focusConfirm: false,
+			reverseButtons: false,
+			showCancelButton: true,
+			cancelButtonText: 'No',
+			confirmButtonText: 'Yes',
+    }).then((result) => {
+        if (result.isConfirmed) {	
+			const data = {
+				ref: refId,
+			};
+			
+			ajaxPostPlugIn("deletedevicerecords", data, function(result, context) {
+				//update the table column
+				const col1 = $('.devicerow[data-refId='+refId +'] td:nth-child(2)');		
+				col1.text(0);				
+			}, null, data);
+		}
+    }); 
 };
 
 

@@ -11,7 +11,6 @@ using Humanizer;
 using Newtonsoft.Json;
 using Serilog;
 using Serilog.Events;
-
 using static System.FormattableString;
 
 #nullable enable
@@ -45,7 +44,7 @@ namespace Hspi.Device
 
         public int RefId { get; }
 
-        private string NameForLog => GetNameForLog(HS, RefId);
+        private string NameForLog => HsHelper.GetNameForLog(HS, RefId);
 
         private int RefreshInterval
         {
@@ -156,18 +155,6 @@ namespace Hspi.Device
         public void UpdateNow()
         {
             timer.Change(0, RefreshInterval);
-        }
-
-        private static string GetNameForLog(IHsController hsController, int refId)
-        {
-            try
-            {
-                return hsController.GetNameByRef(refId);
-            }
-            catch
-            {
-                return Invariant($"RefId:{refId}");
-            }
         }
 
         private static T GetPlugExtraData<T>(IHsController hsController,
