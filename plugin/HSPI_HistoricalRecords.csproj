@@ -108,6 +108,7 @@
     <Compile Include="Hspi\Utils\FillStrategy.cs" />
     <Compile Include="Hspi\Utils\HsDeviceInvalidException.cs" />
     <Compile Include="Hspi\Device\StatisticsDevice.cs" />
+    <Compile Include="Hspi\Utils\HsHelper.cs" />
     <Compile Include="Hspi\Utils\TypeConverter.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIterator.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueQueryHelper.cs" />

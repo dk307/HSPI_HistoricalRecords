@@ -8,27 +8,26 @@ using HomeSeer.PluginSdk.Devices.Controls;
 
 namespace Hspi
 {
-    internal sealed record HsFeatureData
+    internal sealed class HsFeatureData
     {
-        private readonly IHsController homeSeerSystem;
-
         public HsFeatureData(IHsController homeSeerSystem, int deviceRef)
         {
             this.homeSeerSystem = homeSeerSystem;
             Ref = deviceRef;
         }
 
-        public int Ref { get; }
-
-        public double Value => GetPropertyValue<double>(EProperty.Value);
-        public DateTimeOffset LastChange => GetPropertyValue<DateTime>(EProperty.LastChange);
         public string DisplayedStatus => GetPropertyValue<string>(EProperty.DisplayedStatus);
+        public DateTimeOffset LastChange => GetPropertyValue<DateTime>(EProperty.LastChange);
+        public int Ref { get; }
         public List<StatusControl> StatusControls => GetPropertyValue<List<StatusControl>>(EProperty.StatusControls);
         public List<StatusGraphic> StatusGraphics => GetPropertyValue<List<StatusGraphic>>(EProperty.StatusGraphics);
+        public double Value => GetPropertyValue<double>(EProperty.Value);
 
         private T GetPropertyValue<T>(EProperty prop)
         {
             return (T)homeSeerSystem.GetPropertyByRef(Ref, prop);
         }
+
+        private readonly IHsController homeSeerSystem;
     }
 }

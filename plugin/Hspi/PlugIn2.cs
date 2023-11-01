@@ -132,6 +132,7 @@ namespace Hspi
 
         internal long DeleteAllRecords(int refId)
         {
+            Log.Information("Deleting All Records for {name}", HsHelper.GetNameForLog(HomeSeerSystem, refId));
             var count = Collector.DeleteAllRecordsForRef(refId);
             return count;
         }
