@@ -39,7 +39,6 @@ namespace HSPI_HistoricalRecordsTest
         [DataTestMethod]
         [DataRow(Constants.HSEvent.VALUE_CHANGE, "abcd", "abcd")]
         [DataRow(Constants.HSEvent.STRING_CHANGE, "abcd3", "abcd3")]
-        [TestMethod]
         public void DeviceValueUpdateIsRecorded(Constants.HSEvent eventType, string displayStatus, string expectedString)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -52,13 +51,50 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
 
-            DateTime now = DateTime.Now;
+            var now = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
             var data = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, eventType, refId,
                                                       100, displayStatus, now, 1);
 
             Assert.AreEqual(100, data.DeviceValue);
             Assert.AreEqual(expectedString, data.DeviceString);
             Assert.AreEqual(((DateTimeOffset)now).ToUnixTimeSeconds(), data.UnixTimeSeconds);
+        }
+
+        [DataTestMethod]
+        [DataRow(-10)]
+        [DataRow(104)]
+        public void OutOfRangeDeviceValueIsNotRecorded(double value)
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            int refId = 35673;
+            mockHsController.SetupIniValue("Settings", "DeviceSettings", refId.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "RefId", refId.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "IsTracked", true.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "RetentionPeriod", string.Empty);
+            mockHsController.SetupIniValue(refId.ToString(), "MinValue", "0");
+            mockHsController.SetupIniValue(refId.ToString(), "MaxValue", "100");
+
+            mockHsController.SetupFeature(refId, 1.132);
+
+            var now = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
+
+            //raise out of range value event
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.Value, value);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.LastChange, now.AddHours(1));
+
+            TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.STRING_CHANGE, refId);
+
+            // raise a normal range event
+            var data = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.STRING_CHANGE, refId,
+                                          10, string.Empty, now, 1);
+
+            Assert.AreEqual(10, data.DeviceValue);
+            Assert.AreEqual(1, plugin.Object.GetTotalRecords(refId));
         }
 
         [TestMethod]

@@ -192,7 +192,7 @@ namespace HSPI_HistoricalRecordsTest
                 case StatisticsFunction.AverageLinear:
                     ExpectedValue = ((15D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
                 case StatisticsFunction.MinValue:
-                    ExpectedValue = 10D; break; ;
+                    ExpectedValue = 10D; break;
                 case StatisticsFunction.MaxValue:
                     ExpectedValue = 20D; break;
 
