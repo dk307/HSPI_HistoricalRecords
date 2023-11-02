@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using HomeSeer.PluginSdk;
-using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -46,6 +46,40 @@ namespace HSPI_HistoricalRecordsTest
             plugIn.Object.PostBackProc("deletedevicerecords", $"{{ref:{refId}}}", string.Empty, 0);
 
             Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugIn, refId, 0));
+        }
+
+        [TestMethod]
+        public void HandleStatisticsForRecords()
+        {
+            var plugin = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugin);
+
+            DateTime time = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
+
+            int refId = 10002;
+
+            hsControllerMock.SetupFeature(refId, 100);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
+
+            TestHelper.RaiseHSEventAndWait(plugin, hsControllerMock, Constants.HSEvent.VALUE_CHANGE,
+                                    refId, 10, "10", time, 1);
+            TestHelper.RaiseHSEventAndWait(plugin, hsControllerMock, Constants.HSEvent.VALUE_CHANGE,
+                                    refId, 100, "100", time.AddSeconds(60), 2);
+
+            string format = $"{{ refId:{refId}, min:{time.ToUnixTimeMilliseconds()}, max:{time.AddSeconds(119).ToUnixTimeMilliseconds()}}}";
+            string data = plugin.Object.PostBackProc("statisticsforrecords", format, string.Empty, 0);
+            Assert.IsNotNull(data);
+
+            var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+            Assert.IsNotNull(jsonData);
+
+            var result = (JArray)jsonData["result"]["data"];
+            Assert.AreEqual(2, result.Count);
+            Assert.AreEqual((10D * 60 + 100D * 60) / 120D, (double)result[0]);
+            Assert.AreEqual((55D * 60 + 100D * 60) / 120D, (double)result[1]);
         }
 
         [TestMethod]

@@ -23,6 +23,16 @@ namespace HSPI_HistoricalRecordsTest
         {
             return listToClone.Select(item => item with { }).ToList();
         }
+
+        public static long ToUnixTimeMilliseconds(this DateTime time)
+        {
+            return ((DateTimeOffset)time).ToUnixTimeMilliseconds();
+        }
+
+        public static long ToUnixTimeSeconds(this DateTime time)
+        {
+            return ((DateTimeOffset)time).ToUnixTimeSeconds();
+        }
     }
 
     internal static class TestHelper

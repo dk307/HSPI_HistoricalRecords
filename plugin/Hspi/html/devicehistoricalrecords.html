@@ -42,9 +42,9 @@
 	
 	# get list of features for devices
 	childrenRefIds=plugin_function 'HistoricalRecords' 'GetFeatureRefIdsForDevice'[refId]
-
+	
 	deviceDisplayDetails=plugin_function 'HistoricalRecords' 'GetAllowedDisplays'[featureId]
-	devicePageStats=plugin_function 'HistoricalRecords' 'GetDeviceStatsForPage'[featureId]
+	devicePageStats=plugin_function 'HistoricalRecords' 'GetDevicePageHeaderStats'[featureId]
 
 	deviceDisplayDetails=deviceDisplayDetails ?? []
 	devicePageStats=devicePageStats ?? [0,0,false,0,""]
@@ -185,6 +185,8 @@ function getRangeString(min, max) {
 								"Table"
 							when "chart"
 								"Chart"
+							when "stats"
+								"Statistics"
 						end														
 						}}</option>								
 					{{ end }}
@@ -203,8 +205,8 @@ function getRangeString(min, max) {
 			</div>
 			<ul class="navbar-nav ml-auto nav-flex-icons nav-right"  >
 			  <li class="nav-item">	  
-				<a class="nav-link waves-effect waves-light" data-mdb-toggle="tooltip" title="Change tracking options for the device" id="idModalEditLink"  href="#">
-				  <i class="fa fa-edit"></i>
+				<a class="nav-link waves-effect waves-light " data-mdb-toggle="tooltip" title="Change tracking options for the device" id="idModalEditLink"  href="#">
+				  <i class="fa fa-sliders-h"></i>
 				</a>
 			  </li>
 			</ul>
@@ -269,6 +271,16 @@ function getRangeString(min, max) {
 			<div class="chart-container">
 				<canvas id="myLineChart"></canvas>
 			</div>
+		{{else if displaySelect=="stats"}}
+			<table id="dt-persistence" class="table table-sm mb-0 table-striped"  width="100%">	
+				<thead style=" display:none;">
+					<tr>
+						<th>Type</th> 
+						<th>Value</th> 
+					</tr>
+				</thead> 
+			<table>		
+			{{needDataTables=true}}		
 		{{end}}		
 	{{else if device}}
 		Not Configured
@@ -304,12 +316,12 @@ function getRangeString(min, max) {
 
 {{includefile 'bootstrap/js/page_common.js'}}
 <script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
- 
-    </script>
+
 {{if needDataTables}}
 <script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/humanize-duration.js"></script>
 {{end}}
+
 {{if displaySelect=="chart"}}
 <script type="text/javascript" src="/HistoricalRecords/chart.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
@@ -317,7 +329,8 @@ function getRangeString(min, max) {
 <script type="text/javascript" src="/HistoricalRecords/hammer.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/chartjs-plugin-zoom.min.js"></script>
 {{end}}
-<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script><script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+
+<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
 
 <script>
 $(function() {
@@ -359,7 +372,7 @@ function roundValue(num) {
 	return Math.round(num * 10 ** {{devicePrecision}}) / 10 ** {{devicePrecision}};
 }
 
-{{if needDataTables}}
+{{if displaySelect=="table"}}
 
 function humanizeTime(unix_timestamp) {
 	const date = new Date(unix_timestamp);
@@ -628,6 +641,50 @@ function chartFunction(reason) {
 
 $(document).ready(function () {
 	setUpChart();
+	$('#loading').hide();
+});
+
+{{else if displaySelect=="stats"}}
+
+function setUpPersistanceTable() {
+  $('#dt-persistence').dataTable({
+	paging: false,
+	responsive: true,
+	bInfo : false, 
+	ajax: function (data, callback, settings) {
+		const formObject = {
+		   refId : {{featureId}},
+		   min: displayStartDate,
+		   max: displayEndDate,   
+		};
+
+		ajaxPostPlugIn("statisticsforrecords", formObject, function (result) {	
+		
+			const unit={{if deviceUnits}}' {{deviceUnits}}'{{end}};
+			const data= result["data"];
+			const jsonResult =
+			{
+				data: [
+					[	
+					 "Average (Step)",
+					 roundValue(data[0]).toString() + unit,
+					],
+					[	
+					 "Average (Linear)",
+					 roundValue(data[1]).toString() + unit,
+					],
+				]
+			};			
+			callback(jsonResult);
+		});
+	},
+  });
+  
+  $(".dataTables_length").addClass("bs-select"); 
+}
+
+$(document).ready(function () {
+	setUpPersistanceTable();
 	$('#loading').hide();
 });
 

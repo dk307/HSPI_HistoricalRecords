@@ -928,6 +928,11 @@ namespace HSPI_HistoricalRecordsTest
             return null;
         }
 
+        public DateTime GetFeatureLastChange(int devOrFeatRef)
+        {
+            return (DateTime)GetFeatureValue(devOrFeatRef, EProperty.LastChange);
+        }
+
         public void SetupDevOrFeatureValue(int devOrFeatRef, EProperty property, object value)
         {
             if (deviceOrFeatureData.TryGetValue(devOrFeatRef, out var dict))
