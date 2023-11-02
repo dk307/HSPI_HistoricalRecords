@@ -35,6 +35,7 @@ namespace Hspi
             if (ShouldShowChart(feature))
             {
                 displays.Add("chart");
+                displays.Add("stats");
             }
 
             return displays;
@@ -56,7 +57,7 @@ namespace Hspi
             }
         }
 
-        public List<object?> GetDeviceStatsForPage(object? refIdString)
+        public List<object?> GetDevicePageHeaderStats(object? refIdString)
         {
             var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
             var result = new List<object?>();
@@ -86,6 +87,7 @@ namespace Hspi
                 {
                     "historyrecords" => HandleHistoryRecords(data),
                     "graphrecords" => HandleGraphRecords(data),
+                    "statisticsforrecords" => HandleStatisticsForRecords(data),
                     "updatedevicesettings" => HandleUpdateDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
                     "deviceedit" => HandleDeviceEdit(data),
@@ -98,6 +100,13 @@ namespace Hspi
                 Log.Error("Error in Page {page} for {param} with {error}", page, data, ex.GetFullMessage());
                 return WriteExceptionResultAsJson(ex);
             }
+        }
+
+        internal long DeleteAllRecords(int refId)
+        {
+            Log.Information("Deleting All Records for {name}", HsHelper.GetNameForLog(HomeSeerSystem, refId));
+            var count = Collector.DeleteAllRecordsForRef(refId);
+            return count;
         }
 
         internal IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
@@ -130,13 +139,6 @@ namespace Hspi
             return count;
         }
 
-        internal long DeleteAllRecords(int refId)
-        {
-            Log.Information("Deleting All Records for {name}", HsHelper.GetNameForLog(HomeSeerSystem, refId));
-            var count = Collector.DeleteAllRecordsForRef(refId);
-            return count;
-        }
-
         internal bool IsFeatureTracked(int refId)
         {
             CheckNotNull(settingsPages);
@@ -151,6 +153,17 @@ namespace Hspi
         {
             // aim for 256 points on graph
             return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
+        }
+
+        private static void GetDevicePageRequestParameters(JObject? jsonData, out int refId, out long min, out long max)
+        {
+            refId = GetJsonValue<int>(jsonData, "refId");
+            min = GetJsonValue<long>(jsonData, "min");
+            max = GetJsonValue<long>(jsonData, "max");
+            if (max < min)
+            {
+                throw new ArgumentException("max < min");
+            }
         }
 
         private static T GetJsonValue<T>(JObject? json, string tokenStr)
@@ -178,6 +191,25 @@ namespace Hspi
             jsonWriter.WriteValue(ex.GetFullMessage());
             jsonWriter.WriteEndObject();
             jsonWriter.Close();
+            return stb.ToString();
+        }
+
+        private static string WriteJsonResult(Action<JsonWriter> dataWritter)
+        {
+            StringBuilder stb = new();
+            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
+            using var jsonWriter = new JsonTextWriter(stringWriter);
+            jsonWriter.Formatting = Formatting.Indented;
+            jsonWriter.WriteStartObject();
+
+            jsonWriter.WritePropertyName("result");
+            jsonWriter.WriteStartObject();
+
+            dataWritter(jsonWriter);
+
+            jsonWriter.WriteEndObject();
+            jsonWriter.Close();
+
             return stb.ToString();
         }
 
@@ -231,14 +263,7 @@ namespace Hspi
         {
             var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
 
-            var refId = GetJsonValue<int>(jsonData, "refId");
-            var min = GetJsonValue<long>(jsonData, "min");
-            var max = GetJsonValue<long>(jsonData, "max");
-
-            if (max < min)
-            {
-                throw new ArgumentException("max < min");
-            }
+            GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
 
             var fillStrategy = GetFillStrategy(jsonData);
 
@@ -249,37 +274,27 @@ namespace Hspi
                              TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy) :
                              Collector.GetGraphValues(refId, min / 1000, max / 1000);
 
-            CheckNotNull(featureCachedDataProvider);
-            StringBuilder stb = new();
-            using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
-            using var jsonWriter = new JsonTextWriter(stringWriter);
-            jsonWriter.Formatting = Formatting.Indented;
-            jsonWriter.WriteStartObject();
-
-            jsonWriter.WritePropertyName("result");
-            jsonWriter.WriteStartObject();
-            jsonWriter.WritePropertyName("groupedbyseconds");
-            jsonWriter.WriteValue(shouldGroup ? groupBySeconds : 0);
-            jsonWriter.WritePropertyName("data");
-            jsonWriter.WriteStartArray();
-
-            foreach (var row in queryData)
+            return WriteJsonResult((jsonWriter) =>
             {
-                jsonWriter.WriteStartObject();
-                jsonWriter.WritePropertyName("x");
-                jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
-                jsonWriter.WritePropertyName("y");
-                jsonWriter.WriteValue(row.DeviceValue);
+                jsonWriter.WritePropertyName("groupedbyseconds");
+                jsonWriter.WriteValue(shouldGroup ? groupBySeconds : 0);
+
+                jsonWriter.WritePropertyName("data");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in queryData)
+                {
+                    jsonWriter.WriteStartObject();
+                    jsonWriter.WritePropertyName("x");
+                    jsonWriter.WriteValue(row.UnixTimeMilliSeconds);
+                    jsonWriter.WritePropertyName("y");
+                    jsonWriter.WriteValue(row.DeviceValue);
+                    jsonWriter.WriteEndObject();
+                }
+
+                jsonWriter.WriteEndArray();
                 jsonWriter.WriteEndObject();
-            }
-
-            jsonWriter.WriteEndArray();
-            jsonWriter.WriteEndObject();
-
-            jsonWriter.WriteEndObject();
-            jsonWriter.Close();
-
-            return stb.ToString();
+            });
 
             static FillStrategy GetFillStrategy(JObject? jsonData)
             {
@@ -382,6 +397,33 @@ namespace Hspi
             {
                 return TypeConverter.TryGetFromObject<long>(parameters[name]) ?? throw new ArgumentException(name + " is invalid");
             }
+        }
+
+        private string HandleStatisticsForRecords(string data)
+        {
+            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+
+            GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
+
+            List<double?> stats = new()
+            {
+               TimeAndValueQueryHelper.Average(Collector, refId, min / 1000, max / 1000, FillStrategy.LOCF) ,
+               TimeAndValueQueryHelper.Average(Collector, refId, min / 1000, max / 1000, FillStrategy.Linear),
+            };
+
+            return WriteJsonResult((jsonWriter) =>
+            {
+                jsonWriter.WritePropertyName("data");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in stats)
+                {
+                    jsonWriter.WriteValue(row);
+                }
+
+                jsonWriter.WriteEndArray();
+                jsonWriter.WriteEndObject();
+            });
         }
 
         private string HandleUpdateDeviceSettings(string data)

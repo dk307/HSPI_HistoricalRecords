@@ -119,7 +119,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
             var list = plugin.Object.GetAllowedDisplays(refId);
-            CollectionAssert.AreEqual(new List<string>() { "table", "chart" }, list);
+            CollectionAssert.AreEqual(new List<string>() { "table", "chart", "stats" }, list);
         }
 
         [TestMethod]
@@ -175,7 +175,7 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
                                          refId, 11, "11.0 lux", nowTime.AddMinutes(1), 2);
 
-            var list = plugin.Object.GetDeviceStatsForPage(refId).ToList();
+            var list = plugin.Object.GetDevicePageHeaderStats(refId).ToList();
 
             var expected = new List<object>
             {

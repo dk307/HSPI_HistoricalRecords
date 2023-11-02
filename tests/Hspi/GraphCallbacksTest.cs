@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using Hspi;
 using Hspi.Utils;
@@ -38,7 +37,7 @@ namespace HSPI_HistoricalRecordsTest
                                         deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)mockHsController.GetFeature(deviceRefId).LastChange).ToUnixTimeMilliseconds()}, fill:'{(int)fillStrategy}'}}";
+            string format = $"{{ refId:{deviceRefId}, min:{time.ToUnixTimeMilliseconds()}, max:{mockHsController.GetFeatureLastChange(deviceRefId).ToUnixTimeMilliseconds()}, fill:'{(int)fillStrategy}'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
@@ -63,7 +62,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
 
-            DateTime time = DateTime.Now;
+            DateTime time = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
 
             int deviceRefId = 35673;
             mockHsController.SetupFeature(deviceRefId,
@@ -81,7 +80,7 @@ namespace HSPI_HistoricalRecordsTest
                                         deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1);
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{((DateTimeOffset)time).ToUnixTimeMilliseconds()}, max:{((DateTimeOffset)mockHsController.GetFeature(deviceRefId).LastChange.AddSeconds(4)).ToUnixTimeMilliseconds()}, fill:'0'}}";
+            string format = $"{{ refId:{deviceRefId}, min:{time.ToUnixTimeMilliseconds()}, max:{mockHsController.GetFeatureLastChange(deviceRefId).AddSeconds(4).ToUnixTimeMilliseconds()}, fill:'0'}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
