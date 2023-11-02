@@ -77,9 +77,11 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsNotNull(jsonData);
 
             var result = (JArray)jsonData["result"]["data"];
-            Assert.AreEqual(2, result.Count);
+            Assert.AreEqual(4, result.Count);
             Assert.AreEqual((10D * 60 + 100D * 60) / 120D, (double)result[0]);
             Assert.AreEqual((55D * 60 + 100D * 60) / 120D, (double)result[1]);
+            Assert.AreEqual(10D, (double)result[2]);
+            Assert.AreEqual(100D, (double)result[3]);
         }
 
         [TestMethod]

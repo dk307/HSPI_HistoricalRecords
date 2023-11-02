@@ -15,12 +15,6 @@ using Serilog;
 
 namespace Hspi
 {
-    public enum StatisticsFunction
-    {
-        AverageStep = 0,
-        AverageLinear = 1,
-    };
-
     internal partial class PlugIn : HspiBase
     {
         public string? GetStatisticDeviceDataAsJson(object refIdString)

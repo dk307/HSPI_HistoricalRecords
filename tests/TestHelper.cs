@@ -9,6 +9,7 @@ using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Logging;
 using Hspi;
+using Hspi.Device;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Moq.Protected;
@@ -233,7 +234,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         public static void SetupStatisticsDevice(StatisticsFunction statisticsFunction,
-                                                                                                                                                          Mock<PlugIn> plugIn,
+                                          Mock<PlugIn> plugIn,
                                           FakeHSController hsControllerMock,
                                           DateTime aTime,
                                           int statsDeviceRefId,

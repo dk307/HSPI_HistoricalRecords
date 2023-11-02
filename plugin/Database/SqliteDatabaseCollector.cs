@@ -47,11 +47,13 @@ namespace Hspi.Database
             insertCommand = CreateStatement(InsertSql);
             getHistoryCommand = CreateStatement(RecordsHistorySql);
             getRecordHistoryCountCommand = CreateStatement(RecordsHistoryCountSql);
-            getTimeAndValueCommand = CreateStatement(GetTimeValueSql);
+            getTimeAndValueCommand = CreateStatement(GetTimeValuesSql);
             getEarliestAndOldestRecordCommand = CreateStatement(EarliestAndOldestRecordSql);
             allRefOldestRecordsCommand = CreateStatement(AllRefOldestRecordsSql);
             deleteOldRecordByRefCommand = CreateStatement(DeleteOldRecordByRefSql);
             deleteAllRecordByRefCommand = CreateStatement(DeleteAllRecordByRefSql);
+            getMaxValueCommand = CreateStatement(GetMaxValuesSql);
+            getMinValueCommand = CreateStatement(GetMinValuesSql);
 
             var recordUpdateThread = new Thread(UpdateRecords);
             recordUpdateThread.Start();
@@ -92,6 +94,8 @@ namespace Hspi.Database
             allRefOldestRecordsCommand?.Dispose();
             deleteOldRecordByRefCommand.Dispose();
             deleteAllRecordByRefCommand.Dispose();
+            getMaxValueCommand?.Dispose();
+            getMinValueCommand?.Dispose();
             sqliteConnection?.Dispose();
             maintainanceTimer.Dispose();
             connectionLock.Dispose();
@@ -177,8 +181,18 @@ namespace Hspi.Database
             return records;
         }
 
+        public double? GetMaxValue(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        {
+            return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMaxValueCommand);
+        }
+
+        public double? GetMinValue(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        {
+            return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMinValueCommand);
+        }
+
         public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                                                long start, long length, ResultSortBy sortBy)
+                                                                        long start, long length, ResultSortBy sortBy)
         {
             using var lock2 = CreateAutoUnlockForDBConnection();
 
@@ -288,22 +302,34 @@ namespace Hspi.Database
             queue.Add(recordData);
         }
 
-        private IDisposable CreateAutoUnlockForDBConnection()
-        {
-            connectionLock.Wait(shutdownToken);
-            return Disposable.Create(() => connectionLock.Release());
-        }
-
         private static IDisposable CreateStatementAutoReset(sqlite3_stmt stmt)
         {
             ugly.reset(stmt);
             return Disposable.Create(() => ugly.reset(stmt));
         }
 
+        private IDisposable CreateAutoUnlockForDBConnection()
+        {
+            connectionLock.Wait(shutdownToken);
+            return Disposable.Create(() => connectionLock.Release());
+        }
+
         private sqlite3_stmt CreateStatement(string sql)
         {
             var command = ugly.prepare_v3(sqliteConnection, sql, SQLITE_PREPARE_PERSISTENT);
             return command;
+        }
+
+        private double? ExecRefIdMinMaxStatement(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds, sqlite3_stmt stmt)
+        {
+            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var stmtRest = CreateStatementAutoReset(stmt);
+            ugly.bind_int64(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
+            ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
+            ugly.step(stmt);
+
+            return ugly.column_type(stmt, 0) == SQLITE_NULL ? null : ugly.column_double(stmt, 0);
         }
 
         private void InsertRecord(in RecordData record)
@@ -496,8 +522,12 @@ namespace Hspi.Database
         private const string DeleteOldRecordByRefSql = "DELETE from history where ref=$ref and ts<$time AND ts NOT IN ( SELECT ts FROM history WHERE ref=$ref ORDER BY ts DESC LIMIT $limit)";
         private const string EarliestAndOldestRecordSql = "SELECT MIN(ts), MAX(ts) FROM history WHERE ref=?";
 
+        private const string GetMaxValuesSql = @"SELECT MAX(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
+
+        private const string GetMinValuesSql = @"SELECT MIN(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
+
         // 1 record before the time range and one after
-        private const string GetTimeValueSql =
+        private const string GetTimeValuesSql =
             @"SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts<$min ORDER BY ts DESC LIMIT 1) UNION
               SELECT * FROM (SELECT ts, value FROM history WHERE ref=$ref AND ts>$max ORDER BY ts LIMIT 1) UNION
               SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
@@ -526,6 +556,8 @@ namespace Hspi.Database
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
         private readonly sqlite3_stmt getEarliestAndOldestRecordCommand;
         private readonly sqlite3_stmt getHistoryCommand;
+        private readonly sqlite3_stmt getMaxValueCommand;
+        private readonly sqlite3_stmt getMinValueCommand;
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;

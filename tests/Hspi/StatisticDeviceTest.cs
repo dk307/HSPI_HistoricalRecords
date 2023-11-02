@@ -24,6 +24,8 @@ namespace HSPI_HistoricalRecordsTest
         [DataTestMethod]
         [DataRow(StatisticsFunction.AverageStep)]
         [DataRow(StatisticsFunction.AverageLinear)]
+        [DataRow(StatisticsFunction.MinValue)]
+        [DataRow(StatisticsFunction.MaxValue)]
         public void AddDevice(StatisticsFunction function)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -104,6 +106,14 @@ namespace HSPI_HistoricalRecordsTest
                 case StatisticsFunction.AverageLinear:
                     Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Linear)"));
                     break;
+
+                case StatisticsFunction.MinValue:
+                    Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Minimum Value"));
+                    break;
+
+                case StatisticsFunction.MaxValue:
+                    Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Maximum Value"));
+                    break;
             }
 
             Assert.AreEqual(function, data.StatisticsFunction);
@@ -147,18 +157,19 @@ namespace HSPI_HistoricalRecordsTest
         [DataTestMethod]
         [DataRow(StatisticsFunction.AverageStep)]
         [DataRow(StatisticsFunction.AverageLinear)]
+        [DataRow(StatisticsFunction.MinValue)]
+        [DataRow(StatisticsFunction.MaxValue)]
         public void DeviceIsUpdated(StatisticsFunction statisticsFunction)
         {
             var plugIn = TestHelper.CreatePlugInMock();
-            var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn);
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 10;
             TestHelper.SetupStatisticsDevice(statisticsFunction, plugIn, hsControllerMock, aTime,
-                                  statsDeviceRefId, trackedDeviceRefId);
+                                             statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
@@ -180,6 +191,11 @@ namespace HSPI_HistoricalRecordsTest
                     ExpectedValue = ((10D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
                 case StatisticsFunction.AverageLinear:
                     ExpectedValue = ((15D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
+                case StatisticsFunction.MinValue:
+                    ExpectedValue = 10D; break; ;
+                case StatisticsFunction.MaxValue:
+                    ExpectedValue = 20D; break;
+
                 default:
                     Assert.Fail();
                     break;

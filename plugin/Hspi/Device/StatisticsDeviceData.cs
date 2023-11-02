@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Hspi.Device;
+using Newtonsoft.Json;
 
 #nullable enable
 
