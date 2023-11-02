@@ -405,10 +405,14 @@ namespace Hspi
 
             GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
 
+            long minUnixTimeSeconds = min / 1000;
+            long maxUnixTimeSeconds = max / 1000;
             List<double?> stats = new()
             {
-               TimeAndValueQueryHelper.Average(Collector, refId, min / 1000, max / 1000, FillStrategy.LOCF) ,
-               TimeAndValueQueryHelper.Average(Collector, refId, min / 1000, max / 1000, FillStrategy.Linear),
+               TimeAndValueQueryHelper.Average(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds, FillStrategy.LOCF) ,
+               TimeAndValueQueryHelper.Average(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds, FillStrategy.Linear),
+               Collector.GetMinValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+               Collector.GetMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
             };
 
             return WriteJsonResult((jsonWriter) =>

@@ -87,6 +87,8 @@ namespace Hspi.Device
             {
                 case StatisticsFunction.AverageStep:
                 case StatisticsFunction.AverageLinear:
+                case StatisticsFunction.MinValue:
+                case StatisticsFunction.MaxValue:
                     newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string>(feature.AdditionalStatusData);
                     newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(feature.StatusGraphics);
                     break;
@@ -122,6 +124,8 @@ namespace Hspi.Device
                 {
                     StatisticsFunction.AverageLinear => "Average(Linear)",
                     StatisticsFunction.AverageStep => "Average(Step)",
+                    StatisticsFunction.MinValue => "Minimum Value",
+                    StatisticsFunction.MaxValue => "Maximum Value",
                     _ => throw new NotImplementedException(),
                 };
             }
@@ -228,11 +232,18 @@ namespace Hspi.Device
                     throw new ArgumentException("Duration too long");
                 }
 
-                var result = TimeAndValueQueryHelper.Average(collector,
-                                                             deviceData.TrackedRef,
-                                                             min,
-                                                             max,
-                                                             this.deviceData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear);
+                var result = this.deviceData.StatisticsFunction switch
+                {
+                    StatisticsFunction.AverageStep or StatisticsFunction.AverageLinear => TimeAndValueQueryHelper.Average(collector,
+                                                                                     deviceData.TrackedRef,
+                                                                                     min,
+                                                                                     max,
+                                                                                     this.deviceData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
+                    StatisticsFunction.MinValue => collector.GetMinValue(deviceData.TrackedRef, min, max),
+                    StatisticsFunction.MaxValue => collector.GetMaxValue(deviceData.TrackedRef, min, max),
+                    _ => throw new NotImplementedException(),
+                };
+
                 if (result.HasValue)
                 {
                     var precision = hsFeatureCachedDataProvider.GetPrecision(deviceData.TrackedRef);

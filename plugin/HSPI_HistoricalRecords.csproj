@@ -103,6 +103,7 @@
     <Compile Include="Hspi\Pages\PerDeviceSettings.cs" />
     <Compile Include="Hspi\Pages\PerDeviceSettingsConfig.cs" />
     <Compile Include="Hspi\PlugInStatsDevice.cs" />
+    <Compile Include="Hspi\Device\StatisticsFunction.cs" />
     <Compile Include="Hspi\SystemClock.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />
     <Compile Include="Hspi\Utils\FillStrategy.cs" />
