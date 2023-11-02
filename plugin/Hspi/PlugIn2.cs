@@ -437,7 +437,7 @@ namespace Hspi
             var refId = GetJsonValue<int>(jsonData, "refId");
             var tracked = GetJsonValue<bool>(jsonData, "tracked");
 
-            var deviceSettings = new PerDeviceSettings(refId, tracked, null);
+            var deviceSettings = new PerDeviceSettings(refId, tracked, null, null, null);
             CheckNotNull(settingsPages);
             settingsPages.AddOrUpdate(deviceSettings);
             Log.Information("Updated Device tracking {record}", deviceSettings);

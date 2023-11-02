@@ -34,6 +34,8 @@ namespace Hspi
 
             SetValue(DeviceRefIdKey, device.DeviceRefId, id);
             SetValue(IsTrackedTag, device.IsTracked, id);
+            SetValue(MinValueTag, device.MinValue?.ToString("g") ?? string.Empty, id);
+            SetValue(MaxValueTag, device.MaxValue?.ToString("g") ?? string.Empty, id);
             SetValue(RetentionPeriodTag, device.RetentionPeriod?.ToString("c", CultureInfo.InvariantCulture) ?? string.Empty, id);
             SetValue(DeviceSettingsTag, deviceSettings.Keys.Aggregate((x, y) => x + DeviceSettingsIdsSeparator + y));
         }
@@ -102,18 +104,40 @@ namespace Hspi
                 }
 
                 var isTracked = GetValue<bool>(IsTrackedTag, true, id);
-                var retentionPeriodStr = GetValue<string>(RetentionPeriodTag, string.Empty, id);
+                TimeSpan? retentionPeriod = ParseRetentionPeriod(id);
 
-                TimeSpan? retentionPeriod = null;
-                if (TimeSpan.TryParse(retentionPeriodStr, CultureInfo.InvariantCulture, out var temp))
-                {
-                    retentionPeriod = temp;
-                }
+                var minValue = ParseDouble(id, MinValueTag);
+                var maxValue = ParseDouble(id, MaxValueTag);
 
-                data.Add(deviceRefId, new PerDeviceSettings(deviceRefId, isTracked, retentionPeriod));
+                data.Add(deviceRefId, new PerDeviceSettings(deviceRefId, isTracked, retentionPeriod,
+                                                        minValue, maxValue));
             }
 
             this.deviceSettings = data.ToImmutableDictionary();
+
+            TimeSpan? ParseRetentionPeriod(string id)
+            {
+                var retentionPeriodStr = GetValue<string>(RetentionPeriodTag, string.Empty, id);
+
+                if (TimeSpan.TryParse(retentionPeriodStr, CultureInfo.InvariantCulture, out var temp))
+                {
+                    return temp;
+                }
+
+                return null;
+            }
+
+            double? ParseDouble(string id, string tag)
+            {
+                var retentionPeriodStr = GetValue<string>(tag, string.Empty, id);
+
+                if (double.TryParse(retentionPeriodStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var temp))
+                {
+                    return temp;
+                }
+
+                return null;
+            }
         }
 
         private void SetValue<T>(string key, T value, string section = DefaultSection)
@@ -124,10 +148,12 @@ namespace Hspi
 
         private const string DefaultSection = "Settings";
         private const string DeviceRefIdKey = "RefId";
-        private const string IsTrackedTag = "IsTracked";
-        private const string RetentionPeriodTag = "RetentionPeriod";
-        private const string DeviceSettingsTag = "DeviceSettings";
         private const char DeviceSettingsIdsSeparator = ',';
+        private const string DeviceSettingsTag = "DeviceSettings";
+        private const string IsTrackedTag = "IsTracked";
+        private const string MaxValueTag = "MaxValue";
+        private const string MinValueTag = "MinValue";
+        private const string RetentionPeriodTag = "RetentionPeriod";
         private readonly IHsController HS;
         private ImmutableDictionary<long, PerDeviceSettings> deviceSettings = ImmutableDictionary<long, PerDeviceSettings>.Empty;
     }
