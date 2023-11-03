@@ -5,8 +5,6 @@ using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using Moq.Protected;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -247,13 +245,15 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
+            TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1);
+
             Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId));
 
             mockHsController.SetupIniValue(deviceRefId.ToString(), "RefId", deviceRefId.ToString());
             mockHsController.SetupIniValue(deviceRefId.ToString(), "IsTracked", false.ToString());
-            mockHsController.SetupIniValue(deviceRefId.ToString(), "RetentionPeriod", string.Empty);
+            mockHsController.SetupIniValue(deviceRefId.ToString(), "MinValue", string.Empty);
 
-            string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"373\",\"tracked\":0}", string.Empty, 0);
+            string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"373\",\"tracked\":0, \"minValue\":10, \"maxValue\":20}", string.Empty, 0);
             Assert.IsNotNull(data);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
@@ -262,6 +262,13 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsFalse(jsonData.ContainsKey("error"));
 
             Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId));
+
+            var list = plugin.Object.GetDevicePageHeaderStats(deviceRefId);
+            Assert.AreEqual(10D, list[5]);
+            Assert.AreEqual(20D, list[6]);
+
+            // wait till all invalid records are deleted
+            TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 0);
         }
 
         [TestMethod]

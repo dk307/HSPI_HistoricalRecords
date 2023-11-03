@@ -67,6 +67,11 @@ namespace Hspi
             result.Add(GetFeaturePrecision(refId));
             result.Add(GetFeatureUnit(refId) ?? string.Empty);
 
+            CheckNotNull(settingsPages);
+            var pair = settingsPages.GetDeviceRangeForValidValues(refId);
+            result.Add(pair.Item1);
+            result.Add(pair.Item2);
+
             return result;
         }
 
@@ -155,7 +160,7 @@ namespace Hspi
             return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
         }
 
-        private static void GetDevicePageRequestParameters(JObject? jsonData, out int refId, out long min, out long max)
+        private static void GetDevicePageRequestParameters(JObject jsonData, out int refId, out long min, out long max)
         {
             refId = GetJsonValue<int>(jsonData, "refId");
             min = GetJsonValue<long>(jsonData, "min");
@@ -166,11 +171,11 @@ namespace Hspi
             }
         }
 
-        private static T GetJsonValue<T>(JObject? json, string tokenStr)
+        private static T GetJsonValue<T>(JObject json, string tokenStr)
         {
             try
             {
-                var token = (json?.SelectToken(tokenStr)) ?? throw new ArgumentException(tokenStr + " is not correct");
+                var token = (json.SelectToken(tokenStr)) ?? throw new ArgumentException(tokenStr + " is not correct");
                 return token.Value<T?>() ?? throw new ArgumentException(tokenStr + " is not correct");
             }
             catch (Exception ex)
@@ -261,7 +266,7 @@ namespace Hspi
 
         private string HandleGraphRecords(string data)
         {
-            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var jsonData = ParseToJObject(data);
 
             GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
 
@@ -296,7 +301,7 @@ namespace Hspi
                 jsonWriter.WriteEndObject();
             });
 
-            static FillStrategy GetFillStrategy(JObject? jsonData)
+            static FillStrategy GetFillStrategy(JObject jsonData)
             {
                 var fillStrategy = GetJsonValue<int>(jsonData, "fill");
                 if (!Enum.IsDefined(typeof(FillStrategy), fillStrategy))
@@ -401,7 +406,7 @@ namespace Hspi
 
         private string HandleStatisticsForRecords(string data)
         {
-            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var jsonData = ParseToJObject(data);
 
             GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
 
@@ -432,15 +437,20 @@ namespace Hspi
 
         private string HandleUpdateDeviceSettings(string data)
         {
-            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var jsonData = ParseToJObject(data);
 
             var refId = GetJsonValue<int>(jsonData, "refId");
             var tracked = GetJsonValue<bool>(jsonData, "tracked");
+            var minValue = jsonData.ContainsKey("minValue") ? GetJsonValue<double>(jsonData, "minValue") : (double?)null;
+            var maxValue = jsonData.ContainsKey("maxValue") ? GetJsonValue<double>(jsonData, "maxValue") : (double?)null;
 
-            var deviceSettings = new PerDeviceSettings(refId, tracked, null);
+            var deviceSettings = new PerDeviceSettings(refId, tracked, null, minValue, maxValue);
             CheckNotNull(settingsPages);
             settingsPages.AddOrUpdate(deviceSettings);
             Log.Information("Updated Device tracking {record}", deviceSettings);
+
+            Collector.DeleteRecordsOutsideRangeForRef(refId, minValue, maxValue);
+
             return "{}";
         }
 

@@ -49,6 +49,11 @@ namespace Hspi
             return statisticsDeviceUpdater?.UpdateData(featureRefId) ?? false;
         }
 
+        private static JObject ParseToJObject(string data)
+        {
+            return (JObject?)JsonConvert.DeserializeObject(data) ?? throw new ArgumentException("data is not correct");
+        }
+
         private static string SendRefIdResult(int refId)
         {
             StringBuilder stb = new();
@@ -71,7 +76,7 @@ namespace Hspi
 
         private string HandleDeleteRecords(string data)
         {
-            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var jsonData = ParseToJObject(data);
             var refId = GetJsonValue<int>(jsonData, "ref");
 
             DeleteAllRecords(refId);
@@ -80,7 +85,7 @@ namespace Hspi
 
         private string HandleDeviceCreate(string data)
         {
-            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var jsonData = ParseToJObject(data);
             var name = GetJsonValue<string>(jsonData, "name");
             var dataJObject = GetJsonValue<JObject>(jsonData, "data");
             JsonSerializer serializer = new();
@@ -96,7 +101,7 @@ namespace Hspi
 
         private string HandleDeviceEdit(string data)
         {
-            var jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+            var jsonData = ParseToJObject(data);
             var refId = GetJsonValue<int>(jsonData, "ref");
             var dataJObject = GetJsonValue<JObject>(jsonData, "data");
             JsonSerializer serializer = new();

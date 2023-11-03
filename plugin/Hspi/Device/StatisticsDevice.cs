@@ -206,7 +206,7 @@ namespace Hspi.Device
 
             HS.UpdatePropertyByRef(RefId, EProperty.InvalidValue, false);
 
-            if (data.HasValue)
+            if (data.HasValue && HasValue(data.Value))
             {
                 // only this call triggers events
                 if (!HS.UpdateFeatureValueByRef(RefId, data.Value))
@@ -217,6 +217,11 @@ namespace Hspi.Device
             else
             {
                 HS.UpdatePropertyByRef(RefId, EProperty.InvalidValue, true);
+            }
+
+            static bool HasValue(double value)
+            {
+                return !double.IsNaN(value) && !double.IsInfinity(value);
             }
         }
 

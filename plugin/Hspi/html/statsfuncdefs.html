@@ -1,10 +1,18 @@
  
 <p>
 <span class="font-italic">Average Linear</span>
-<label class="fw-lighter" class="font-weight-light">The average value of stored records under consideration of the time distances between them. A linear interpolation is applied per measurement pair. Good suited to observe a source sensor with non-periodic sensor updates and when continuous behavior is represented by the records (e.g. outside temperature).</label> 						 
+<label class="fw-lighter font-weight-light">The average value of stored records under consideration of the time distances between them. A linear interpolation is applied per record pair. Good suited to observe a source sensor with non-periodic sensor updates and when continuous behavior is represented by the records (e.g. outside temperature).</label> 						 
 </p>
 <p>
 <span class="font-italic">Average Step</span>
-<label class="fw-lighter" class="font-weight-light">The average value of stored measurements under consideration of the time distances between them. LOCF (last observation carried forward weighting) is applied, meaning, that the old value is assumed between two measurements. The resulting step function represents well the behavior of non-continuous behavior, like the set temperature of a boiler.</label> 						 
+<label class="fw-lighter font-weight-light">The average value of stored records under consideration of the time distances between them. LOCF (last observation carried forward weighting) is applied, meaning, that the old value is assumed between two records. The resulting step function represents well the behavior of non-continuous behavior, like the set temperature of a boiler.</label> 						 
+</p>
+<p>
+<span class="font-italic">Minimum Value</span>
+<label class="fw-lighter font-weight-light">The smallest value among the number of records. Only the records in the interval are considered.</label> 						 
+</p>
+<p>
+<span class="font-italic">Maximum Value</span>
+<label class="fw-lighter font-weight-light">The largest value among the number of records. Only the records in the interval are considered.</label> 						 
 </p>
 		 

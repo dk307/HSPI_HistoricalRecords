@@ -673,6 +673,14 @@ function setUpPersistanceTable() {
 					 "Average (Linear)",
 					 roundValue(data[1]).toString() + unit,
 					],
+					[	
+					 "Minimum Value",
+					 roundValue(data[2]).toString() + unit,
+					],
+					[	
+					 "Maximum Value",
+					 roundValue(data[3]).toString() + unit,
+					],
 				]
 			};			
 			callback(jsonResult);

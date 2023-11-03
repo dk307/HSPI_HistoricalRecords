@@ -83,6 +83,16 @@ namespace Hspi
             return GlobalRetentionPeriod;
         }
 
+        public (double?, double?) GetDeviceRangeForValidValues(long deviceRefId)
+        {
+            if (this.perDeviceSettingsConfig.DeviceSettings.TryGetValue(deviceRefId, out var result))
+            {
+                return (result.MinValue, result.MaxValue);
+            }
+
+            return (null, null);
+        }
+
         public bool IsTracked(long deviceRefId)
         {
             if (this.perDeviceSettingsConfig.DeviceSettings.TryGetValue(deviceRefId, out var result))

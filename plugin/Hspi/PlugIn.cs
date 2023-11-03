@@ -270,14 +270,52 @@ namespace Hspi
                 var lastChange = feature.LastChange;
                 var deviceString = feature.DisplayedStatus;
 
-                RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-                Log.Verbose("Recording {@record}", recordData);
+                bool validValue = CheckValidValue(deviceRefId, deviceValue);
 
-                Collector.Record(recordData);
+                if (validValue)
+                {
+                    RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
+                    Log.Verbose("Recording {@record}", recordData);
+
+                    Collector.Record(recordData);
+                }
+                else
+                {
+                    Log.Warning("Not adding {name} value to db as it has not valid value :{value}",
+                                HsHelper.GetNameForLog(HomeSeerSystem, deviceRefId), deviceValue);
+                }
             }
             else
             {
-                Log.Verbose("Not adding {refId} to db as it is not tracked", deviceRefId);
+                Log.Verbose("Not adding {refId}'s value to db as it is not tracked", deviceRefId);
+            }
+
+            bool CheckValidValue(int deviceRefId, double deviceValue)
+            {
+                if (!HasValue(deviceValue))
+                {
+                    return false;
+                }
+
+                CheckNotNull(settingsPages);
+                var (minValue, maxValue) = settingsPages.GetDeviceRangeForValidValues(deviceRefId);
+
+                if (minValue != null && deviceValue < minValue)
+                {
+                    return false;
+                }
+
+                if (maxValue != null && deviceValue > maxValue)
+                {
+                    return false;
+                }
+
+                return true;
+
+                static bool HasValue(double value)
+                {
+                    return !double.IsNaN(value) && !double.IsInfinity(value);
+                }
             }
         }
 
