@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -233,8 +232,19 @@ namespace HSPI_HistoricalRecordsTest
             return nowTime;
         }
 
+        public static void SetupPerDeviceSettings(FakeHSController mockHsController, int refId,
+                                                  bool tracked, double? minValue = null, double? maxValue = null)
+        {
+            mockHsController.SetupIniValue("Settings", "DeviceSettings", refId.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "RefId", refId.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "IsTracked", tracked.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "RetentionPeriod", string.Empty);
+            mockHsController.SetupIniValue(refId.ToString(), "MinValue", minValue?.ToString("g") ?? string.Empty);
+            mockHsController.SetupIniValue(refId.ToString(), "MaxValue", maxValue?.ToString("g") ?? string.Empty);
+        }
+
         public static void SetupStatisticsDevice(StatisticsFunction statisticsFunction,
-                                          Mock<PlugIn> plugIn,
+                                                  Mock<PlugIn> plugIn,
                                           FakeHSController hsControllerMock,
                                           DateTime aTime,
                                           int statsDeviceRefId,
