@@ -39,7 +39,7 @@ namespace Hspi
             }
         }
 
-        public List<Dictionary<string, object>> GetAllDevicesProperties()
+        public List<Dictionary<string, object?>> GetAllDevicesProperties()
         {
             var recordCounts = Collector.GetRecordsWithCount(int.MaxValue)
                                         .ToDictionary(x => x.Key, x => x.Value);
@@ -47,15 +47,19 @@ namespace Hspi
             CheckNotNull(featureCachedDataProvider);
             CheckNotNull(settingsPages);
 
-            List<Dictionary<string, object>> result = new();
+            List<Dictionary<string, object?>> result = new();
             foreach (var refId in HomeSeerSystem.GetAllRefs())
             {
-                Dictionary<string, object> row = new()
+                var (minValue, maxValue) = settingsPages.GetDeviceRangeForValidValues(refId);
+
+                Dictionary<string, object?> row = new()
                 {
                     ["ref"] = refId,
                     ["records"] = recordCounts.TryGetValue((long)refId, out var count) ? count : 0,
                     ["monitorableType"] = featureCachedDataProvider.IsMonitorableTypeFeature(refId),
-                    ["tracked"] = settingsPages.IsTracked(refId)
+                    ["tracked"] = settingsPages.IsTracked(refId),
+                    ["minValue"] = minValue,
+                    ["maxValue"] = maxValue,
                 };
                 result.Add(row);
             }

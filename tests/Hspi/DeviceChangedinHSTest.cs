@@ -70,12 +70,7 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
             int refId = 35673;
-            mockHsController.SetupIniValue("Settings", "DeviceSettings", refId.ToString());
-            mockHsController.SetupIniValue(refId.ToString(), "RefId", refId.ToString());
-            mockHsController.SetupIniValue(refId.ToString(), "IsTracked", true.ToString());
-            mockHsController.SetupIniValue(refId.ToString(), "RetentionPeriod", string.Empty);
-            mockHsController.SetupIniValue(refId.ToString(), "MinValue", "0");
-            mockHsController.SetupIniValue(refId.ToString(), "MaxValue", "100");
+            TestHelper.SetupPerDeviceSettings(mockHsController, refId, true, 0, 100);
 
             mockHsController.SetupFeature(refId, 1.132);
 
