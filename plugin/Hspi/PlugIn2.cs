@@ -93,7 +93,7 @@ namespace Hspi
                     "historyrecords" => HandleHistoryRecords(data),
                     "graphrecords" => HandleGraphRecords(data),
                     "statisticsforrecords" => HandleStatisticsForRecords(data),
-                    "updatedevicesettings" => HandleUpdateDeviceSettings(data),
+                    "updatedevicesettings" => HandleUpdatePerDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
                     "deviceedit" => HandleDeviceEdit(data),
                     "deletedevicerecords" => HandleDeleteRecords(data),
@@ -177,6 +177,26 @@ namespace Hspi
             {
                 var token = (json.SelectToken(tokenStr)) ?? throw new ArgumentException(tokenStr + " is not correct");
                 return token.Value<T?>() ?? throw new ArgumentException(tokenStr + " is not correct");
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException(tokenStr + " is not correct", ex);
+            }
+        }
+
+        private static T? GetOptionalJsonValue<T>(JObject json, string tokenStr) where T : struct
+        {
+            try
+            {
+                var token = (json.SelectToken(tokenStr));
+                if ((token != null) && (token.Type != JTokenType.Null))
+                {
+                    return token.Value<T>();
+                }
+                else
+                {
+                    return null;
+                }
             }
             catch (Exception ex)
             {
@@ -435,14 +455,14 @@ namespace Hspi
             });
         }
 
-        private string HandleUpdateDeviceSettings(string data)
+        private string HandleUpdatePerDeviceSettings(string data)
         {
             var jsonData = ParseToJObject(data);
 
             var refId = GetJsonValue<int>(jsonData, "refId");
             var tracked = GetJsonValue<bool>(jsonData, "tracked");
-            var minValue = jsonData.ContainsKey("minValue") ? GetJsonValue<double>(jsonData, "minValue") : (double?)null;
-            var maxValue = jsonData.ContainsKey("maxValue") ? GetJsonValue<double>(jsonData, "maxValue") : (double?)null;
+            var minValue = GetOptionalJsonValue<double>(jsonData, "minValue");
+            var maxValue = GetOptionalJsonValue<double>(jsonData, "maxValue");
 
             var deviceSettings = new PerDeviceSettings(refId, tracked, null, minValue, maxValue);
             CheckNotNull(settingsPages);

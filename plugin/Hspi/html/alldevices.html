@@ -28,7 +28,6 @@
 		
 	}}
  
-	
 	<div class="hs_spinner" id="loading">
 		<div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
 			<div class="spinner-border" role="status">
@@ -38,8 +37,6 @@
 	</div>	
 	
 	<div class="container">
-	 
-	 
 		<table id="dt-persistence" class="table table-sm mb-0 table-striped"cellspacing="0" width="100%">	
 			<thead>
 				<tr>
@@ -52,7 +49,7 @@
 			<tbody>
 			
 			{{for item in deviceRecords}}         
-            <tr class="devicerow" data-refId="{{item["ref"]}}">	
+            <tr class="devicerow" data-refId="{{item["ref"]}}" data-min-value="{{item["minValue"]}}" data-max-value="{{item["maxValue"]}}" data-tracked="{{item["tracked"]}}">	
 				{{relationship=device_prop item["ref"] "Relationship"}}
 				{{assoc_count=device_prop item["ref"] "AssociatedDevices_Count"}}	 
 				{{if relationship==4 && assoc_count==1}}
@@ -63,17 +60,15 @@
                 <td>{{item["records"]}}</td> 
                 <td>{{if item["tracked"] && item["monitorableType"]}}Yes{{else}}No{{end}}</td> 
                 <td>{{if item["monitorableType"]}}
-					<a class="fas fa-lg fa-point fa-sliders-h" data-refId='{{item["ref"]}}' data-tracked='{{item["tracked"]}}' data-mdb-toggle="tooltip" title="Change tracking options for the device" onclick="javascript:showDeviceOptions(this)">				  
+					<a class="fas fa-lg fa-point fa-sliders-h" data-mdb-toggle="tooltip" title="Change tracking options for the device" onclick="javascript:showDeviceOptions(this)">				  
 					</a>
-					<a  class="far fa-lg fa-point fa-trash-alt" data-refId='{{item["ref"]}}' data-tracked='{{item["tracked"]}}' data-mdb-toggle="tooltip" title="Delete all records for the device" onclick="javascript:deleteRecords(this)">					  
+					<a  class="far fa-lg fa-point fa-trash-alt" data-mdb-toggle="tooltip" title="Delete all records for the device" onclick="javascript:deleteRecords(this)">					  
 					</a>
 					{{end}}
 				</td> 
             </tr>
-        {{end}}
-			
+			{{end}}
 			</tbody>
-					 
 		<table>
 	</div>
 	
@@ -86,14 +81,31 @@
 				<div class="modal-body">
 					<form>
 						<input type="hidden" id="deviceOptionsRef" value="{{featureId}}"/>
-						<div class="row mt-1 mb-1 no-gutters">
-							<div class="form-check form-switch">
+						<div class="form-row no-gutters">
+							<div class="form-check form-switch form-sm">
 								<div class="form-check form-check-inline">
 									<input type="checkbox" class="form-check-input" id="idTrackedFeature" name="idTrackedFeature" >
 									<label class="form-check-label" for="idTrackedFeature">Track this device values</label>
 								</div>            
 							</div>
-						</div>					 
+						</div>
+
+						<div class="form-row mt-3">
+							  <small class="form-text text-muted ml-3">Range for tracking values</small>
+						</div>
+					 
+						<div class="form-row mt-0 mb-0">
+							<div class="md-form  form-sm ml-3">
+								<input type="text" id="idMinValue" name="minValue" class="form-control-sm">
+								<label for="idMinValue">Minimum Value</label>                                     
+							</div>
+							                                  
+							<div class="md-form form-sm">
+								<input type="text" id="idMaxValue" name="maxValue" class="form-control-sm">
+								<label for="idMaxValue">Maximum Value</label>                                     
+							</div>
+						</div>
+						
 					</form>
 				</div>
 				<div class="modal-footer">
@@ -128,8 +140,9 @@ function setUpPersistanceTable() {
 
 
 function showDevicePage(e, feature, parent){
-	const link = $('.devicerow[data-refId='+feature+'] td:nth-child(4) a');	
-	const tracked = link.attr('data-tracked');	
+	const row = $('.devicerow[data-refId='+feature+']');	
+	const tracked = row.attr('data-tracked');	
+	alert(tracked);
 	
 	let devicesPageUrl= window.location.origin + '/Devices.html?';	
 	
@@ -150,18 +163,23 @@ function showDevicePage(e, feature, parent){
 
 
 function showDeviceOptions(e){
-	const refId = $(e).attr('data-refId');
-	const tracked = $(e).attr('data-tracked');
+	const row = $(e).parent().parent();
+	const refId =row.attr('data-refId');
+	const tracked = row.attr('data-tracked');
+	const minValue = row.attr('data-min-value');
+	const maxValue = row.attr('data-max-value');
 	
 	// set the values from a link to modal
 	$('#deviceOptionsRef').val(refId);
 	$("#idTrackedFeature").prop('checked', tracked == "true");
-	
+	$("#idMinValue").val(minValue);
+	$("#idMaxValue").val(maxValue);
 	$('#modalEdit').modal('show');
 };
 
 function deleteRecords(e){
-	const refId = $(e).attr('data-refId');
+	const row = $(e).parent().parent();
+	const refId =row.attr('data-refId');
 		
 	swal.fire({
 			title: 'Confirmation',
@@ -194,22 +212,24 @@ $(document).ready(function () {
 
 	$(document).on('click', '#btnOk', {}, async function (e) {
 		$('#modalEdit').modal('hide');
-		
 		const ref = $('#deviceOptionsRef').val();
-		
-		
 		const data = {
 			refId: ref,
 			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
+			minValue: $('#idMinValue').val(),
+			maxValue: $('#idMaxValue').val(),
 		};
 		await ajaxPostPlugIn("updatedevicesettings", data, function(result, context) {
+		
 			//update the table column
 			const col3 = $('.devicerow[data-refId='+context.refId +'] td:nth-child(3)');		
 			col3.text(context.tracked ? "Yes" : "No");
 			
-			// update the custom attribute also
-			const link = $('.devicerow[data-refId='+context.refId +'] td:nth-child(4) a');	
+			// update the custom attributes also
+			const link = $('.devicerow[data-refId='+context.refId +']');	
 			link.attr('data-tracked', context.tracked ? 'true' : 'false');	
+			link.attr('data-min-value',  context.minValue);	
+			link.attr('data-max-value',  context.maxValue);	
 		}, null, data);
 	});	 
 });	
