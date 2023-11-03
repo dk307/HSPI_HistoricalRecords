@@ -107,14 +107,17 @@ namespace Hspi
         {
             //  an ugly way to get unit, but there is no universal way to get them in HS4
             var displayStatus = GetPropertyValue<string>(refId, EProperty.DisplayedStatus);
-            var match = unitExtractionRegEx.Match(displayStatus);
-
-            if (match.Success)
+            if (!string.IsNullOrWhiteSpace(displayStatus))
             {
-                var unit = match.Groups[1].Value;
-                if (validUnits.Contains(unit))
+                var match = unitExtractionRegEx.Match(displayStatus);
+
+                if (match.Success)
                 {
-                    return unit;
+                    var unit = match.Groups[1].Value;
+                    if (validUnits.Contains(unit))
+                    {
+                        return unit;
+                    }
                 }
             }
 

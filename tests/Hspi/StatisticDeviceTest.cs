@@ -133,7 +133,7 @@ namespace HSPI_HistoricalRecordsTest
 
         [DataTestMethod]
         [DataRow("{\"name\":\"dev name\", \"data\": {\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}}", "Required property 'TrackedRef' not found in JSON")]
-        [DataRow("", "name is not correct")]
+        [DataRow("", "data is not correct")]
         public void AddDeviceErrorChecking(string format, string exception)
         {
             var plugIn = TestHelper.CreatePlugInMock();

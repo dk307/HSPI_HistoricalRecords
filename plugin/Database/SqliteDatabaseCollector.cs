@@ -517,6 +517,36 @@ namespace Hspi.Database
             }
         }
 
+        public void DeleteRecordsOutsideRangeForRef(int refId, double? minValue, double? maxValue)
+        {
+            if (minValue.HasValue)
+            {
+                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var stmt = CreateStatement("DELETE FROM history where ref=$ref and value<$min");
+                RemoveInvalidValues(stmt, refId, minValue.Value);
+            }
+
+            if (maxValue.HasValue)
+            {
+                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var stmt = CreateStatement("DELETE FROM history where ref=$ref and value>$max");
+                RemoveInvalidValues(stmt, refId, maxValue.Value);
+            }
+
+            void RemoveInvalidValues(sqlite3_stmt stmt, int refId, double value)
+            {
+                ugly.bind_int64(stmt, 1, refId);
+                ugly.bind_double(stmt, 2, value);
+                ugly.step_done(stmt);
+
+                var changesCount = ugly.changes(sqliteConnection);
+                if (changesCount > 0)
+                {
+                    Log.Information("Removed {rows} row(s) for device:{refId} in database for being invalid values", changesCount, refId);
+                }
+            }
+        }
+
         private const string AllRefOldestRecordsSql = "SELECT ref, MIN(ts), COUNT(*) FROM history GROUP BY ref";
         private const string DeleteAllRecordByRefSql = "DELETE from history where ref=$ref";
         private const string DeleteOldRecordByRefSql = "DELETE from history where ref=$ref and ts<$time AND ts NOT IN ( SELECT ts FROM history WHERE ref=$ref ORDER BY ts DESC LIMIT $limit)";

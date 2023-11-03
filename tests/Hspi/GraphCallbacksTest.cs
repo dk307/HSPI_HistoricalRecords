@@ -104,7 +104,7 @@ namespace HSPI_HistoricalRecordsTest
 
         [TestMethod]
         [DataTestMethod]
-        [DataRow("", "refId is not correct")]
+        [DataRow("", "data is not correct")]
         [DataRow("refId={0}&min=1001&max=99", "Unexpected character encountered")]
         [DataRow("{{ refId:{0}, min:1001, max:99}}", "max < min")]
         [DataRow("{{ refId:{0}, min:'abc', max:99 }}", "min is not correct")]

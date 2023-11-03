@@ -4,7 +4,6 @@ using System.Linq;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
-using Hspi;
 using Hspi.Device;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -183,10 +182,39 @@ namespace HSPI_HistoricalRecordsTest
                 -60L,
                 true,
                 1,
-                "lux"
+                "lux",
+                null,
+                null,
             };
 
             CollectionAssert.AreEqual(expected, list);
+        }
+
+        [TestMethod]
+        public void GetDeviceStatsForPageReturnsRange()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
+
+            int refId = 11310;
+            mockHsController.SetupFeature(refId, 10, "10.0 lux", lastChange: nowTime);
+
+            mockHsController.SetupIniValue("Settings", "DeviceSettings", refId.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "RefId", refId.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "IsTracked", true.ToString());
+            mockHsController.SetupIniValue(refId.ToString(), "RetentionPeriod", string.Empty);
+            mockHsController.SetupIniValue(refId.ToString(), "MinValue", "-190");
+            mockHsController.SetupIniValue(refId.ToString(), "MaxValue", "1090");
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, 1));
+
+            var list = plugin.Object.GetDevicePageHeaderStats(refId).ToList();
+
+            Assert.AreEqual(-190D, list[5]);
+            Assert.AreEqual(1090D, list[6]);
         }
 
         [TestMethod]

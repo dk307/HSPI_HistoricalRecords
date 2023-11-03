@@ -63,6 +63,8 @@ namespace HSPI_HistoricalRecordsTest
         [DataTestMethod]
         [DataRow(-10)]
         [DataRow(104)]
+        [DataRow(double.NaN)]
+        [DataRow(double.PositiveInfinity)]
         public void OutOfRangeDeviceValueIsNotRecorded(double value)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);

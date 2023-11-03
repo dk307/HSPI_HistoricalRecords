@@ -292,6 +292,11 @@ namespace Hspi
 
             bool CheckValidValue(int deviceRefId, double deviceValue)
             {
+                if (!HasValue(deviceValue))
+                {
+                    return false;
+                }
+
                 CheckNotNull(settingsPages);
                 var (minValue, maxValue) = settingsPages.GetDeviceRangeForValidValues(deviceRefId);
 
@@ -306,6 +311,11 @@ namespace Hspi
                 }
 
                 return true;
+
+                static bool HasValue(double value)
+                {
+                    return !double.IsNaN(value) && !double.IsInfinity(value);
+                }
             }
         }
 
