@@ -17,6 +17,7 @@ FAQ
 * How do I go about creating a statistical device associated with a specific device?
 * My database has become too large. What methods can I employ to reduce its size?
 * Is there a way to check the size of the database?
+* What is the duration for which the records are retained?
 
 
     
