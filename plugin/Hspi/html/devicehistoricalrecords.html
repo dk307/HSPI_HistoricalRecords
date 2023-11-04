@@ -53,6 +53,8 @@
 	deviceTracked=devicePageStats[2]
 	devicePrecision=devicePageStats[3]
 	deviceUnits=devicePageStats[4] ?? ""
+	minValue=devicePageStats[5] ?? ""
+	maxValue=devicePageStats[6] ?? ""
 		
 	if deviceDisplayDetails.empty? 
 		# there is no valid displays
@@ -156,6 +158,8 @@ function getRangeString(min, max) {
 <!-- devicePrecision={{devicePrecision}}<BR> -->
 <!-- deviceUnits={{deviceUnits}}<BR> -->
 <!-- childrenRefIds={{childrenRefIds}}<BR> -->
+<!-- minValue={{minValue}}<BR> -->
+<!-- maxValue={{maxValue}}<BR> -->
  
 <header>
 	<nav class="navbar">
@@ -291,25 +295,41 @@ function getRangeString(min, max) {
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h5 class="modal-title" id="lblModalEdit">Device Options</h5>
+				<h6 class="modal-title" id="lblModalEdit">Device Options</h6>
 			</div>
-			<div class="modal-body">
-				<form>
-					<input type="hidden" id="deviceOptionsRef" value="{{featureId}}"/>
-					<div class="row mt-1 mb-1 no-gutters">
-						<div class="form-check form-switch">
-							<div class="form-check form-check-inline">
-								<input type="checkbox" class="form-check-input" id="idTrackedFeature" name="idTrackedFeature" {{if deviceTracked}} checked {{end}}>
-								<label class="form-check-label" for="idTrackedFeature">Track this device values</label>
-							</div>            
+			<form id="idDeviceOptions">	
+				<div class="modal-body">
+						<input type="hidden" id="deviceOptionsRef" value="{{featureId}}"/>
+						<div class="form-row no-gutters">
+							<div class="form-check form-switch form-sm">
+								<div class="form-check form-check-inline">
+									<input type="checkbox" class="form-check-input" id="idTrackedFeature" name="idTrackedFeature" {{if deviceTracked}}checked{{end}}>
+									<label class="form-check-label" for="idTrackedFeature">Track this device values</label>
+								</div>            
+							</div>
 						</div>
-					</div>					 
-				</form>
-			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-				<button type="button" class="btn btn-primary" id="btnOk">Save</button>
-			</div>
+
+						<div class="form-row mt-3">
+							  <small class="form-text text-muted ml-3">Range for tracking values</small>
+						</div>
+					 
+						<div class="form-row mt-0 mb-0">
+							<div class="md-form  form-sm ml-3">
+								<input type="text" id="idMinValue" name="minValue" class="form-control-sm" pattern="(\d+(?:\.\d+){0,1})$" value="{{minValue}}">
+								<label for="idMinValue">Minimum Value</label>                                     
+							</div>
+															  
+							<div class="md-form form-sm">
+								<input type="text" id="idMaxValue" name="maxValue" class="form-control-sm" pattern="(\d+(?:\.\d+){0,1})$" value="{{maxValue}}">
+								<label for="idMaxValue">Maximum Value</label>                                     
+							</div>
+						</div>			
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-primary" id="btnOk">Save</button>
+				</div>
+			</form>
 		</div>
 	</div>
 </div>
@@ -352,18 +372,33 @@ $(function() {
 		}
     });	
 	
-	 
 	$('#idModalEditLink').click(function(){
 		$('#modalEdit').modal('show');
 	});
 	
-	$(document).on('click', '#btnOk', {}, async function (e) {
+	$( "#idDeviceOptions" ).on( "submit",async function (e) {
+		e.preventDefault();
 		$('#modalEdit').modal('hide');
-		var data = {
-			refId: $('#deviceOptionsRef').val(),
+		const ref = $('#deviceOptionsRef').val();
+		 
+		const data = {
+			refId: ref,
 			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
+			minValue: $('#idMinValue').val() ? $('#idMinValue').val() : null,
+			maxValue: $('#idMaxValue').val() ? $('#idMaxValue').val() : null,
 		};
-		await ajaxPostPlugIn("updatedevicesettings", data, null );
+		await ajaxPostPlugIn("updatedevicesettings", data, function(result, context) {
+		
+			//update the table column
+			const col3 = $('.devicerow[data-refId='+context.refId +'] td:nth-child(3)');		
+			col3.text(context.tracked ? "Yes" : "No");
+			
+			// update the custom attributes also
+			const link = $('.devicerow[data-refId='+context.refId +']');	
+			link.attr('data-tracked', context.tracked ? 'true' : 'false');	
+			link.attr('data-min-value',  context.minValue);	
+			link.attr('data-max-value',  context.maxValue);	
+		}, null, data);
 	});	 
 });
 
