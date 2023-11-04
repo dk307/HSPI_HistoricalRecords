@@ -83,21 +83,18 @@ namespace Hspi
             {
                 var graphics = GetPropertyValue<List<StatusGraphic>>(refId, EProperty.StatusGraphics);
 
-                if (graphics != null)
+                if (graphics == null)
                 {
-                    foreach (StatusGraphic graphic in graphics)
+                    return;
+                }
+
+                foreach (StatusGraphic graphic in graphics)
+                {
+                    if (graphic.IsRange)
                     {
-                        if (graphic.IsRange)
-                        {
-                            if (precision == null)
-                            {
-                                precision = graphic.TargetRange.DecimalPlaces;
-                            }
-                            else
-                            {
-                                precision = Math.Max(precision.Value, graphic.TargetRange.DecimalPlaces);
-                            }
-                        }
+                        precision = precision == null ?
+                                    graphic.TargetRange.DecimalPlaces :
+                                    Math.Max(precision.Value, graphic.TargetRange.DecimalPlaces);
                     }
                 }
             }
@@ -124,10 +121,7 @@ namespace Hspi
             return null;
         }
 
-        private T GetPropertyValue<T>(int refId, EProperty prop)
-        {
-            return (T)homeSeerSystem.GetPropertyByRef(refId, prop);
-        }
+        private T GetPropertyValue<T>(int refId, EProperty prop) => (T)homeSeerSystem.GetPropertyByRef(refId, prop);
 
         private bool IsMonitorableTypeFeature2(int refId)
         {
