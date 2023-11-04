@@ -190,12 +190,12 @@ namespace Hspi.Database
             return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMinValueCommand);
         }
 
-        public List<Dictionary<string, object?>> ExecSql(string sql)
+        public IList<IDictionary<string, object?>> ExecSql(string sql)
         {
             using var lock2 = CreateAutoUnlockForDBConnection();
             using var stmt = CreateStatement(sql);
 
-            List<Dictionary<string, object?>> list = new();
+            List<IDictionary<string, object?>> list = new();
 
             while (ugly.step(stmt) != SQLITE_DONE)
             {

@@ -96,6 +96,7 @@ namespace Hspi
                     "devicecreate" => HandleDeviceCreate(data),
                     "deviceedit" => HandleDeviceEdit(data),
                     "deletedevicerecords" => HandleDeleteRecords(data),
+                    "execsql" => HandleExecSql(data),
                     _ => base.PostBackProc(page, data, user, userRights),
                 };
             }
@@ -105,8 +106,6 @@ namespace Hspi
                 return WriteExceptionResultAsJson(ex);
             }
         }
-
-        public List<Dictionary<string, object?>> ExecSql(string sql) => Collector.ExecSql(sql);
 
         internal long DeleteAllRecords(int refId)
         {

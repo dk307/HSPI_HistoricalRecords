@@ -74,6 +74,45 @@ namespace Hspi
             return "{}";
         }
 
+        private string HandleExecSql(string data)
+        {
+            var jsonData = ParseToJObject(data);
+            var sql = GetJsonValue<string>(jsonData, "sql");
+
+            var result = Collector.ExecSql(sql);
+
+            return WriteJsonResult((jsonWriter) =>
+            {
+                jsonWriter.WritePropertyName("columns");
+                jsonWriter.WriteStartArray();
+                if (result.Count > 0)
+                {
+                    foreach (var col in result[0])
+                    {
+                        jsonWriter.WriteValue(col.Key);
+                    }
+                }
+
+                jsonWriter.WriteEndArray();
+
+                jsonWriter.WritePropertyName("data");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in result)
+                {
+                    jsonWriter.WriteStartArray();
+                    foreach (var col in row)
+                    {
+                        jsonWriter.WriteValue(col.Value);
+                    }
+
+                    jsonWriter.WriteEndArray();
+                }
+
+                jsonWriter.WriteEndArray();
+            });
+        }
+
         private string HandleDeviceCreate(string data)
         {
             var jsonData = ParseToJObject(data);
