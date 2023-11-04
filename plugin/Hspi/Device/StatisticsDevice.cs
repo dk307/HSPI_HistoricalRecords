@@ -156,10 +156,7 @@ namespace Hspi.Device
             combinedToken.Cancel();
         }
 
-        public void UpdateNow()
-        {
-            timer.Change(0, RefreshInterval);
-        }
+        public void UpdateNow() => timer.Change(0, RefreshInterval);
 
         private static T GetPlugExtraData<T>(IHsController hsController,
                                              int refId,
@@ -219,10 +216,7 @@ namespace Hspi.Device
                 HS.UpdatePropertyByRef(RefId, EProperty.InvalidValue, true);
             }
 
-            static bool HasValue(double value)
-            {
-                return !double.IsNaN(value) && !double.IsInfinity(value);
-            }
+            static bool HasValue(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
         }
 
         private void UpdateDeviceValueFromDatabase(object state)

@@ -39,25 +39,40 @@ namespace Hspi
             }
         }
 
+        private HsFeatureCachedDataProvider FeatureCachedDataProvider
+        {
+            get
+            {
+                CheckNotNull(featureCachedDataProvider);
+                return featureCachedDataProvider;
+            }
+        }
+
+        private SettingsPages SettingsPages
+        {
+            get
+            {
+                CheckNotNull(settingsPages);
+                return settingsPages;
+            }
+        }
+
         public List<Dictionary<string, object?>> GetAllDevicesProperties()
         {
             var recordCounts = Collector.GetRecordsWithCount(int.MaxValue)
                                         .ToDictionary(x => x.Key, x => x.Value);
 
-            CheckNotNull(featureCachedDataProvider);
-            CheckNotNull(settingsPages);
-
             List<Dictionary<string, object?>> result = new();
             foreach (var refId in HomeSeerSystem.GetAllRefs())
             {
-                var (minValue, maxValue) = settingsPages.GetDeviceRangeForValidValues(refId);
+                var (minValue, maxValue) = SettingsPages.GetDeviceRangeForValidValues(refId);
 
                 Dictionary<string, object?> row = new()
                 {
                     ["ref"] = refId,
                     ["records"] = recordCounts.TryGetValue((long)refId, out var count) ? count : 0,
-                    ["monitorableType"] = featureCachedDataProvider.IsMonitorableTypeFeature(refId),
-                    ["tracked"] = settingsPages.IsTracked(refId),
+                    ["monitorableType"] = FeatureCachedDataProvider.IsMonitorableTypeFeature(refId),
+                    ["tracked"] = SettingsPages.IsTracked(refId),
                     ["minValue"] = minValue,
                     ["maxValue"] = maxValue,
                 };
@@ -90,8 +105,7 @@ namespace Hspi
 
         public override bool HasJuiDeviceConfigPage(int devOrFeatRef)
         {
-            CheckNotNull(featureCachedDataProvider);
-            bool hasPage = featureCachedDataProvider.IsMonitorableTypeFeature(devOrFeatRef) || IsThisPlugInFeature(devOrFeatRef);
+            bool hasPage = FeatureCachedDataProvider.IsMonitorableTypeFeature(devOrFeatRef) || IsThisPlugInFeature(devOrFeatRef);
             return hasPage;
         }
 
@@ -138,7 +152,7 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
-                collector = new SqliteDatabaseCollector(settingsPages, CreateClock(), ShutdownCancellationToken);
+                collector = new SqliteDatabaseCollector(SettingsPages, CreateClock(), ShutdownCancellationToken);
                 statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
@@ -162,9 +176,7 @@ namespace Hspi
         {
             Log.Information("Page:{pageId} has changed value of id:{id} to {value}", pageId, changedView.Id, changedView.GetStringValue());
 
-            CheckNotNull(settingsPages);
-
-            if (settingsPages.OnSettingChange(changedView))
+            if (SettingsPages.OnSettingChange(changedView))
             {
                 UpdateDebugLevel();
                 return true;
@@ -212,7 +224,7 @@ namespace Hspi
             void HandleConfigChange()
             {
                 int refId = ConvertToInt32(3);
-                featureCachedDataProvider?.Invalidate(refId);
+                FeatureCachedDataProvider.Invalidate(refId);
 
                 const int DeleteDevice = 2;
                 if (ConvertToInt32(4) == DeleteDevice)
@@ -231,9 +243,7 @@ namespace Hspi
         }
 
         private bool IsThisPlugInFeature(int devOrFeatRef)
-        {
-            return (string)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, HomeSeer.PluginSdk.Devices.EProperty.Interface) == this.Id;
-        }
+        => (string)HomeSeerSystem.GetPropertyByRef(devOrFeatRef, HomeSeer.PluginSdk.Devices.EProperty.Interface) == this.Id;
 
         private void RecordAllDevices()
         {
@@ -301,8 +311,7 @@ namespace Hspi
                     return false;
                 }
 
-                CheckNotNull(settingsPages);
-                var (minValue, maxValue) = settingsPages.GetDeviceRangeForValidValues(deviceRefId);
+                var (minValue, maxValue) = SettingsPages.GetDeviceRangeForValidValues(deviceRefId);
 
                 if (minValue != null && deviceValue < minValue)
                 {
@@ -325,12 +334,10 @@ namespace Hspi
 
         private void UpdateDebugLevel()
         {
-            CheckNotNull(settingsPages);
-
-            bool debugLevel = settingsPages.DebugLoggingEnabled;
-            bool logToFile = settingsPages.LogtoFileEnabled;
+            bool debugLevel = SettingsPages.DebugLoggingEnabled;
+            bool logToFile = SettingsPages.LogtoFileEnabled;
             this.LogDebug = debugLevel;
-            Logger.ConfigureLogging(settingsPages.LogLevel, logToFile, HomeSeerSystem);
+            Logger.ConfigureLogging(SettingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
         private SqliteDatabaseCollector? collector;

@@ -113,11 +113,10 @@ namespace Hspi.Database
             return new Dictionary<string, string>()
             {
                 { "Path", settings.DBPath },
-                { "Sqlite version",  raw.sqlite3_libversion().utf8_to_string() },
-                { "Sqlite memory used",  raw.sqlite3_memory_used().Bytes().Humanize() },
-                { "Size",   GetTotalFileSize().Bytes().Humanize() },
-                { "Total records",   GetTotalRecords().ToString("N0") },
-                { "Total records from last 24 hr",    GetTotalRecordsInLastDay().ToString("N0") },
+                { "Sqlite version", raw.sqlite3_libversion().utf8_to_string() },
+                { "Size", GetTotalFileSize().Bytes().Humanize() },
+                { "Total records", GetTotalRecords().ToString("N0") },
+                { "Total records from last 24 hr", GetTotalRecordsInLastDay().ToString("N0") },
             };
 
             long GetTotalFileSize()
