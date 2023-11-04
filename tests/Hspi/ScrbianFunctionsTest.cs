@@ -7,92 +7,13 @@ using HomeSeer.PluginSdk.Devices.Controls;
 using Hspi.Device;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
     public class ScrbianFunctionsTest
     {
-        [TestMethod]
-        public void ExecSqlSingleFeatureAllValues()
-        {
-            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
-
-            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
-
-            int refId = 100;
-            mockHsController.SetupFeature(refId, 1.1, displayString: "1.1", lastChange: nowTime);
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-
-            TestHelper.WaitTillTotalRecords(plugin, refId, 1);
-            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                           refId, 10, 10.ToString(), nowTime.AddSeconds(1), 2);
-
-            var oldValues = plugin.Object.ExecSql("SELECT ref, value, str FROM history");
-
-            Assert.AreEqual(2, oldValues.Count);
-
-            Assert.AreEqual((long)refId, oldValues[0]["ref"]);
-            Assert.AreEqual(1.1D, oldValues[0]["value"]);
-            Assert.AreEqual("1.1", oldValues[0]["str"]);
-
-            Assert.AreEqual((long)refId, oldValues[1]["ref"]);
-            Assert.AreEqual(10D, oldValues[1]["value"]);
-            Assert.AreEqual("10", oldValues[1]["str"]);
-        }
-
-        [TestMethod]
-        public void ExecSqlCount()
-        {
-            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
-
-            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
-
-            List<int> hsFeatures = new();
-            for (int i = 0; i < 10; i++)
-            {
-                mockHsController.SetupFeature(1307 + i, 1.1, displayString: "1.1", lastChange: nowTime);
-                hsFeatures.Add(1307 + i);
-            }
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-            for (int i = 0; i < hsFeatures.Count; i++)
-            {
-                TestHelper.WaitForRecordCountAndDeleteAll(plugin, hsFeatures[i], 1);
-                for (int j = 0; j < i; j++)
-                {
-                    TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                                   hsFeatures[i], i, i.ToString(), nowTime.AddMinutes(i * j), j + 1);
-                }
-            }
-
-            var oldValues = plugin.Object.ExecSql("SELECT COUNT(*) AS TotalCount FROM history");
-
-            Assert.AreEqual(1, oldValues.Count);
-            Assert.AreEqual(45L, oldValues[0]["TotalCount"]);
-        }
-
-        [TestMethod]
-        public void ExecSqlVacuum()
-        {
-            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
-
-            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
-
-            int refId = 100;
-            mockHsController.SetupFeature(refId, 1.1, displayString: "1.1", lastChange: nowTime);
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
-
-            TestHelper.WaitTillTotalRecords(plugin, refId, 1);
-            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                           refId, 10, 10.ToString(), nowTime.AddSeconds(1), 2);
-
-            var oldValues = plugin.Object.ExecSql("VACUUM");
-            Assert.AreEqual(0, oldValues.Count);
-        }
-
         [TestMethod]
         public void GetAllDevicesProperties()
         {
