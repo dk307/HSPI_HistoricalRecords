@@ -190,6 +190,37 @@ namespace Hspi.Database
             return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMinValueCommand);
         }
 
+        public List<Dictionary<string, object?>> ExecSql(string sql)
+        {
+            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var stmt = CreateStatement(sql);
+
+            List<Dictionary<string, object?>> list = new();
+
+            while (ugly.step(stmt) != SQLITE_DONE)
+            {
+                Dictionary<string, object?> records = new();
+                for (var i = 0; i < ugly.column_count(stmt); i++)
+                {
+                    var name = ugly.column_name(stmt, i);
+                    var type = ugly.column_type(stmt, i);
+                    object? value = type switch
+                    {
+                        SQLITE_INTEGER => ugly.column_int64(stmt, i),
+                        SQLITE_FLOAT => ugly.column_double(stmt, i),
+                        SQLITE_TEXT => ugly.column_text(stmt, i),
+                        SQLITE_BLOB => ugly.column_bytes(stmt, i),
+                        _ => null,
+                    };
+                    records.Add(name, value);
+                }
+
+                list.Add(records);
+            }
+
+            return list;
+        }
+
         public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
                                                                         long start, long length, ResultSortBy sortBy)
         {

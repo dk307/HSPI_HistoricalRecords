@@ -106,6 +106,8 @@ namespace Hspi
             }
         }
 
+        public List<Dictionary<string, object?>> ExecSql(string sql) => Collector.ExecSql(sql);
+
         internal long DeleteAllRecords(int refId)
         {
             Log.Information("Deleting All Records for {name}", HsHelper.GetNameForLog(HomeSeerSystem, refId));
