@@ -39,20 +39,11 @@ namespace Hspi
             return StatisticsDevice.GetDataFromFeatureAsJson(HomeSeerSystem, refId);
         }
 
-        public List<int> GetTrackedDeviceList()
-        {
-            return HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();
-        }
+        public List<int> GetTrackedDeviceList() => HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();
 
-        public bool UpdateStatisticsFeature(int featureRefId)
-        {
-            return statisticsDeviceUpdater?.UpdateData(featureRefId) ?? false;
-        }
+        public bool UpdateStatisticsFeature(int featureRefId) => statisticsDeviceUpdater?.UpdateData(featureRefId) ?? false;
 
-        private static JObject ParseToJObject(string data)
-        {
-            return (JObject?)JsonConvert.DeserializeObject(data) ?? throw new ArgumentException("data is not correct");
-        }
+        private static JObject ParseToJObject(string data) => (JObject?)JsonConvert.DeserializeObject(data) ?? throw new ArgumentException("data is not correct");
 
         private static string SendRefIdResult(int refId)
         {

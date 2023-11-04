@@ -23,10 +23,7 @@ namespace Hspi
         public List<StatusGraphic> StatusGraphics => GetPropertyValue<List<StatusGraphic>>(EProperty.StatusGraphics);
         public double Value => GetPropertyValue<double>(EProperty.Value);
 
-        private T GetPropertyValue<T>(EProperty prop)
-        {
-            return (T)homeSeerSystem.GetPropertyByRef(Ref, prop);
-        }
+        private T GetPropertyValue<T>(EProperty prop) => (T)homeSeerSystem.GetPropertyByRef(Ref, prop);
 
         private readonly IHsController homeSeerSystem;
     }

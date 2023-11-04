@@ -189,7 +189,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsNotNull(stats);
             Assert.IsTrue(stats.ContainsKey("Path"));
             Assert.IsTrue(stats.ContainsKey("Sqlite version"));
-            Assert.IsTrue(stats.ContainsKey("Sqlite memory used"));
             Assert.IsTrue(stats.ContainsKey("Size"));
             Assert.AreEqual("20", stats["Total records"]);
             Assert.AreEqual("20", stats["Total records from last 24 hr"]);

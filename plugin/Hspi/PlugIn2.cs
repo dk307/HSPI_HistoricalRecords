@@ -67,8 +67,7 @@ namespace Hspi
             result.Add(GetFeaturePrecision(refId));
             result.Add(GetFeatureUnit(refId) ?? string.Empty);
 
-            CheckNotNull(settingsPages);
-            var pair = settingsPages.GetDeviceRangeForValidValues(refId);
+            var pair = SettingsPages.GetDeviceRangeForValidValues(refId);
             result.Add(pair.Item1);
             result.Add(pair.Item2);
 
@@ -138,18 +137,12 @@ namespace Hspi
             return featureCachedDataProvider.GetUnit(refId);
         }
 
-        internal long GetTotalRecords(int refId)
-        {
-            var count = Collector.GetRecordsCount(refId, 0, long.MaxValue);
-            return count;
-        }
+        internal long GetTotalRecords(int refId) => Collector.GetRecordsCount(refId, 0, long.MaxValue);
 
         internal bool IsFeatureTracked(int refId)
         {
-            CheckNotNull(settingsPages);
-            CheckNotNull(featureCachedDataProvider);
-            return settingsPages.IsTracked(refId) &&
-                     featureCachedDataProvider.IsMonitorableTypeFeature(refId);
+            return SettingsPages.IsTracked(refId) &&
+                     FeatureCachedDataProvider.IsMonitorableTypeFeature(refId);
         }
 
         protected virtual ISystemClock CreateClock() => new SystemClock();
@@ -465,8 +458,7 @@ namespace Hspi
             var maxValue = GetOptionalJsonValue<double>(jsonData, "maxValue");
 
             var deviceSettings = new PerDeviceSettings(refId, tracked, null, minValue, maxValue);
-            CheckNotNull(settingsPages);
-            settingsPages.AddOrUpdate(deviceSettings);
+            SettingsPages.AddOrUpdate(deviceSettings);
             Log.Information("Updated Device tracking {record}", deviceSettings);
 
             Collector.DeleteRecordsOutsideRangeForRef(refId, minValue, maxValue);

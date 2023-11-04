@@ -14,7 +14,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HSPI_HistoricalRecordsTest"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "asserts", "asserts", "{B025E2CA-865B-45C8-88FD-2CEE4FCD0EEA}"
 	ProjectSection(SolutionItems) = preProject
+		asserts\full-logo.png = asserts\full-logo.png
+		asserts\icon.ico = asserts\icon.ico
 		asserts\icon.png = asserts\icon.png
+		Introduction.md = Introduction.md
 	EndProjectSection
 EndProject
 Global
