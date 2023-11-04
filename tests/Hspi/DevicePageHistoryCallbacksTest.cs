@@ -272,6 +272,32 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void HandleUpdateDeviceSettingsNoMinMax()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            int deviceRefId = 373;
+            mockHsController.SetupFeature(deviceRefId, 1.1);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1);
+
+            string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"373\",\"tracked\":0, \"minValue\":null, \"maxValue\":null}", string.Empty, 0);
+            Assert.IsNotNull(data);
+
+            var jsonData = (JObject)JsonConvert.DeserializeObject(data);
+            Assert.IsNotNull(jsonData);
+            Assert.IsFalse(jsonData.ContainsKey("error"));
+
+            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId));
+
+            var list = plugin.Object.GetDevicePageHeaderStats(deviceRefId);
+            Assert.AreEqual(null, list[5]);
+            Assert.AreEqual(null, list[6]);
+        }
+
+        [TestMethod]
         public void HandleUpdateDeviceSettingsError()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
