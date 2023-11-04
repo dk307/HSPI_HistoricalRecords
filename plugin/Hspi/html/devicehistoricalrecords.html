@@ -683,6 +683,17 @@ $(document).ready(function () {
 
 {{else if displaySelect=="stats"}}
 
+
+function getJsonValue(value, nullSub) {
+	
+	if (value == null) {
+		return nullSub;
+	} else {
+		const unit={{if deviceUnits}}' {{deviceUnits}}'{{end}};
+		return roundValue(value.toString()) + unit;
+	}
+}
+
 function setUpPersistanceTable() {
   $('#dt-persistence').dataTable({
 	paging: false,
@@ -694,29 +705,27 @@ function setUpPersistanceTable() {
 		   min: displayStartDate,
 		   max: displayEndDate,   
 		};
-
-		ajaxPostPlugIn("statisticsforrecords", formObject, function (result) {	
 		
-			const unit={{if deviceUnits}}' {{deviceUnits}}'{{end}};
+		ajaxPostPlugIn("statisticsforrecords", formObject, function (result) {	
 			const data= result["data"];
 			const jsonResult =
 			{
 				data: [
 					[	
 					 "Average (Step)",
-					 roundValue(data[0]).toString() + unit,
+					 getJsonValue(data[0], '-'),
 					],
 					[	
 					 "Average (Linear)",
-					 roundValue(data[1]).toString() + unit,
+					 getJsonValue(data[1], '-'),
 					],
 					[	
 					 "Minimum Value",
-					 roundValue(data[2]).toString() + unit,
+					 getJsonValue(data[2], 'No records found'),
 					],
 					[	
 					 "Maximum Value",
-					 roundValue(data[3]).toString() + unit,
+					 getJsonValue(data[3], 'No records found'),
 					],
 				]
 			};			
