@@ -12,6 +12,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HSPI_HistoricalRecordsTest", "tests\HSPI_HistoricalRecordsTest.csproj", "{3189DB00-014C-48F2-BD3E-81615E268641}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "asserts", "asserts", "{B025E2CA-865B-45C8-88FD-2CEE4FCD0EEA}"
+	ProjectSection(SolutionItems) = preProject
+		asserts\icon.png = asserts\icon.png
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

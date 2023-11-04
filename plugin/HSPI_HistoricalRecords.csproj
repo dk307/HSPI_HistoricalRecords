@@ -86,8 +86,7 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>
-    </ApplicationIcon>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Database\IDBSettings.cs" />
@@ -233,6 +232,7 @@
     <AdditionalFiles Include="install.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </AdditionalFiles>
+    <Content Include="icon.ico" />
     <Content Include="updater_override.tt" />
   </ItemGroup>
   <ItemGroup>
