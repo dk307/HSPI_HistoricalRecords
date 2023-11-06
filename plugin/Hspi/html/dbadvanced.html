@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<!--Don't cache anything-->
+		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+		<meta http-equiv="Pragma" content="no-cache" />
+		<meta http-equiv="Expires" content="0" />
+
+        
+        {{includefile 'bootstrap/css/page_common.css'}}          
+        <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
+		<link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />		
+		<link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
+		
+		<title>Historical Records database advanced</title>    
+				
+    </head>
+  <body class="body homeseer-skin">  
+    {{includefile 'header.html'}}
+    {{includefile 'navbar.html'}} 
+	<div class="hs_spinner" id="loading">
+		<div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
+			<div class="spinner-border" role="status">
+				<span class="sr-only">Loading...</span>
+			</div>
+		</div>
+	</div>	
+	
+	<div class="container">
+
+		<form class="md-form ml-3" id="idSqlForm">		
+				
+			<div class="row mt-1 mb-1">
+				<div class="md-form col-md">			
+					<textarea id="idSql" class="md-textarea form-control" name="idSql" required></textarea>
+					<label for="sql" >SQL</label>				
+				</div>
+			</div>
+
+			<div class="row mt-1 mb-1">
+				<div class="col-md d-flex justify-content-end">
+					<button class="btn btn-default waves-effect waves-light" name="save" type="submit">EXECUTE</button>
+				</div>
+			</div>		
+			
+		</form> 
+
+		<div class="row mt-1 mb-1">
+			<div class="md-form col-md alert alert-danger" role="alert" style="display:none" id="error-message-div">
+			</div>
+		</div>
+
+		<table id="dt-persistence" class="table table-sm mb-0 table-striped"cellspacing="0" width="100%">	
+			<thead></thead>
+			<tbody></tbody>
+		</table>
+	</div>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+     {{includefile 'bootstrap/js/page_common.js'}}
+<script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>	 
+<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+
+<script>
+let dt = null;
+ 
+ function setUpPersistanceTable(tableData) {
+	if (dt != null) {
+		dt.destroy();
+		dt = null;
+	}
+	
+	$('#dt-persistence').empty();
+  
+	const columnNames = tableData["columns"];
+	const data = tableData["data"];
+	
+	if (columnNames && columnNames.length > 0){
+ 		let columns = [];
+		for (const i in columnNames) {
+			columns.push({title: columnNames[i]});
+		}
+			
+		dt = $('#dt-persistence').DataTable({
+			columns: columns,
+			data: data,
+		});
+			
+		$(".dataTables_length").addClass("bs-select"); 
+	} else {
+		$('#error-message-div').show(); 
+		$('#error-message-div').html("No Data");
+	}	
+}
+
+$(document).ready(function () {
+	$('#loading').hide(); 
+	$('#error-message-div').hide(); 
+	
+	$( "#idSqlForm" ).on( "submit",async function (e) {
+		e.preventDefault();
+		$('#loading').show();
+		$('#error-message-div').hide(); 
+		
+		const formObject = {
+			sql: $('#idSql').val(),
+		};
+	 		
+		await ajaxPostPlugIn("execsql", formObject, function(result, context) {
+			$('#loading').hide(); 
+			$('#error-message-div').hide(); 
+
+			//update the table
+			setUpPersistanceTable(result);
+					
+		}, 
+		function(errorMessage) {
+			$('#loading').hide(); 
+			$('#error-message-div').show(); 
+			$('#error-message-div').html(errorMessage);
+
+		}
+		,null);
+	});	 
+});	
+</script>    
+  </body>
+</html>
