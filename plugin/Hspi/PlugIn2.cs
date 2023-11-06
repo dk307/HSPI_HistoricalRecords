@@ -92,6 +92,7 @@ namespace Hspi
                     "historyrecords" => HandleHistoryRecords(data),
                     "graphrecords" => HandleGraphRecords(data),
                     "statisticsforrecords" => HandleStatisticsForRecords(data),
+                    "histogramforrecords" => HandleHistogramForRecords(data),
                     "updatedevicesettings" => HandleUpdatePerDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
                     "deviceedit" => HandleDeviceEdit(data),
@@ -154,7 +155,7 @@ namespace Hspi
             return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
         }
 
-        private static void GetDevicePageRequestParameters(JObject jsonData, out int refId, out long min, out long max)
+        private static void GetRefIdMinMaxRequestParameters(JObject jsonData, out int refId, out long min, out long max)
         {
             refId = GetJsonValue<int>(jsonData, "refId");
             min = GetJsonValue<long>(jsonData, "min");
@@ -282,7 +283,7 @@ namespace Hspi
         {
             var jsonData = ParseToJObject(data);
 
-            GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
+            GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
 
             var fillStrategy = GetFillStrategy(jsonData);
 
@@ -422,7 +423,7 @@ namespace Hspi
         {
             var jsonData = ParseToJObject(data);
 
-            GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
+            GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
 
             long minUnixTimeSeconds = min / 1000;
             long maxUnixTimeSeconds = max / 1000;
@@ -442,6 +443,33 @@ namespace Hspi
                 foreach (var row in stats)
                 {
                     jsonWriter.WriteValue(row);
+                }
+
+                jsonWriter.WriteEndArray();
+                jsonWriter.WriteEndObject();
+            });
+        }
+
+        private string HandleHistogramForRecords(string data)
+        {
+            var jsonData = ParseToJObject(data);
+            GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
+            long minUnixTimeSeconds = min / 1000;
+            long maxUnixTimeSeconds = max / 1000;
+
+            var result = TimeAndValueQueryHelper.Histogram(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds);
+
+            return WriteJsonResult((jsonWriter) =>
+            {
+                jsonWriter.WritePropertyName("data");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in result)
+                {
+                    jsonWriter.WritePropertyName("x");
+                    jsonWriter.WriteValue(row.Key);
+                    jsonWriter.WritePropertyName("y");
+                    jsonWriter.WriteValue(row.Value);
                 }
 
                 jsonWriter.WriteEndArray();

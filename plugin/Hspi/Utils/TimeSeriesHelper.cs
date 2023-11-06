@@ -40,6 +40,7 @@ namespace Hspi.Utils
                 {
                     result.Add(listIterator.Current.DeviceValue, duration);
                 }
+
                 listIterator.MoveNext();
             }
 

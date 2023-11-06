@@ -8,12 +8,10 @@ namespace Hspi.Utils
 {
     internal static class TimeAndValueQueryHelper
     {
-        public static IEnumerable<TimeAndValue> GetGroupedGraphValues(SqliteDatabaseCollector collector,
-                                                                            int refId,
-                                                                            long minUnixTimeSeconds,
-                                                                            long maxUnixTimeSeconds,
-                                                                            long intervalUnixTimeSeconds,
-                                                                            FillStrategy fillStrategy)
+        public static IEnumerable<TimeAndValue> GetGroupedGraphValues(SqliteDatabaseCollector collector, int refId,
+                                                                      long minUnixTimeSeconds, long maxUnixTimeSeconds,
+                                                                      long intervalUnixTimeSeconds,
+                                                                      FillStrategy fillStrategy)
         {
             IEnumerable<TimeAndValue>? result = null;
             collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup);
@@ -28,14 +26,10 @@ namespace Hspi.Utils
             }
         }
 
-        public static double? Average(SqliteDatabaseCollector collector,
-                                                 int refId,
-                                                 long minUnixTimeSeconds,
-                                                 long maxUnixTimeSeconds,
-                                                 FillStrategy fillStrategy)
+        public static double? Average(SqliteDatabaseCollector collector, int refId, long minUnixTimeSeconds,
+                                      long maxUnixTimeSeconds, FillStrategy fillStrategy)
         {
             double? result = null;
-
             collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup);
             return result;
 
@@ -44,6 +38,21 @@ namespace Hspi.Utils
             {
                 var timeSeriesHelper = new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, x);
                 result = timeSeriesHelper.Average(fillStrategy);
+            }
+        }
+
+        public static IDictionary<double, long> Histogram(SqliteDatabaseCollector collector, int refId,
+                                                          long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        {
+            IDictionary<double, long> result = new Dictionary<double, long>();
+            collector.IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, CollectAndGroup);
+            return result;
+
+            // this is called under db lock
+            void CollectAndGroup(IEnumerable<TimeAndValue> x)
+            {
+                var timeSeriesHelper = new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, x);
+                result = timeSeriesHelper.CreateHistogram();
             }
         }
     }
