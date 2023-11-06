@@ -22,6 +22,30 @@ namespace Hspi.Utils
             this.timeAndValues = timeAndValues;
         }
 
+        public IDictionary<double, long> CreateHistogram()
+        {
+            var listIterator = new TimeAndValueIterator(timeAndValues, this.maxUnixTimeSeconds);
+            var result = new Dictionary<double, long>();
+
+            while (listIterator.IsCurrentValid)
+            {
+                var intervalMin = Math.Max(this.minUnixTimeSeconds, listIterator.Current.UnixTimeSeconds);
+                long duration = listIterator.FinishTimeForCurrentTimePoint - intervalMin;
+                if (result.TryGetValue(listIterator.Current.DeviceValue, out var value))
+                {
+                    value += duration;
+                    result[listIterator.Current.DeviceValue] = value;
+                }
+                else
+                {
+                    result.Add(listIterator.Current.DeviceValue, duration);
+                }
+                listIterator.MoveNext();
+            }
+
+            return result;
+        }
+
         public double? Average(FillStrategy fillStrategy)
         {
             var res = ReduceSeriesWithAverage(maxUnixTimeSeconds - minUnixTimeSeconds, fillStrategy).ToList();
@@ -101,18 +125,18 @@ namespace Hspi.Utils
             }
 
             return result.Select(x => new TimeAndValue(x.Key, x.Value.WeighedValue / x.Value.WeighedUnixSeconds));
-        }
 
-        private static ResultType GetOrCreate(IDictionary<long, ResultType> dict, long key)
+            static ResultType GetOrCreate(IDictionary<long, ResultType> dict, long key)
 
-        {
-            if (!dict.TryGetValue(key, out var val))
             {
-                val = new ResultType();
-                dict.Add(key, val);
-            }
+                if (!dict.TryGetValue(key, out var val))
+                {
+                    val = new ResultType();
+                    dict.Add(key, val);
+                }
 
-            return val;
+                return val;
+            }
         }
 
         private sealed class ResultType

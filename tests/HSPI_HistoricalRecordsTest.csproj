@@ -60,6 +60,7 @@
     <Compile Include="Hspi\Utils\HsDeviceInvalidExceptionTests.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIteratorTests.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesAverageTest.cs" />
+    <Compile Include="Hspi\Utils\TimeSeriesGroupingHistogramTest.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesGroupingLOCFTest.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesGroupingLinearTest.cs" />
     <Compile Include="TestHelper.cs" />
