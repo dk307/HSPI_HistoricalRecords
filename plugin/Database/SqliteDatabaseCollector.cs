@@ -54,6 +54,7 @@ namespace Hspi.Database
             deleteAllRecordByRefCommand = CreateStatement(DeleteAllRecordByRefSql);
             getMaxValueCommand = CreateStatement(GetMaxValuesSql);
             getMinValueCommand = CreateStatement(GetMinValuesSql);
+            getStrForRefAndValueCommand = CreateStatement(GetStrForRefAndValueSql);
 
             var recordUpdateThread = new Thread(UpdateRecords);
             recordUpdateThread.Start();
@@ -84,6 +85,36 @@ namespace Hspi.Database
             return changesCount;
         }
 
+        public void DeleteRecordsOutsideRangeForRef(int refId, double? minValue, double? maxValue)
+        {
+            if (minValue.HasValue)
+            {
+                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var stmt = CreateStatement("DELETE FROM history where ref=$ref and value<$min");
+                RemoveInvalidValues(stmt, refId, minValue.Value);
+            }
+
+            if (maxValue.HasValue)
+            {
+                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var stmt = CreateStatement("DELETE FROM history where ref=$ref and value>$max");
+                RemoveInvalidValues(stmt, refId, maxValue.Value);
+            }
+
+            void RemoveInvalidValues(sqlite3_stmt stmt, int refId, double value)
+            {
+                ugly.bind_int64(stmt, 1, refId);
+                ugly.bind_double(stmt, 2, value);
+                ugly.step_done(stmt);
+
+                var changesCount = ugly.changes(sqliteConnection);
+                if (changesCount > 0)
+                {
+                    Log.Information("Removed {rows} row(s) for device:{refId} in database for being invalid values", changesCount, refId);
+                }
+            }
+        }
+
         public void Dispose()
         {
             getHistoryCommand?.Dispose();
@@ -96,6 +127,7 @@ namespace Hspi.Database
             deleteAllRecordByRefCommand.Dispose();
             getMaxValueCommand?.Dispose();
             getMinValueCommand?.Dispose();
+            getStrForRefAndValueCommand?.Dispose();
             sqliteConnection?.Dispose();
             maintainanceTimer.Dispose();
             connectionLock.Dispose();
@@ -106,6 +138,37 @@ namespace Hspi.Database
         {
             Log.Information("Maintainance for database triggered");
             maintainanceTimer.Change(0, MaintainanceIntervalMs);
+        }
+
+        public IList<IDictionary<string, object?>> ExecSql(string sql)
+        {
+            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var stmt = CreateStatement(sql);
+
+            List<IDictionary<string, object?>> list = new();
+
+            while (ugly.step(stmt) != SQLITE_DONE)
+            {
+                Dictionary<string, object?> records = new();
+                for (var i = 0; i < ugly.column_count(stmt); i++)
+                {
+                    var name = ugly.column_name(stmt, i);
+                    var type = ugly.column_type(stmt, i);
+                    object? value = type switch
+                    {
+                        SQLITE_INTEGER => ugly.column_int64(stmt, i),
+                        SQLITE_FLOAT => ugly.column_double(stmt, i),
+                        SQLITE_TEXT => ugly.column_text(stmt, i),
+                        SQLITE_BLOB => ugly.column_bytes(stmt, i),
+                        _ => null,
+                    };
+                    records.Add(name, value);
+                }
+
+                list.Add(records);
+            }
+
+            return list;
         }
 
         public IDictionary<string, string> GetDatabaseStats()
@@ -190,37 +253,6 @@ namespace Hspi.Database
             return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMinValueCommand);
         }
 
-        public IList<IDictionary<string, object?>> ExecSql(string sql)
-        {
-            using var lock2 = CreateAutoUnlockForDBConnection();
-            using var stmt = CreateStatement(sql);
-
-            List<IDictionary<string, object?>> list = new();
-
-            while (ugly.step(stmt) != SQLITE_DONE)
-            {
-                Dictionary<string, object?> records = new();
-                for (var i = 0; i < ugly.column_count(stmt); i++)
-                {
-                    var name = ugly.column_name(stmt, i);
-                    var type = ugly.column_type(stmt, i);
-                    object? value = type switch
-                    {
-                        SQLITE_INTEGER => ugly.column_int64(stmt, i),
-                        SQLITE_FLOAT => ugly.column_double(stmt, i),
-                        SQLITE_TEXT => ugly.column_text(stmt, i),
-                        SQLITE_BLOB => ugly.column_bytes(stmt, i),
-                        _ => null,
-                    };
-                    records.Add(name, value);
-                }
-
-                list.Add(records);
-            }
-
-            return list;
-        }
-
         public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
                                                                         long start, long length, ResultSortBy sortBy)
         {
@@ -296,6 +328,23 @@ namespace Hspi.Database
             }
 
             return records;
+        }
+
+        public string? GetStringForValue(long refId, double value)
+        {
+            using var lock2 = CreateAutoUnlockForDBConnection();
+
+            var stmt = getStrForRefAndValueCommand;
+            using var stmtRest = CreateStatementAutoReset(stmt);
+            ugly.bind_int64(stmt, 1, refId);
+            ugly.bind_double(stmt, 2, value);
+
+            if (ugly.step(stmt) != SQLITE_DONE)
+            {
+                return ugly.column_text(stmt, 0);
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -547,36 +596,6 @@ namespace Hspi.Database
             }
         }
 
-        public void DeleteRecordsOutsideRangeForRef(int refId, double? minValue, double? maxValue)
-        {
-            if (minValue.HasValue)
-            {
-                using var lock2 = CreateAutoUnlockForDBConnection();
-                using var stmt = CreateStatement("DELETE FROM history where ref=$ref and value<$min");
-                RemoveInvalidValues(stmt, refId, minValue.Value);
-            }
-
-            if (maxValue.HasValue)
-            {
-                using var lock2 = CreateAutoUnlockForDBConnection();
-                using var stmt = CreateStatement("DELETE FROM history where ref=$ref and value>$max");
-                RemoveInvalidValues(stmt, refId, maxValue.Value);
-            }
-
-            void RemoveInvalidValues(sqlite3_stmt stmt, int refId, double value)
-            {
-                ugly.bind_int64(stmt, 1, refId);
-                ugly.bind_double(stmt, 2, value);
-                ugly.step_done(stmt);
-
-                var changesCount = ugly.changes(sqliteConnection);
-                if (changesCount > 0)
-                {
-                    Log.Information("Removed {rows} row(s) for device:{refId} in database for being invalid values", changesCount, refId);
-                }
-            }
-        }
-
         private const string AllRefOldestRecordsSql = "SELECT ref, MIN(ts), COUNT(*) FROM history GROUP BY ref";
         private const string DeleteAllRecordByRefSql = "DELETE from history where ref=$ref";
         private const string DeleteOldRecordByRefSql = "DELETE from history where ref=$ref and ts<$time AND ts NOT IN ( SELECT ts FROM history WHERE ref=$ref ORDER BY ts DESC LIMIT $limit)";
@@ -585,6 +604,8 @@ namespace Hspi.Database
         private const string GetMaxValuesSql = @"SELECT MAX(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
 
         private const string GetMinValuesSql = @"SELECT MIN(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
+
+        private const string GetStrForRefAndValueSql = "SELECT str FROM history WHERE ref=? AND value=? ORDER BY ts DESC LIMIT 1";
 
         // 1 record before the time range and one after
         private const string GetTimeValuesSql =
@@ -619,6 +640,7 @@ namespace Hspi.Database
         private readonly sqlite3_stmt getMaxValueCommand;
         private readonly sqlite3_stmt getMinValueCommand;
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
+        private readonly sqlite3_stmt getStrForRefAndValueCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;
         private readonly Timer maintainanceTimer;

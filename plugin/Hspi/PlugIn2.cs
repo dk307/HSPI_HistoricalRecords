@@ -38,6 +38,8 @@ namespace Hspi
                 displays.Add("stats");
             }
 
+            displays.Add("histogram");
+
             return displays;
 
             static bool ShouldShowChart(HsFeatureData feature)
@@ -92,6 +94,7 @@ namespace Hspi
                     "historyrecords" => HandleHistoryRecords(data),
                     "graphrecords" => HandleGraphRecords(data),
                     "statisticsforrecords" => HandleStatisticsForRecords(data),
+                    "histogramforrecords" => HandleHistogramForRecords(data),
                     "updatedevicesettings" => HandleUpdatePerDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
                     "deviceedit" => HandleDeviceEdit(data),
@@ -154,7 +157,7 @@ namespace Hspi
             return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
         }
 
-        private static void GetDevicePageRequestParameters(JObject jsonData, out int refId, out long min, out long max)
+        private static void GetRefIdMinMaxRequestParameters(JObject jsonData, out int refId, out long min, out long max)
         {
             refId = GetJsonValue<int>(jsonData, "refId");
             min = GetJsonValue<long>(jsonData, "min");
@@ -282,7 +285,7 @@ namespace Hspi
         {
             var jsonData = ParseToJObject(data);
 
-            GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
+            GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
 
             var fillStrategy = GetFillStrategy(jsonData);
 
@@ -422,7 +425,7 @@ namespace Hspi
         {
             var jsonData = ParseToJObject(data);
 
-            GetDevicePageRequestParameters(jsonData, out var refId, out var min, out var max);
+            GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
 
             long minUnixTimeSeconds = min / 1000;
             long maxUnixTimeSeconds = max / 1000;
@@ -447,6 +450,78 @@ namespace Hspi
                 jsonWriter.WriteEndArray();
                 jsonWriter.WriteEndObject();
             });
+        }
+
+        private string HandleHistogramForRecords(string data)
+        {
+            var jsonData = ParseToJObject(data);
+            GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
+            long minUnixTimeSeconds = min / 1000;
+            long maxUnixTimeSeconds = max / 1000;
+
+            var count = GetJsonValue<int>(jsonData, "count");
+
+            var histogram = TimeAndValueQueryHelper.Histogram(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds);
+            var result = GetTopValues(count, histogram, out var leftOver);
+
+            return WriteJsonResult((jsonWriter) =>
+            {
+                // labels array
+                jsonWriter.WritePropertyName("labels");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in result)
+                {
+                    string label = Collector.GetStringForValue(refId, row.Key) ?? row.Key.ToString("g", CultureInfo.InvariantCulture);
+                    jsonWriter.WriteValue(label);
+                }
+                if (leftOver > 0)
+                {
+                    jsonWriter.WriteValue((string?)null);
+                }
+
+                jsonWriter.WriteEndArray();
+
+                // time in milliseconds array
+                jsonWriter.WritePropertyName("time");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in result)
+                {
+                    jsonWriter.WriteValue(row.Value * 1000);
+                }
+
+                if (leftOver > 0)
+                {
+                    jsonWriter.WriteValue(leftOver * 1000);
+                }
+
+                jsonWriter.WriteEndArray();
+            });
+
+            static IList<KeyValuePair<double, long>> GetTopValues(int maxCount,
+                                                          IDictionary<double, long> histogram,
+                                                          out long leftOver)
+            {
+                leftOver = 0;
+
+                List<KeyValuePair<double, long>> result = new();
+                var count = maxCount - 1; // -1 for others
+                foreach (var pair in histogram.OrderByDescending(x => x.Value))
+                {
+                    if (count > 0)
+                    {
+                        result.Add(pair);
+                        count--;
+                    }
+                    else
+                    {
+                        leftOver += pair.Value;
+                    }
+                }
+
+                return result;
+            }
         }
 
         private string HandleUpdatePerDeviceSettings(string data)

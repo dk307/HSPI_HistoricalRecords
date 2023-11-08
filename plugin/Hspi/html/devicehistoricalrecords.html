@@ -17,11 +17,12 @@
 		canvas {
 			 width: 100%;  
 			 object-fit: contain; 
+			 margin: auto;
 		}
 
 		.chart-container {
 		  position: relative;
-		  margin: auto;	
+		  margin: auto;
 		  height: 60vh;
 		}
 	</style>
@@ -130,7 +131,7 @@
 <script>
 {{ if durationSeconds != "" }}
 const displayEndDate = 1000 * Math.round(Date.now() / 1000);
-const displayStartDate = displayEndDate - {{durationSeconds}} * 1000;
+const displayStartDate = displayEndDate + 1000 - {{durationSeconds}} * 1000;
 {{else if displayMax != ""}}
 const displayEndDate = new Date({{displayMax}} * 1000).getTime();
 const displayStartDate = new Date({{displayMin}} * 1000).getTime();
@@ -191,6 +192,8 @@ function getRangeString(min, max) {
 								"Chart"
 							when "stats"
 								"Statistics"
+							when "histogram"
+								"Histogram"
 						end														
 						}}</option>								
 					{{ end }}
@@ -240,6 +243,7 @@ function getRangeString(min, max) {
 		}}
 
 		{{needDataTables=false}}
+		{{needChartJs=false}}
 		{{if displaySelect=="table"}}
 			<table id="dt-persistence" class="table table-sm mb-0 table-striped"  width="100%">	
 				<thead>
@@ -275,6 +279,7 @@ function getRangeString(min, max) {
 			<div class="chart-container">
 				<canvas id="myLineChart"></canvas>
 			</div>
+			{{needChartJs=true}}
 		{{else if displaySelect=="stats"}}
 			<table id="dt-persistence" class="table table-sm mb-0 table-striped"  width="100%">	
 				<thead style=" display:none;">
@@ -285,6 +290,23 @@ function getRangeString(min, max) {
 				</thead> 
 			<table>		
 			{{needDataTables=true}}		
+		{{else if displaySelect=="histogram"}}
+			<div class="d-flex mt-3 flex-wrap justify-content-center">
+				<div class="p-2">
+					<canvas id="myPieChart"></canvas>
+				</div>
+				<div class="p-2" >
+					<table class="table table-sm table-striped" id="idPieLegand">
+						<thead>
+							<th scope="col"></th>
+							<th scope="col"></th>
+							<th scope="col"></th>
+						<thead>
+						<tbody></tbody>
+					</table>
+				</div>
+			</div>
+			{{needChartJs=true}}		
 		{{end}}		
 	{{else if device}}
 		Not Configured
@@ -341,10 +363,9 @@ function getRangeString(min, max) {
 
 {{if needDataTables}}
 <script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>
-<script type="text/javascript" src="/HistoricalRecords/humanize-duration.js"></script>
 {{end}}
 
-{{if displaySelect=="chart"}}
+{{if needChartJs}}
 <script type="text/javascript" src="/HistoricalRecords/chart.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/chartjs-adapter-moment.min.js"></script>
@@ -353,6 +374,7 @@ function getRangeString(min, max) {
 {{end}}
 
 <script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+<script type="text/javascript" src="/HistoricalRecords/humanize-duration.js"></script>
 
 <script>
 $(function() {
@@ -683,7 +705,6 @@ $(document).ready(function () {
 
 {{else if displaySelect=="stats"}}
 
-
 function getJsonValue(value, nullSub) {
 	
 	if (value == null) {
@@ -742,6 +763,98 @@ $(document).ready(function () {
 	$('#loading').hide();
 });
 
+
+{{else if displaySelect=="histogram"}}
+let chart;
+
+//https://www.patternfly.org/charts/colors-for-charts/
+const colors = ['#8BC1F7','#BDE2B9','#A2D9D9','#B2B0EA','#F9E0A2','#F4B678','#C9190B','#519DE9', '#7CC674', '#73C5C5','#8481DD','#F6D173','#EF9234','#A30000'];
+			  
+let dynamicColors = function(label, index) {	 
+	if (label) {
+		switch (label.toLowerCase()) {
+			case "on": return "#FFC154";
+			case "off": return "#47B39C";
+		}
+	} else {
+		return "#D2D2D2"; //others
+	}
+	return colors[index];
+};
+
+const data = {
+  labels: [],
+  datasets: [{
+    data: [],
+  }]
+};
+
+const tooltip = {
+    enabled: true,
+    callbacks: { 
+      // To change label in tooltip
+      label: (data) => { 
+           return humanizeDuration(data.parsed);
+      },
+    }
+};
+
+function updateChart(chart) {
+	 
+	const formObject = {
+	   refId : {{featureId}},
+	   min: displayStartDate,
+	   max: displayEndDate,
+	   count: 10,
+	};
+	
+	ajaxPostPlugIn("histogramforrecords", formObject, function (result) {	  
+		chart.data.datasets[0].data =  result.time;
+		chart.data.datasets[0].backgroundColor =  Array.from(result.labels, (x,i) => dynamicColors(x,i));
+		
+		chart.data.labels = Array.from( result.labels, (x) => (x === null ? "Others" : x));
+		chart.update('none');		
+
+		let legandTableBody = $('#idPieLegand tbody');
+		for(let i=0; i< chart.data.datasets[0].data.length; i++) {	
+			var row = $("<tr>");			
+			row.append($("<th class='scope'>").html('<div style="background-color:' + chart.data.datasets[0].backgroundColor[i] + ';width:20px;height:20px;"></div>'));
+			row.append($("<td>").text(chart.data.labels[i]));	
+			row.append($("<td>").text(humanizeDuration(chart.data.datasets[0].data[i])));	
+			row.appendTo(legandTableBody);    
+		}
+	});
+}
+ 
+function setUpChart() { 
+	Chart.defaults.font.family = "sans-serif";
+	Chart.defaults.font.size = 16;
+	
+	let ctx = document.getElementById("myPieChart").getContext('2d'); 
+	
+	let myChart = new Chart(ctx, {
+		type: 'pie',
+		data: data,
+		options: {
+			plugins: {
+				tooltip: tooltip,
+				legend: {
+					display: false,
+				},
+			},
+			
+			responsive: true,
+		},
+	});
+	 
+	chart = myChart;
+	updateChart(chart);
+}
+
+$(document).ready(function () {
+	setUpChart();
+	$('#loading').hide();
+});
 {{else}}	
 $(document).ready(function () {
 	$('#loading').hide();

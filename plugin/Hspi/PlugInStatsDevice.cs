@@ -43,7 +43,16 @@ namespace Hspi
 
         public bool UpdateStatisticsFeature(int featureRefId) => statisticsDeviceUpdater?.UpdateData(featureRefId) ?? false;
 
-        private static JObject ParseToJObject(string data) => (JObject?)JsonConvert.DeserializeObject(data) ?? throw new ArgumentException("data is not correct");
+        private static JObject ParseToJObject(string data)
+        {
+            if (string.IsNullOrWhiteSpace(data))
+            {
+                throw new ArgumentException("data is not correct");
+            }
+
+            var deserializedObject = JObject.Parse(data);
+            return deserializedObject ?? throw new ArgumentException("data is not correct");
+        }
 
         private static string SendRefIdResult(int refId)
         {
