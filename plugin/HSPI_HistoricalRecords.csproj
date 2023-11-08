@@ -212,20 +212,11 @@
     <PackageReference Include="SQLitePCLRaw.ugly">
       <Version>2.1.6</Version>
     </PackageReference>
-    <PackageReference Include="System.Collections">
-      <Version>4.3.0</Version>
-    </PackageReference>
     <PackageReference Include="System.Collections.Immutable">
       <Version>7.0.0</Version>
     </PackageReference>
-    <PackageReference Include="System.Data.Common">
-      <Version>4.3.0</Version>
-    </PackageReference>
     <PackageReference Include="System.Runtime">
       <Version>4.3.1</Version>
-    </PackageReference>
-    <PackageReference Include="System.Threading.Tasks.Extensions">
-      <Version>4.5.4</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
@@ -268,8 +259,8 @@
       <Output TaskParameter="CombinedPaths" ItemName="DllFilePaths" />
     </CombinePath>
     <Copy SourceFiles="@(DllFilePaths)" DestinationFolder="$(ShippedDllsDirectory)" />
-    <Copy SourceFiles="$(OutputPath)\runtimes\win-x64\native\e_sqlite3.dll" DestinationFiles="$(ShippedDllsDirectory)\runtimes\win-x64\native\e_sqlite3.dll"/>
-    <Copy SourceFiles="$(OutputPath)\runtimes\win-x86\native\e_sqlite3.dll" DestinationFiles="$(ShippedDllsDirectory)\runtimes\win-x86\native\e_sqlite3.dll"/>
+    <Copy SourceFiles="$(OutputPath)\runtimes\win-x64\native\e_sqlite3.dll" DestinationFiles="$(ShippedDllsDirectory)\runtimes\win-x64\native\e_sqlite3.dll" />
+    <Copy SourceFiles="$(OutputPath)\runtimes\win-x86\native\e_sqlite3.dll" DestinationFiles="$(ShippedDllsDirectory)\runtimes\win-x86\native\e_sqlite3.dll" />
     <ZipDirectory SourceDirectory="$(ShippedDllsDirectory)" DestinationFile="$(OutputPath)\dlls.zip" Overwrite="true" />
   </Target>
   <Target Name="ZipHtmlFiles" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
