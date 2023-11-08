@@ -268,10 +268,8 @@
       <Output TaskParameter="CombinedPaths" ItemName="DllFilePaths" />
     </CombinePath>
     <Copy SourceFiles="@(DllFilePaths)" DestinationFolder="$(ShippedDllsDirectory)" />
-    <ItemGroup>
-      <NativeDlls Include="$(OutputPath)\runtimes\**\*.dll" />
-    </ItemGroup>
-    <Copy SourceFiles="@(NativeDlls)" DestinationFiles="@(NativeDlls->'$(ShippedDllsDirectory)\runtimes\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="$(OutputPath)\runtimes\win-x64\native\e_sqlite3.dll" DestinationFiles="$(ShippedDllsDirectory)\runtimes\win-x64\native\e_sqlite3.dll"/>
+    <Copy SourceFiles="$(OutputPath)\runtimes\win-x86\native\e_sqlite3.dll" DestinationFiles="$(ShippedDllsDirectory)\runtimes\win-x86\native\e_sqlite3.dll"/>
     <ZipDirectory SourceDirectory="$(ShippedDllsDirectory)" DestinationFile="$(OutputPath)\dlls.zip" Overwrite="true" />
   </Target>
   <Target Name="ZipHtmlFiles" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
