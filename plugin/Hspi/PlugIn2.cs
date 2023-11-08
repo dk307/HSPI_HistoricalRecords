@@ -470,11 +470,12 @@ namespace Hspi
                 jsonWriter.WritePropertyName("labels");
                 jsonWriter.WriteStartArray();
 
-                foreach (var row in result)
+                foreach (var key in result.Select(x => x.Key))
                 {
-                    string label = Collector.GetStringForValue(refId, row.Key) ?? row.Key.ToString("g", CultureInfo.InvariantCulture);
+                    string label = Collector.GetStringForValue(refId, key) ?? key.ToString("g", CultureInfo.InvariantCulture);
                     jsonWriter.WriteValue(label);
                 }
+
                 if (leftOver > 0)
                 {
                     jsonWriter.WriteValue((string?)null);
