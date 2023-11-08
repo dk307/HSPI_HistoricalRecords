@@ -124,9 +124,10 @@
 <script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>	 
 <script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
 <script>
+let dt;
 
 function setUpPersistanceTable() {
-  $('#dt-persistence').dataTable({
+  dt = $('#dt-persistence').DataTable({
 		stateSave: false,
 		responsive: true,
 		order: [[ 1, 'desc' ]],
@@ -197,7 +198,8 @@ function deleteRecords(e){
 			ajaxPostPlugIn("deletedevicerecords", data, function(result, context) {
 				//update the table column
 				const col1 = $('.devicerow[data-refId='+refId +'] td:nth-child(2)');		
-				col1.text(0);				
+				col1.text(0);	
+				dt.cell(col1).invalidate().draw();
 			}, null, data);
 		}
     }); 
@@ -208,7 +210,7 @@ $(document).ready(function () {
 	setUpPersistanceTable();
 	$('#loading').hide();
 
-	$( "#idDeviceOptions" ).on( "submit",async function (e) {
+	$( "#idDeviceOptions" ).on("submit",async function (e) {
 		e.preventDefault();
 		$('#modalEdit').modal('hide');
 		const ref = $('#deviceOptionsRef').val();
@@ -224,6 +226,7 @@ $(document).ready(function () {
 			//update the table column
 			const col3 = $('.devicerow[data-refId='+context.refId +'] td:nth-child(3)');		
 			col3.text(context.tracked ? "Yes" : "No");
+			dt.cell(col3).invalidate().draw();
 			
 			// update the custom attributes also
 			const link = $('.devicerow[data-refId='+context.refId +']');	

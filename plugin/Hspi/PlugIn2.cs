@@ -38,6 +38,8 @@ namespace Hspi
                 displays.Add("stats");
             }
 
+            displays.Add("histogram");
+
             return displays;
 
             static bool ShouldShowChart(HsFeatureData feature)
@@ -457,24 +459,69 @@ namespace Hspi
             long minUnixTimeSeconds = min / 1000;
             long maxUnixTimeSeconds = max / 1000;
 
-            var result = TimeAndValueQueryHelper.Histogram(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds);
+            var count = GetJsonValue<int>(jsonData, "count");
+
+            var histogram = TimeAndValueQueryHelper.Histogram(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds);
+            var result = GetTopValues(count, histogram, out var leftOver);
 
             return WriteJsonResult((jsonWriter) =>
             {
-                jsonWriter.WritePropertyName("data");
+                // labels array
+                jsonWriter.WritePropertyName("labels");
                 jsonWriter.WriteStartArray();
 
                 foreach (var row in result)
                 {
-                    jsonWriter.WritePropertyName("x");
-                    jsonWriter.WriteValue(row.Key);
-                    jsonWriter.WritePropertyName("y");
-                    jsonWriter.WriteValue(row.Value);
+                    string label = Collector.GetStringForValue(refId, row.Key) ?? row.Key.ToString("g", CultureInfo.InvariantCulture);
+                    jsonWriter.WriteValue(label);
+                }
+                if (leftOver > 0)
+                {
+                    jsonWriter.WriteValue((string?)null);
                 }
 
                 jsonWriter.WriteEndArray();
-                jsonWriter.WriteEndObject();
+
+                // time in milliseconds array
+                jsonWriter.WritePropertyName("time");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in result)
+                {
+                    jsonWriter.WriteValue(row.Value * 1000);
+                }
+
+                if (leftOver > 0)
+                {
+                    jsonWriter.WriteValue(leftOver * 1000);
+                }
+
+                jsonWriter.WriteEndArray();
             });
+
+            static IList<KeyValuePair<double, long>> GetTopValues(int maxCount,
+                                                          IDictionary<double, long> histogram,
+                                                          out long leftOver)
+            {
+                leftOver = 0;
+
+                List<KeyValuePair<double, long>> result = new();
+                var count = maxCount - 1; // -1 for others
+                foreach (var pair in histogram.OrderByDescending(x => x.Value))
+                {
+                    if (count > 0)
+                    {
+                        result.Add(pair);
+                        count--;
+                    }
+                    else
+                    {
+                        leftOver += pair.Value;
+                    }
+                }
+
+                return result;
+            }
         }
 
         private string HandleUpdatePerDeviceSettings(string data)

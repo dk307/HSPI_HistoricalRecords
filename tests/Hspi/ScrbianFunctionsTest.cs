@@ -101,7 +101,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
             var list = plugin.Object.GetAllowedDisplays(refId);
-            CollectionAssert.AreEqual(new List<string>() { "table", "chart", "stats" }, list);
+            CollectionAssert.AreEqual(new List<string>() { "table", "chart", "stats", "histogram" }, list);
         }
 
         [TestMethod]
@@ -119,7 +119,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
             var list = plugin.Object.GetAllowedDisplays(refId);
-            CollectionAssert.AreEqual(new List<string>() { "table" }, list);
+            CollectionAssert.AreEqual(new List<string>() { "table", "histogram" }, list);
         }
 
         [TestMethod]
