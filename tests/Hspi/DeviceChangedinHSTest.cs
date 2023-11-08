@@ -95,6 +95,34 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void InvalidLastChangeTimeIsNotRecorded()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            int refId = 35673;
+            mockHsController.SetupFeature(refId, 1.132);
+
+            var now = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
+
+            //raise out of range value event
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.Value, 100D);
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.LastChange, DateTime.MinValue);
+
+            TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.STRING_CHANGE, refId);
+
+            // raise a normal range event
+            var data = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.STRING_CHANGE, refId,
+                                          10, string.Empty, now, 1);
+
+            Assert.AreEqual(10, data.DeviceValue);
+            Assert.AreEqual(1, plugin.Object.GetTotalRecords(refId));
+        }
+
+        [TestMethod]
         public void MultipleDeviceValueUpdatesAreRecorded()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);

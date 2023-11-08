@@ -289,9 +289,15 @@ namespace Hspi
                 if (validValue)
                 {
                     RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-                    Log.Verbose("Recording {@record}", recordData);
-
-                    Collector.Record(recordData);
+                    if (recordData.UnixTimeSeconds >= 0)
+                    {
+                        Log.Verbose("Recording {@record}", recordData);
+                        Collector.Record(recordData);
+                    }
+                    else
+                    {
+                        Log.Verbose("Not Recording {@record} as last change time is invalid", recordData);
+                    }
                 }
                 else
                 {
