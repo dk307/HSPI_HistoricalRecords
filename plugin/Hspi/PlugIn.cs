@@ -29,7 +29,7 @@ namespace Hspi
         public override bool SupportsConfigDeviceAll => true;
         public override bool SupportsConfigFeature => true;
 
-        private SqliteDatabaseCollector Collector => sqliteManager.Collector ?? throw new InvalidOperationException("Plugin Not Initialized");
+        private SqliteDatabaseCollector Collector => sqliteManager?.Collector ?? throw new InvalidOperationException("Plugin Not Initialized");
 
         private HsFeatureCachedDataProvider FeatureCachedDataProvider
         {
@@ -153,7 +153,7 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
-                sqliteManager = new SqliteManager(settingsPages, CreateClock(), queue, HomeSeerSystem, featureCachedDataProvider, ShutdownCancellationToken);
+                sqliteManager = new SqliteManager(HomeSeerSystem, queue, settingsPages, featureCachedDataProvider, CreateClock(), ShutdownCancellationToken);
                 sqliteManager.Start();
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
@@ -230,7 +230,7 @@ namespace Hspi
                 const int DeleteDevice = 2;
                 if (ConvertToInt32(4) == DeleteDevice)
                 {
-                    sqliteManager.OnDeviceDeletedInHS(refId);
+                    sqliteManager?.OnDeviceDeletedInHS(refId);
                 }
             }
         }
@@ -342,6 +342,6 @@ namespace Hspi
         private readonly RecordDataProducerConsumerQueue queue = new();
         private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
-        private SqliteManager sqliteManager;
+        private SqliteManager? sqliteManager;
     }
 }

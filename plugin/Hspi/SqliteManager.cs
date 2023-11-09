@@ -12,12 +12,12 @@ namespace Hspi
 {
     public sealed class SqliteManager : IDisposable
     {
-        public SqliteManager(IDBSettings settings,
-                                       ISystemClock systemClock,
-                                       RecordDataProducerConsumerQueue queue,
-                                       IHsController hs,
-                                       HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
-                                       CancellationToken shutdownToken)
+        public SqliteManager(IHsController hs,
+                             RecordDataProducerConsumerQueue queue,
+                             IDBSettings settings,
+                             HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
+                             ISystemClock systemClock,
+                             CancellationToken shutdownToken)
         {
             this.settings = settings;
             this.systemClock = systemClock;
@@ -27,24 +27,16 @@ namespace Hspi
             this.shutdownToken = shutdownToken;
         }
 
-        public SqliteDatabaseCollector Collector
-        {
-            get
-            {
-                var copy = Volatile.Read(ref this.collector);
-                return copy ?? throw new InvalidOperationException("Sqlite Not Initialized");
-            }
-        }
-
-        public Exception? CollectorInitException { get; private set; }
+        public SqliteDatabaseCollector Collector =>
+            Volatile.Read(ref this.collector) ?? throw new InvalidOperationException("Sqlite Not Initialized");
 
         public PluginStatus Status
         {
             get
             {
-                if (CollectorInitException != null)
+                if (collectorInitException != null)
                 {
-                    return PluginStatus.Critical(this.CollectorInitException.GetFullMessage());
+                    return PluginStatus.Critical(this.collectorInitException.GetFullMessage());
                 }
                 else
                 {
@@ -96,6 +88,11 @@ namespace Hspi
             }
         }
 
+        public bool UpdateStatisticDeviceData(int refId)
+        {
+            return statisticsDeviceUpdater?.UpdateData(refId) ?? false;
+        }
+
         //public void Stop()
         //{
         //    statisticsDeviceUpdater?.Dispose();
@@ -103,26 +100,20 @@ namespace Hspi
         //    statisticsDeviceUpdater = null;
         //    collector = null;
         //}
-
-        public bool UpdateStatisticDeviceData(int refId)
-        {
-            return statisticsDeviceUpdater?.UpdateData(refId) ?? false;
-        }
-
         private bool CreateCollector()
         {
             try
             {
                 var collectorNew = new SqliteDatabaseCollector(settings, systemClock, queue, shutdownToken);
                 Interlocked.Exchange(ref collector, collectorNew);
-                this.CollectorInitException = null;
+                this.collectorInitException = null;
                 return true;
             }
             catch (Exception ex) when (!ex.IsCancelException())
             {
                 string errorMessage = ex.GetFullMessage();
                 Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
-                this.CollectorInitException = ex;
+                this.collectorInitException = ex;
                 return false;
             }
         }
@@ -134,6 +125,7 @@ namespace Hspi
         private readonly CancellationToken shutdownToken;
         private readonly ISystemClock systemClock;
         private SqliteDatabaseCollector? collector;
+        private Exception? collectorInitException;
         private StatisticsDeviceUpdater? statisticsDeviceUpdater;
     }
 }
