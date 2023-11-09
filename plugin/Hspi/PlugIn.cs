@@ -9,7 +9,6 @@ using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
-using Hspi.Device;
 using Hspi.Utils;
 using Serilog;
 using Constants = HomeSeer.PluginSdk.Constants;
@@ -30,14 +29,7 @@ namespace Hspi
         public override bool SupportsConfigDeviceAll => true;
         public override bool SupportsConfigFeature => true;
 
-        private SqliteDatabaseCollector Collector
-        {
-            get
-            {
-                var copy = Volatile.Read(ref this.collector);
-                return copy ?? throw new InvalidOperationException("Sqlite Not Initialized");
-            }
-        }
+        private SqliteDatabaseCollector Collector => sqliteManager.Collector ?? throw new InvalidOperationException("Plugin Not Initialized");
 
         private HsFeatureCachedDataProvider FeatureCachedDataProvider
         {
@@ -117,12 +109,10 @@ namespace Hspi
             }
             catch (Exception ex)
             {
-                if (ex.IsCancelException())
+                if (!ex.IsCancelException() && @params.Length > 0)
                 {
-                    return;
+                    Log.Warning("Error in event {type} with {error}", @params[0], ex.GetFullMessage());
                 }
-
-                Log.Warning("Error in recording event with {error}", ex.GetFullMessage());
             }
         }
 
@@ -130,22 +120,14 @@ namespace Hspi
 
         protected override void BeforeReturnStatus()
         {
-            if (collectorInitException != null)
+            var sqliteStatus = sqliteManager?.Status;
+            if ((sqliteStatus != null) && sqliteStatus.Status != PluginStatus.EPluginStatus.Ok)
             {
-                this.Status = PluginStatus.Critical(this.collectorInitException.GetFullMessage());
+                this.Status = sqliteStatus;
             }
             else
             {
-                var collectorCopy = Volatile.Read(ref this.collector);
-                var collectorError = collectorCopy?.RecordUpdateException;
-                if (collectorError != null)
-                {
-                    this.Status = PluginStatus.Warning(collectorError.GetFullMessage());
-                }
-                else
-                {
-                    this.Status = PluginStatus.Ok();
-                }
+                this.Status = PluginStatus.Ok();
             }
         }
 
@@ -153,8 +135,7 @@ namespace Hspi
         {
             if (disposing)
             {
-                statisticsDeviceUpdater?.Dispose();
-                collector?.Dispose();
+                sqliteManager?.Dispose();
                 queue?.Dispose();
             }
 
@@ -172,8 +153,8 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
-                CreateCollector();
-                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
+                sqliteManager = new SqliteManager(settingsPages, CreateClock(), queue, HomeSeerSystem, featureCachedDataProvider, ShutdownCancellationToken);
+                sqliteManager.Start();
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
@@ -219,22 +200,6 @@ namespace Hspi
             }
         }
 
-        private void CreateCollector()
-        {
-            try
-            {
-                var collectorNew = new SqliteDatabaseCollector(SettingsPages, CreateClock(), queue, ShutdownCancellationToken);
-                Interlocked.Exchange(ref collector, collectorNew);
-                this.collectorInitException = null;
-            }
-            catch (Exception ex) when (!ex.IsCancelException())
-            {
-                string errorMessage = ex.GetFullMessage();
-                Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
-                this.collectorInitException = ex;
-            }
-        }
-
         private void HSEventImpl(Constants.HSEvent eventType, object[] parameters)
         {
             if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
@@ -265,15 +230,7 @@ namespace Hspi
                 const int DeleteDevice = 2;
                 if (ConvertToInt32(4) == DeleteDevice)
                 {
-                    // currently these events are only for devices not features
-                    if ((statisticsDeviceUpdater?.HasRefId(refId) ?? false))
-                    {
-                        RestartStatisticsDeviceUpdate();
-                    }
-                    else
-                    {
-                        Collector.DeleteAllRecordsForRef(refId);
-                    }
+                    sqliteManager.OnDeviceDeletedInHS(refId);
                 }
             }
         }
@@ -383,9 +340,8 @@ namespace Hspi
         }
 
         private readonly RecordDataProducerConsumerQueue queue = new();
-        private SqliteDatabaseCollector? collector;
         private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
-        private Exception? collectorInitException;
+        private SqliteManager sqliteManager;
     }
 }
