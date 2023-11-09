@@ -138,7 +138,7 @@ namespace Hspi.Device
             var eRelationship = (ERelationship)hsController.GetPropertyByRef(refId, EProperty.Relationship);
             if (deviceInterface != PlugInData.PlugInId || eRelationship != ERelationship.Feature)
             {
-                throw new HsDeviceInvalidException(Invariant($"Device/Feature {refId} not a plugin feature"));
+                throw new HsDeviceInvalidException(Invariant($"Device or feature {refId} not a plugin feature"));
             }
 
             var plugExtraData = new PlugExtraData();

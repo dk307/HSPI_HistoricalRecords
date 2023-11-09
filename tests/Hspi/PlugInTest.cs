@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
+using static HomeSeer.PluginSdk.PluginStatus;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -47,7 +48,8 @@ namespace HSPI_HistoricalRecordsTest
                 { "LogToFileId", logToFile.ToString() }
             };
 
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(settingsFromIni);
+            TestHelper.CreateMockPlugInAndHsController2(settingsFromIni, out var plugInMock, out var _);
+            using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
             PlugIn plugIn = plugInMock.Object;
 
@@ -70,10 +72,30 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void CheckPlugInStatus()
         {
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var _);
+            using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
-            PlugIn plugIn = plugInMock.Object;
-            Assert.AreEqual(plugIn.OnStatusCheck().Status, PluginStatus.Ok().Status);
+            Assert.AreEqual(plugInMock.Object.OnStatusCheck().Status, PluginStatus.Ok().Status);
+        }
+
+        [TestMethod]
+        public void CheckPlugInStatusOnFailedSqliteInit()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var hsMockController);
+
+            string dbPath = Path.Combine((hsMockController as IHsController).GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+
+            Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
+
+            //lock the sqlite 3 db
+            using var lockFile = new FileStream(dbPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
+
+            var status = plugInMock.Object.OnStatusCheck();
+
+            Assert.AreEqual(EPluginStatus.Critical, status.Status);
+            Assert.AreEqual("Unable to open database file", status.StatusText);
         }
 
         [TestMethod]
@@ -85,7 +107,8 @@ namespace HSPI_HistoricalRecordsTest
                 { SettingsPages.LogToFileId, true.ToString()},
             };
 
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(settingsFromIni);
+            TestHelper.CreateMockPlugInAndHsController2(settingsFromIni, out var plugInMock, out var _);
+            using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
             PlugIn plugIn = plugInMock.Object;
 
@@ -259,6 +282,8 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "dbstats.html", "Database statistics"));
+            mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "alldevices.html", "Device statistics"));
+            mockHsController.Verify(x => x.RegisterDeviceIncPage(PlugInData.PlugInId, "adddevice.html", "Add a statistics device"));
 
             string dbPath = Path.Combine(mockHsController.Object.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
             Assert.IsTrue(File.Exists(dbPath));
@@ -321,6 +346,15 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(plugin.SupportsConfigDeviceAll);
             Assert.IsTrue(plugin.SupportsConfigFeature);
             Assert.IsTrue(plugin.SupportsConfigDevice);
+        }
+
+        [TestMethod]
+        public void UseWithoutInit()
+        {
+            var plugin = new PlugIn();
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.PruneDatabase());
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.DeleteAllRecords(10));
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.GetDatabaseStats());
         }
     }
 }

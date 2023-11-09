@@ -41,8 +41,9 @@ namespace Hspi.Database
             this.shutdownToken = shutdownToken;
             CreateDBDirectory(settings.DBPath);
 
+            const int SQLITE_OPEN_EXRESCODE = 0x02000000;
             const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
-                                  SQLITE_OPEN_PRIVATECACHE | SQLITE_OPEN_NOMUTEX;
+                                  SQLITE_OPEN_PRIVATECACHE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_EXRESCODE;
 
             sqliteConnection = ugly.open_v2(settings.DBPath, OpenFlags, null);
             Log.Information("{dll} version:{version}", GetNativeLibraryName(), sqlite3_libversion().utf8_to_string());

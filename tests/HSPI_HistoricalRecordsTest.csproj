@@ -44,10 +44,8 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\plugin\shared\tests\ExceptionHelperTest.cs">
-      <Link>shared\ExceptionHelperTest.cs</Link>
-    </Compile>
     <Compile Include="FakeHSController.cs" />
+    <Compile Include="Hspi\Utils\ExceptionHelperTest.cs" />
     <Compile Include="Hspi\HistogramTest.cs" />
     <Compile Include="Hspi\ExecSqlTest.cs" />
     <Compile Include="Hspi\ScrbianFunctionsTest.cs" />

@@ -132,8 +132,8 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [DataTestMethod]
-        [DataRow("{\"name\":\"dev name\", \"data\": {\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}}", "Required property 'TrackedRef' not found in JSON")]
-        [DataRow("", "data is not correct")]
+        [DataRow("{\"name\":\"dev name\", \"data\": {\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}}", "Required property tracked ref not found in JSON")]
+        [DataRow("", "Data is not correct")]
         public void AddDeviceErrorChecking(string format, string exception)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -321,7 +321,7 @@ namespace HSPI_HistoricalRecordsTest
             // error is returned
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
             Assert.IsNotNull(result2);
-            StringAssert.Contains((string)result2["error"], $"Device/Feature {trackedDeviceRefId} not a plugin feature");
+            StringAssert.Contains((string)result2["error"], $"Device or feature {trackedDeviceRefId} not a plugin feature");
         }
 
         [TestMethod]

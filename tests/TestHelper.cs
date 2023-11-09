@@ -81,21 +81,6 @@ namespace HSPI_HistoricalRecordsTest
             return (mockPlugin, mockHsController);
         }
 
-        public static (Mock<PlugIn> mockPlugin, FakeHSController mockHsController)
-                         CreateMockPluginAndHsController2(Dictionary<string, string> settingsFromIni)
-        {
-            var mockPlugin = new Mock<PlugIn>(MockBehavior.Loose)
-            {
-                CallBase = true,
-            };
-
-            var mockHsController = SetupHsControllerAndSettings2(mockPlugin, settingsFromIni);
-
-            mockPlugin.Object.InitIO();
-
-            return (mockPlugin, mockHsController);
-        }
-
         public static void CreateMockPlugInAndHsController2(out Mock<PlugIn> plugin,
                                                             out FakeHSController mockHsController)
         {
@@ -103,8 +88,16 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
         }
 
+        public static void CreateMockPlugInAndHsController2(Dictionary<string, string> settingsFromIni,
+                                                            out Mock<PlugIn> plugin,
+                                                            out FakeHSController mockHsController)
+        {
+            plugin = TestHelper.CreatePlugInMock();
+            mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin, settingsFromIni);
+        }
+
         public static void CreateMockPlugInAndMoqHsController(out Mock<PlugIn> plugin,
-                                                                      out Mock<IHsController> mockHsController)
+                                                              out Mock<IHsController> mockHsController)
         {
             plugin = TestHelper.CreatePlugInMock();
             mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());

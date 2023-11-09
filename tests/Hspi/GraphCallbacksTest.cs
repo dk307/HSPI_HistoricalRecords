@@ -104,16 +104,16 @@ namespace HSPI_HistoricalRecordsTest
 
         [TestMethod]
         [DataTestMethod]
-        [DataRow("", "data is not correct")]
+        [DataRow("", "Data is not correct")]
         [DataRow("refId={0}&min=1001&max=99", "Unexpected character encountered")]
-        [DataRow("{{ refId:{0}, min:1001, max:99}}", "max < min")]
-        [DataRow("{{ refId:{0}, min:'abc', max:99 }}", "min is not correct")]
-        [DataRow("{{ refId:{0}, min:33, max:'abc' }}", "max is not correct")]
-        [DataRow("{{refId:{0}}}", "min is not correct")]
-        [DataRow("{{refId1:{0}}}", "refId is not correct")]
-        [DataRow("{{ refId:{0}, min:11, max:99}}", "fill is not correct")]
-        [DataRow("{{ refId:{0}, min:11, max:99, fill:'rt'}}", "fill is not correct")]
-        [DataRow("{{ refId:{0}, min:11, max:99, fill:'5'}}", "fill is not correct")]
+        [DataRow("{{ refId:{0}, min:1001, max:99}}", "Max is less than min")]
+        [DataRow("{{ refId:{0}, min:'abc', max:99 }}", "Min is not correct")]
+        [DataRow("{{ refId:{0}, min:33, max:'abc' }}", "Max is not correct")]
+        [DataRow("{{refId:{0}}}", "Min is not correct")]
+        [DataRow("{{refId1:{0}}}", "Ref id is not correct")]
+        [DataRow("{{ refId:{0}, min:11, max:99}}", "Fill is not correct")]
+        [DataRow("{{ refId:{0}, min:11, max:99, fill:'rt'}}", "Fill is not correct")]
+        [DataRow("{{ refId:{0}, min:11, max:99, fill:'5'}}", "Fill is not correct")]
         public void GraphCallbackArgumentChecks(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();

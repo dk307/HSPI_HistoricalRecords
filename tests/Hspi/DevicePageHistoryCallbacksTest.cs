@@ -104,9 +104,9 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [DataTestMethod]
-        [DataRow("refId={0}&min=1001&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "max < min")]
-        [DataRow("refId={0}&min=abc&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min is invalid")]
-        [DataRow("refId={0}&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min/max not specified")]
+        [DataRow("refId={0}&min=1001&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "Max is less than min")]
+        [DataRow("refId={0}&min=abc&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "Min is invalid")]
+        [DataRow("refId={0}&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "Min or max not specified")]
         public void DatatableCallbackMinMoreThanMax(string format, string exception)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);

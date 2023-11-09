@@ -131,7 +131,7 @@
     <Compile Include="Shared\Hspi\HSPIBase.cs" />
     <Compile Include="Shared\Hspi\Logger2.cs" />
     <Compile Include="Shared\Hspi\Utils\EnumHelper.cs" />
-    <Compile Include="Shared\Hspi\Utils\ExceptionHelper.cs" />
+    <Compile Include="Hspi\Utils\ExceptionHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig">

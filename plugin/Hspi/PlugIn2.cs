@@ -164,7 +164,7 @@ namespace Hspi
             max = GetJsonValue<long>(jsonData, "max");
             if (max < min)
             {
-                throw new ArgumentException("max < min");
+                throw new ArgumentException("Max is less than Min");
             }
         }
 
@@ -353,14 +353,14 @@ namespace Hspi
 
                 if (max < min)
                 {
-                    throw new ArgumentException("max < min");
+                    throw new ArgumentException("Max is less than Min");
                 }
 
                 totalResultsCount = Collector.GetRecordsCount(refId, min, max);
             }
             else
             {
-                throw new ArgumentException("min/max not specified");
+                throw new ArgumentException("Min or max not specified");
             }
 
             var queryData = Collector.GetRecords(refId,
