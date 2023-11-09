@@ -30,14 +30,19 @@ namespace Hspi.Database
             }
         }
 
-        public SqliteDatabaseCollector(IDBSettings settings, ISystemClock systemClock, CancellationToken shutdownToken)
+        public SqliteDatabaseCollector(IDBSettings settings,
+                                       ISystemClock systemClock,
+                                       RecordDataProducerConsumerQueue queue,
+                                       CancellationToken shutdownToken)
         {
             this.settings = settings;
             this.systemClock = systemClock;
+            this.queue = queue;
             this.shutdownToken = shutdownToken;
             CreateDBDirectory(settings.DBPath);
 
-            const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_PRIVATECACHE;
+            const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
+                                  SQLITE_OPEN_PRIVATECACHE | SQLITE_OPEN_NOMUTEX;
 
             sqliteConnection = ugly.open_v2(settings.DBPath, OpenFlags, null);
             Log.Information("{dll} version:{version}", GetNativeLibraryName(), sqlite3_libversion().utf8_to_string());
@@ -70,6 +75,8 @@ namespace Hspi.Database
                 }
             }
         }
+
+        public Exception? RecordUpdateException { get; private set; }
 
         public long DeleteAllRecordsForRef(long refId)
         {
@@ -131,7 +138,6 @@ namespace Hspi.Database
             sqliteConnection?.Dispose();
             maintainanceTimer.Dispose();
             connectionLock.Dispose();
-            queue.Dispose();
         }
 
         public void DoMaintainance()
@@ -376,11 +382,6 @@ namespace Hspi.Database
             }
         }
 
-        public void Record(in RecordData recordData)
-        {
-            queue.Add(recordData);
-        }
-
         private static IDisposable CreateStatementAutoReset(sqlite3_stmt stmt)
         {
             ugly.reset(stmt);
@@ -540,7 +541,7 @@ namespace Hspi.Database
             {
                 if (sqlite3_threadsafe() == 0)
                 {
-                    throw new ApplicationException(@"Sqlite is not thread safe");
+                    throw new SqliteInvalidException(@"Sqlite is not thread safe");
                 }
 
                 if (Version.TryParse(sqlite3_libversion().utf8_to_string(), out var version))
@@ -548,7 +549,7 @@ namespace Hspi.Database
                     var minSupportedVersion = new Version(3, 37);
                     if (version < minSupportedVersion)
                     {
-                        throw new ApplicationException("Sqlite version on machine is too old. Need 3.37+");
+                        throw new SqliteInvalidException("Sqlite version on machine is too old. Need 3.37+");
                     }
                 }
             }
@@ -562,21 +563,16 @@ namespace Hspi.Database
                 try
                 {
                     var record = queue.Take(shutdownToken);
-                    try
-                    {
-                        Log.Verbose("Adding to database: {@record}", record);
-                        InsertRecord(record);
-                    }
-                    catch (Exception ex) when (!ex.IsCancelException())
-                    {
-                        Log.Warning("Failed to update {record} with {error}}", record, ExceptionHelper.GetFullMessage(ex));
-                    }
+                    Log.Verbose("Adding to database: {@record}", record);
+                    InsertRecord(record);
+                    RecordUpdateException = null;
                 }
                 catch (Exception ex)
                 {
                     if (!ex.IsCancelException())
                     {
-                        Log.Warning("Error in records update thread : {error}", ex.GetFullMessage());
+                        Log.Warning("Error in records update thread : {error}. Retrying in 30s.", ex.GetFullMessage());
+                        this.RecordUpdateException = ex;
                         shutdownToken.WaitHandle.WaitOne(30 * 1000);
                     }
                 }
@@ -644,7 +640,7 @@ namespace Hspi.Database
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;
         private readonly Timer maintainanceTimer;
-        private readonly RecordDataProducerConsumerQueue queue = new();
+        private readonly RecordDataProducerConsumerQueue queue;
         private readonly IDBSettings settings;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;

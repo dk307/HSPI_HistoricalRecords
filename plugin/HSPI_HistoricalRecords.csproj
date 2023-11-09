@@ -92,6 +92,7 @@
     <Compile Include="Database\IDBSettings.cs" />
     <Compile Include="Database\RecordDataProducerConsumerQueue.cs" />
     <Compile Include="Database\ResultSortBy.cs" />
+    <Compile Include="Database\SqliteInvalidException.cs" />
     <Compile Include="Database\TimeAndValue.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="Hspi\Device\StatisticsDeviceData.cs" />

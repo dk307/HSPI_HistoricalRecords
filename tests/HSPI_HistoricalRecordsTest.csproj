@@ -59,6 +59,7 @@
     <Compile Include="Hspi\DeviceChangedinHSTest.cs" />
     <Compile Include="Hspi\PlugInTest.cs" />
     <Compile Include="Hspi\SettingsPagesTest.cs" />
+    <Compile Include="Hspi\Utils\SqliteInvalidExceptionTest.cs" />
     <Compile Include="Hspi\Utils\HsDeviceInvalidExceptionTests.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIteratorTests.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesAverageTest.cs" />

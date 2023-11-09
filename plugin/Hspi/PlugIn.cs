@@ -34,8 +34,8 @@ namespace Hspi
         {
             get
             {
-                CheckNotNull(collector);
-                return collector;
+                var copy = Volatile.Read(ref this.collector);
+                return copy ?? throw new InvalidOperationException("Sqlite Not Initialized");
             }
         }
 
@@ -128,7 +128,26 @@ namespace Hspi
 
         public void PruneDatabase() => Collector.DoMaintainance();
 
-        protected override void BeforeReturnStatus() => this.Status = PluginStatus.Ok();
+        protected override void BeforeReturnStatus()
+        {
+            if (collectorInitException != null)
+            {
+                this.Status = PluginStatus.Critical(this.collectorInitException.GetFullMessage());
+            }
+            else
+            {
+                var collectorCopy = Volatile.Read(ref this.collector);
+                var collectorError = collectorCopy?.RecordUpdateException;
+                if (collectorError != null)
+                {
+                    this.Status = PluginStatus.Warning(collectorError.GetFullMessage());
+                }
+                else
+                {
+                    this.Status = PluginStatus.Ok();
+                }
+            }
+        }
 
         protected override void Dispose(bool disposing)
         {
@@ -136,6 +155,7 @@ namespace Hspi
             {
                 statisticsDeviceUpdater?.Dispose();
                 collector?.Dispose();
+                queue?.Dispose();
             }
 
             base.Dispose(disposing);
@@ -152,8 +172,8 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
-                collector = new SqliteDatabaseCollector(SettingsPages, CreateClock(), ShutdownCancellationToken);
-                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
+                CreateCollector();
+                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
@@ -196,6 +216,22 @@ namespace Hspi
             if (obj is null)
             {
                 throw new InvalidOperationException("Plugin Not Initialized");
+            }
+        }
+
+        private void CreateCollector()
+        {
+            try
+            {
+                var collectorNew = new SqliteDatabaseCollector(SettingsPages, CreateClock(), queue, ShutdownCancellationToken);
+                Interlocked.Exchange(ref collector, collectorNew);
+                this.collectorInitException = null;
+            }
+            catch (Exception ex) when (!ex.IsCancelException())
+            {
+                string errorMessage = ex.GetFullMessage();
+                Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
+                this.collectorInitException = ex;
             }
         }
 
@@ -292,7 +328,7 @@ namespace Hspi
                     if (recordData.UnixTimeSeconds >= 0)
                     {
                         Log.Verbose("Recording {@record}", recordData);
-                        Collector.Record(recordData);
+                        this.queue.Add(recordData);
                     }
                     else
                     {
@@ -346,8 +382,10 @@ namespace Hspi
             Logger.ConfigureLogging(SettingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
+        private readonly RecordDataProducerConsumerQueue queue = new();
         private SqliteDatabaseCollector? collector;
         private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
+        private Exception? collectorInitException;
     }
 }
