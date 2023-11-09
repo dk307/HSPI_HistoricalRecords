@@ -4,6 +4,7 @@ using HomeSeer.PluginSdk;
 using Hspi.Database;
 using Hspi.Device;
 using Hspi.Utils;
+using Nito.Disposables;
 using Serilog;
 
 #nullable enable
@@ -42,22 +43,19 @@ namespace Hspi
                 {
                     var collectorCopy = Volatile.Read(ref this.collector);
                     var collectorError = collectorCopy?.RecordUpdateException;
-                    if (collectorError != null)
-                    {
-                        return PluginStatus.Warning(collectorError.GetFullMessage());
-                    }
-                    else
-                    {
-                        return PluginStatus.Ok();
-                    }
+                    return collectorError != null ?
+                                PluginStatus.Warning(collectorError.GetFullMessage()) : PluginStatus.Ok();
                 }
             }
         }
 
         public void Dispose()
         {
+            startTimer?.Dispose();
             statisticsDeviceUpdater?.Dispose();
             collector?.Dispose();
+            startStopMutex?.Dispose();
+            combinedToken?.Dispose();
         }
 
         public void OnDeviceDeletedInHS(int refId)
@@ -73,49 +71,92 @@ namespace Hspi
             }
         }
 
-        public void RestartStatisticsDeviceUpdate()
+        public bool RestartStatisticsDeviceUpdate()
         {
-            Log.Debug("Restarting statistics device update");
-            statisticsDeviceUpdater?.Dispose();
-            statisticsDeviceUpdater = new StatisticsDeviceUpdater(hs, Collector, systemClock, hsFeatureCachedDataProvider, shutdownToken);
-        }
+            startStopMutex.Wait(shutdownToken);
+            using var unLock = Disposable.Create(() => startStopMutex.Release());
 
-        public void Start()
-        {
-            if (CreateCollector())
+            if (started)
             {
-                RestartStatisticsDeviceUpdate();
+                Log.Debug("Restarting statistics device update");
+                RestartStatisticsDeviceUpdateImpl();
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 
-        public bool UpdateStatisticDeviceData(int refId)
+        public void Stop(int restartTimer = 10000)
+        {
+            startStopMutex.Wait(shutdownToken);
+            using var unLock = Disposable.Create(() => startStopMutex.Release());
+            started = false;
+            StopImpl();
+            startTimer = new Timer(StartTimer, null, restartTimer, Timeout.Infinite);
+        }
+
+        public bool TryStart()
+        {
+            startStopMutex.Wait(shutdownToken);
+            using var unLock = Disposable.Create(() => startStopMutex.Release());
+
+            if (!started)
+            {
+                StopImpl();
+                combinedToken = CancellationTokenSource.CreateLinkedTokenSource(shutdownToken);
+                if (CreateCollector())
+                {
+                    RestartStatisticsDeviceUpdateImpl();
+                }
+                started = true;
+            }
+            return started;
+
+            bool CreateCollector()
+            {
+                try
+                {
+                    var collectorNew = new SqliteDatabaseCollector(settings, systemClock, queue, combinedToken.Token);
+                    Interlocked.Exchange(ref collector, collectorNew);
+                    this.collectorInitException = null;
+                    return true;
+                }
+                catch (Exception ex) when (!ex.IsCancelException())
+                {
+                    string errorMessage = ex.GetFullMessage();
+                    Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
+                    this.collectorInitException = ex;
+                    return false;
+                }
+            }
+        }
+
+        public bool TryUpdateStatisticDeviceData(int refId)
         {
             return statisticsDeviceUpdater?.UpdateData(refId) ?? false;
         }
 
-        //public void Stop()
-        //{
-        //    statisticsDeviceUpdater?.Dispose();
-        //    collector?.Dispose();
-        //    statisticsDeviceUpdater = null;
-        //    collector = null;
-        //}
-        private bool CreateCollector()
+        private void RestartStatisticsDeviceUpdateImpl()
         {
-            try
-            {
-                var collectorNew = new SqliteDatabaseCollector(settings, systemClock, queue, shutdownToken);
-                Interlocked.Exchange(ref collector, collectorNew);
-                this.collectorInitException = null;
-                return true;
-            }
-            catch (Exception ex) when (!ex.IsCancelException())
-            {
-                string errorMessage = ex.GetFullMessage();
-                Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
-                this.collectorInitException = ex;
-                return false;
-            }
+            statisticsDeviceUpdater?.Dispose();
+            statisticsDeviceUpdater = new StatisticsDeviceUpdater(hs, Collector, systemClock, hsFeatureCachedDataProvider, shutdownToken);
+        }
+
+        private void StartTimer(object state)
+        {
+            startStopMutex.Wait(shutdownToken);
+            using var unLock = Disposable.Create(() => startStopMutex.Release());
+        }
+
+        private void StopImpl()
+        {
+            combinedToken?.Cancel();
+            statisticsDeviceUpdater?.Dispose();
+            collector?.Dispose();
+            statisticsDeviceUpdater = null;
+            collector = null;
         }
 
         private readonly IHsController hs;
@@ -123,9 +164,13 @@ namespace Hspi
         private readonly RecordDataProducerConsumerQueue queue;
         private readonly IDBSettings settings;
         private readonly CancellationToken shutdownToken;
+        private readonly SemaphoreSlim startStopMutex = new(1, 1);
         private readonly ISystemClock systemClock;
         private SqliteDatabaseCollector? collector;
         private Exception? collectorInitException;
+        private CancellationTokenSource? combinedToken;
+        private volatile bool started = false;
+        private Timer? startTimer;
         private StatisticsDeviceUpdater? statisticsDeviceUpdater;
     }
 }

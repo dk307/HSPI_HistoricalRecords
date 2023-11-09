@@ -41,7 +41,7 @@ namespace Hspi
 
         public List<int> GetTrackedDeviceList() => HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();
 
-        public bool UpdateStatisticsFeature(int featureRefId) => sqliteManager?.UpdateStatisticDeviceData(featureRefId) ?? false;
+        public bool UpdateStatisticsFeature(int featureRefId) => sqliteManager?.TryUpdateStatisticDeviceData(featureRefId) ?? false;
 
         private static JObject ParseToJObject(string data)
         {
