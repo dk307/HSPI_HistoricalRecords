@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
@@ -81,21 +82,25 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void CheckPlugInStatusOnFailedSqliteInit()
         {
-            TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var hsMockController);
+            // locking file does not work on ubuntu
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var hsMockController);
 
-            string dbPath = Path.Combine((hsMockController as IHsController).GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+                string dbPath = Path.Combine((hsMockController as IHsController).GetAppPath(), "data", PlugInData.PlugInId, "records.db");
 
-            Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
+                Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
 
-            //lock the sqlite 3 db
-            using var lockFile = new FileStream(dbPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                //lock the sqlite 3 db
+                using var lockFile = new FileStream(dbPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 
-            using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
+                using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
-            var status = plugInMock.Object.OnStatusCheck();
+                var status = plugInMock.Object.OnStatusCheck();
 
-            Assert.AreEqual(EPluginStatus.Critical, status.Status);
-            Assert.AreEqual("Unable to open database file", status.StatusText);
+                Assert.AreEqual(EPluginStatus.Critical, status.Status);
+                Assert.AreEqual("Unable to open database file", status.StatusText);
+            }
         }
 
         [TestMethod]
@@ -325,6 +330,15 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
+        public void UseWithoutInit()
+        {
+            var plugin = new PlugIn();
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.PruneDatabase());
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.DeleteAllRecords(10));
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.GetDatabaseStats());
+        }
+
+        [TestMethod]
         public void VerifyAccessLevel()
         {
             var plugin = new PlugIn();
@@ -346,15 +360,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsTrue(plugin.SupportsConfigDeviceAll);
             Assert.IsTrue(plugin.SupportsConfigFeature);
             Assert.IsTrue(plugin.SupportsConfigDevice);
-        }
-
-        [TestMethod]
-        public void UseWithoutInit()
-        {
-            var plugin = new PlugIn();
-            Assert.ThrowsException<InvalidOperationException>(() => plugin.PruneDatabase());
-            Assert.ThrowsException<InvalidOperationException>(() => plugin.DeleteAllRecords(10));
-            Assert.ThrowsException<InvalidOperationException>(() => plugin.GetDatabaseStats());
         }
     }
 }
