@@ -29,7 +29,8 @@ namespace Hspi
         }
 
         public SqliteDatabaseCollector Collector =>
-            Volatile.Read(ref this.collector) ?? throw new InvalidOperationException("Sqlite Not Initialized");
+            Volatile.Read(ref this.collector) ??
+            throw new InvalidOperationException("Sqlite initialize failed Or Backup in progress");
 
         public PluginStatus Status
         {
@@ -88,7 +89,7 @@ namespace Hspi
             }
         }
 
-        public void Stop(int restartTimer = 10000)
+        public void Stop(int restartTimer = 30000)
         {
             startStopMutex.Wait(shutdownToken);
             using var unLock = Disposable.Create(() => startStopMutex.Release());
@@ -110,8 +111,10 @@ namespace Hspi
                 {
                     RestartStatisticsDeviceUpdateImpl();
                 }
+
                 started = true;
             }
+
             return started;
 
             bool CreateCollector()

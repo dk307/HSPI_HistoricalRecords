@@ -159,6 +159,7 @@ namespace Hspi
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId);
+                HomeSeerSystem.RegisterEventCB(BackupEvent, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a statistics device");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "alldevices.html", "Device statistics");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
@@ -216,6 +217,10 @@ namespace Hspi
             {
                 HandleConfigChange();
             }
+            else if ((eventType == BackupEvent) && (parameters.Length > 1))
+            {
+                HandleBackupStartStop();
+            }
 
             int ConvertToInt32(int index)
             {
@@ -231,6 +236,22 @@ namespace Hspi
                 if (ConvertToInt32(4) == DeleteDevice)
                 {
                     sqliteManager?.OnDeviceDeletedInHS(refId);
+                }
+            }
+
+            void HandleBackupStartStop()
+            {
+                switch (ConvertToInt32(1))
+                {
+                    case 1:
+                        Log.Information("Back up starting. Shutting down database connection");
+                        sqliteManager?.Stop();
+                        break;
+
+                    case 2:
+                        Log.Information("Back up finished. Starting database connection");
+                        sqliteManager?.TryStart();
+                        break;
                 }
             }
         }
@@ -339,6 +360,7 @@ namespace Hspi
             Logger.ConfigureLogging(SettingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
+        private const Constants.HSEvent BackupEvent = (Constants.HSEvent)0x200;
         private readonly RecordDataProducerConsumerQueue queue = new();
         private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
