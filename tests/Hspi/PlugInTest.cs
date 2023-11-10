@@ -286,6 +286,7 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId));
+            mockHsController.Verify(x => x.RegisterEventCB((Constants.HSEvent)0x200, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "dbstats.html", "Database statistics"));
             mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "alldevices.html", "Device statistics"));
             mockHsController.Verify(x => x.RegisterDeviceIncPage(PlugInData.PlugInId, "adddevice.html", "Add a statistics device"));

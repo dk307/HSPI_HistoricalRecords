@@ -112,6 +112,7 @@ namespace Hspi
 
             if (!started)
             {
+                startTimer?.Dispose();
                 StopImpl();
                 combinedToken = CancellationTokenSource.CreateLinkedTokenSource(shutdownToken);
                 if (CreateCollector())
@@ -156,8 +157,7 @@ namespace Hspi
 
         private void StartTimer(object state)
         {
-            startStopMutex.Wait(shutdownToken);
-            using var unLock = Disposable.Create(() => startStopMutex.Release());
+            TryStart();
         }
 
         private void StopImpl()
