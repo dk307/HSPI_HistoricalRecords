@@ -138,8 +138,8 @@ namespace Hspi.Database
             getStrForRefAndValueCommand?.Dispose();
             sqliteConnection?.manual_close_v2();
             sqliteConnection?.Dispose();
-            maintainanceTimer.Dispose();
-            connectionMutex.Dispose();
+            maintainanceTimer?.Dispose();
+            connectionMutex?.Dispose();
         }
 
         public void DoMaintainance()
