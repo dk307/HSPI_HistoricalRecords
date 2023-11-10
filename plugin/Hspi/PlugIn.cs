@@ -9,7 +9,6 @@ using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
-using Hspi.Device;
 using Hspi.Utils;
 using Serilog;
 using Constants = HomeSeer.PluginSdk.Constants;
@@ -30,14 +29,7 @@ namespace Hspi
         public override bool SupportsConfigDeviceAll => true;
         public override bool SupportsConfigFeature => true;
 
-        private SqliteDatabaseCollector Collector
-        {
-            get
-            {
-                CheckNotNull(collector);
-                return collector;
-            }
-        }
+        private SqliteDatabaseCollector Collector => sqliteManager?.Collector ?? throw new InvalidOperationException("Plugin Not Initialized");
 
         private HsFeatureCachedDataProvider FeatureCachedDataProvider
         {
@@ -117,25 +109,34 @@ namespace Hspi
             }
             catch (Exception ex)
             {
-                if (ex.IsCancelException())
+                if (!ex.IsCancelException() && @params.Length > 0)
                 {
-                    return;
+                    Log.Warning("Error in event {type} with {error}", @params[0], ex.GetFullMessage());
                 }
-
-                Log.Warning("Error in recording event with {error}", ex.GetFullMessage());
             }
         }
 
         public void PruneDatabase() => Collector.DoMaintainance();
 
-        protected override void BeforeReturnStatus() => this.Status = PluginStatus.Ok();
+        protected override void BeforeReturnStatus()
+        {
+            var sqliteStatus = sqliteManager?.Status;
+            if ((sqliteStatus != null) && sqliteStatus.Status != PluginStatus.EPluginStatus.Ok)
+            {
+                this.Status = sqliteStatus;
+            }
+            else
+            {
+                this.Status = PluginStatus.Ok();
+            }
+        }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                statisticsDeviceUpdater?.Dispose();
-                collector?.Dispose();
+                sqliteManager?.Dispose();
+                queue?.Dispose();
             }
 
             base.Dispose(disposing);
@@ -152,12 +153,13 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
-                collector = new SqliteDatabaseCollector(SettingsPages, CreateClock(), ShutdownCancellationToken);
-                statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
+                sqliteManager = new SqliteManager(HomeSeerSystem, queue, settingsPages, featureCachedDataProvider, CreateClock(), ShutdownCancellationToken);
+                sqliteManager.TryStart();
 
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId);
+                HomeSeerSystem.RegisterEventCB(BackupEvent, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a statistics device");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "alldevices.html", "Device statistics");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
@@ -215,6 +217,10 @@ namespace Hspi
             {
                 HandleConfigChange();
             }
+            else if ((eventType == BackupEvent) && (parameters.Length > 1))
+            {
+                HandleBackupStartStop();
+            }
 
             int ConvertToInt32(int index)
             {
@@ -229,15 +235,23 @@ namespace Hspi
                 const int DeleteDevice = 2;
                 if (ConvertToInt32(4) == DeleteDevice)
                 {
-                    // currently these events are only for devices not features
-                    if ((statisticsDeviceUpdater?.HasRefId(refId) ?? false))
-                    {
-                        RestartStatisticsDeviceUpdate();
-                    }
-                    else
-                    {
-                        Collector.DeleteAllRecordsForRef(refId);
-                    }
+                    sqliteManager?.OnDeviceDeletedInHS(refId);
+                }
+            }
+
+            void HandleBackupStartStop()
+            {
+                switch (ConvertToInt32(1))
+                {
+                    case 1:
+                        Log.Information("Back up starting. Shutting down database connection");
+                        sqliteManager?.Stop();
+                        break;
+
+                    case 2:
+                        Log.Information("Back up finished. Starting database connection");
+                        sqliteManager?.TryStart();
+                        break;
                 }
             }
         }
@@ -289,9 +303,15 @@ namespace Hspi
                 if (validValue)
                 {
                     RecordData recordData = new(feature.Ref, deviceValue, deviceString, lastChange);
-                    Log.Verbose("Recording {@record}", recordData);
-
-                    Collector.Record(recordData);
+                    if (recordData.UnixTimeSeconds >= 0)
+                    {
+                        Log.Verbose("Recording {@record}", recordData);
+                        this.queue.Add(recordData);
+                    }
+                    else
+                    {
+                        Log.Verbose("Not Recording {@record} as last change time is invalid", recordData);
+                    }
                 }
                 else
                 {
@@ -340,8 +360,10 @@ namespace Hspi
             Logger.ConfigureLogging(SettingsPages.LogLevel, logToFile, HomeSeerSystem);
         }
 
-        private SqliteDatabaseCollector? collector;
+        private const Constants.HSEvent BackupEvent = (Constants.HSEvent)0x200;
+        private readonly RecordDataProducerConsumerQueue queue = new();
         private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
+        private SqliteManager? sqliteManager;
     }
 }

@@ -81,21 +81,6 @@ namespace HSPI_HistoricalRecordsTest
             return (mockPlugin, mockHsController);
         }
 
-        public static (Mock<PlugIn> mockPlugin, FakeHSController mockHsController)
-                         CreateMockPluginAndHsController2(Dictionary<string, string> settingsFromIni)
-        {
-            var mockPlugin = new Mock<PlugIn>(MockBehavior.Loose)
-            {
-                CallBase = true,
-            };
-
-            var mockHsController = SetupHsControllerAndSettings2(mockPlugin, settingsFromIni);
-
-            mockPlugin.Object.InitIO();
-
-            return (mockPlugin, mockHsController);
-        }
-
         public static void CreateMockPlugInAndHsController2(out Mock<PlugIn> plugin,
                                                             out FakeHSController mockHsController)
         {
@@ -103,8 +88,16 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
         }
 
+        public static void CreateMockPlugInAndHsController2(Dictionary<string, string> settingsFromIni,
+                                                            out Mock<PlugIn> plugin,
+                                                            out FakeHSController mockHsController)
+        {
+            plugin = TestHelper.CreatePlugInMock();
+            mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin, settingsFromIni);
+        }
+
         public static void CreateMockPlugInAndMoqHsController(out Mock<PlugIn> plugin,
-                                                                      out Mock<IHsController> mockHsController)
+                                                              out Mock<IHsController> mockHsController)
         {
             plugin = TestHelper.CreatePlugInMock();
             mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
@@ -243,22 +236,22 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.SetupIniValue(refId.ToString(), "MaxValue", maxValue?.ToString("g") ?? string.Empty);
         }
 
-        public static void SetupStatisticsDevice(StatisticsFunction statisticsFunction,
+        public static void SetupStatisticsFeature(StatisticsFunction statisticsFunction,
                                                   Mock<PlugIn> plugIn,
-                                          FakeHSController hsControllerMock,
-                                          DateTime aTime,
-                                          int statsDeviceRefId,
-                                          int trackedFeatureRefId)
+                                                  FakeHSController hsControllerMock,
+                                                  DateTime aTime,
+                                                  int statsFeatureRefId,
+                                                  int trackedFeatureRefId)
         {
             Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
 
-            hsControllerMock.SetupFeature(statsDeviceRefId, 12.132, featureInterface: PlugInData.PlugInId);
+            hsControllerMock.SetupFeature(statsFeatureRefId, 12.132, featureInterface: PlugInData.PlugInId);
             hsControllerMock.SetupFeature(trackedFeatureRefId, 2);
 
             PlugExtraData plugExtraData = new();
             plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeatureRefId},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDurationSeconds\":600,\"RefreshIntervalSeconds\":30}}");
-            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.PlugExtraData, plugExtraData);
+            hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.PlugExtraData, plugExtraData);
         }
 
         public static bool TimedWaitTillTrue(Func<bool> func, TimeSpan wait)

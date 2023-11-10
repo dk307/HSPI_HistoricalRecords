@@ -41,7 +41,7 @@ namespace Hspi
 
         public List<int> GetTrackedDeviceList() => HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();
 
-        public bool UpdateStatisticsFeature(int featureRefId) => statisticsDeviceUpdater?.UpdateData(featureRefId) ?? false;
+        public bool UpdateStatisticsFeature(int featureRefId) => sqliteManager?.TryUpdateStatisticDeviceData(featureRefId) ?? false;
 
         private static JObject ParseToJObject(string data)
         {
@@ -133,7 +133,7 @@ namespace Hspi
 
             var refId = StatisticsDevice.CreateDevice(HomeSeerSystem, name, statisticsDeviceData);
 
-            RestartStatisticsDeviceUpdate();
+            sqliteManager?.RestartStatisticsDeviceUpdate();
 
             return SendRefIdResult(refId);
         }
@@ -149,19 +149,9 @@ namespace Hspi
 
             StatisticsDevice.EditDevice(HomeSeerSystem, refId, statisticsDeviceData);
 
-            RestartStatisticsDeviceUpdate();
+            sqliteManager?.RestartStatisticsDeviceUpdate();
 
             return SendRefIdResult(refId);
         }
-
-        private void RestartStatisticsDeviceUpdate()
-        {
-            Log.Debug("Restarting statistics device update");
-            CheckNotNull(featureCachedDataProvider);
-            statisticsDeviceUpdater?.Dispose();
-            statisticsDeviceUpdater = new StatisticsDeviceUpdater(HomeSeerSystem, Collector, CreateClock(), featureCachedDataProvider, ShutdownCancellationToken);
-        }
-
-        private StatisticsDeviceUpdater? statisticsDeviceUpdater;
     }
 }

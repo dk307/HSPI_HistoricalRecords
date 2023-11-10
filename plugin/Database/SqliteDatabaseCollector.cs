@@ -30,14 +30,20 @@ namespace Hspi.Database
             }
         }
 
-        public SqliteDatabaseCollector(IDBSettings settings, ISystemClock systemClock, CancellationToken shutdownToken)
+        public SqliteDatabaseCollector(IDBSettings settings,
+                                       ISystemClock systemClock,
+                                       RecordDataProducerConsumerQueue queue,
+                                       CancellationToken shutdownToken)
         {
             this.settings = settings;
             this.systemClock = systemClock;
+            this.queue = queue;
             this.shutdownToken = shutdownToken;
             CreateDBDirectory(settings.DBPath);
 
-            const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_PRIVATECACHE;
+            const int SQLITE_OPEN_EXRESCODE = 0x02000000;
+            const int OpenFlags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE |
+                                  SQLITE_OPEN_PRIVATECACHE | SQLITE_OPEN_NOMUTEX | SQLITE_OPEN_EXRESCODE;
 
             sqliteConnection = ugly.open_v2(settings.DBPath, OpenFlags, null);
             Log.Information("{dll} version:{version}", GetNativeLibraryName(), sqlite3_libversion().utf8_to_string());
@@ -71,9 +77,11 @@ namespace Hspi.Database
             }
         }
 
+        public Exception? RecordUpdateException { get; private set; }
+
         public long DeleteAllRecordsForRef(long refId)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
 
             var stmt = deleteAllRecordByRefCommand;
             using var stmtRest = CreateStatementAutoReset(stmt);
@@ -89,14 +97,14 @@ namespace Hspi.Database
         {
             if (minValue.HasValue)
             {
-                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var lock2 = CreateLockForDBConnection();
                 using var stmt = CreateStatement("DELETE FROM history where ref=$ref and value<$min");
                 RemoveInvalidValues(stmt, refId, minValue.Value);
             }
 
             if (maxValue.HasValue)
             {
-                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var lock2 = CreateLockForDBConnection();
                 using var stmt = CreateStatement("DELETE FROM history where ref=$ref and value>$max");
                 RemoveInvalidValues(stmt, refId, maxValue.Value);
             }
@@ -128,10 +136,10 @@ namespace Hspi.Database
             getMaxValueCommand?.Dispose();
             getMinValueCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
+            sqliteConnection?.manual_close_v2();
             sqliteConnection?.Dispose();
-            maintainanceTimer.Dispose();
-            connectionLock.Dispose();
-            queue.Dispose();
+            maintainanceTimer?.Dispose();
+            connectionMutex?.Dispose();
         }
 
         public void DoMaintainance()
@@ -142,7 +150,7 @@ namespace Hspi.Database
 
         public IList<IDictionary<string, object?>> ExecSql(string sql)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
             using var stmt = CreateStatement(sql);
 
             List<IDictionary<string, object?>> list = new();
@@ -204,20 +212,20 @@ namespace Hspi.Database
 
             long GetTotalRecords()
             {
-                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var lock2 = CreateLockForDBConnection();
                 return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history");
             }
 
             long GetTotalRecordsInLastDay()
             {
-                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var lock2 = CreateLockForDBConnection();
                 return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>(STRFTIME('%s')-86400)");
             }
         }
 
         public Tuple<DateTimeOffset, DateTimeOffset> GetEarliestAndOldestRecordTimeDate(long refId)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
             var stmt = getEarliestAndOldestRecordCommand;
 
             using var stmtRest = CreateStatementAutoReset(stmt);
@@ -256,7 +264,7 @@ namespace Hspi.Database
         public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
                                                                         long start, long length, ResultSortBy sortBy)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
 
             var stmt = getHistoryCommand;
 
@@ -289,7 +297,7 @@ namespace Hspi.Database
 
         public long GetRecordsCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
             var stmt = getRecordHistoryCountCommand;
             using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
@@ -302,7 +310,7 @@ namespace Hspi.Database
 
         public IList<KeyValuePair<long, long>> GetRecordsWithCount(int limit)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
 
             var records = new List<KeyValuePair<long, long>>();
             using var stmt = CreateStatement("SELECT ref, COUNT(*) as rcount FROM history GROUP BY ref ORDER BY rcount DESC LIMIT ?");
@@ -319,7 +327,7 @@ namespace Hspi.Database
         public IList<long> GetRefIdsWithRecords()
         {
             var records = new List<long>();
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
             using var stmt = CreateStatement("SELECT DISTINCT ref FROM history");
 
             while (ugly.step(stmt) != SQLITE_DONE)
@@ -332,7 +340,7 @@ namespace Hspi.Database
 
         public string? GetStringForValue(long refId, double value)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
 
             var stmt = getStrForRefAndValueCommand;
             using var stmtRest = CreateStatementAutoReset(stmt);
@@ -356,7 +364,7 @@ namespace Hspi.Database
         /// <param name="iterator">Function called for iteration</param>
         public void IterateGraphValues(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds, Action<IEnumerable<TimeAndValue>> iterator)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
             var stmt = getTimeAndValueCommand;
             using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
@@ -376,21 +384,16 @@ namespace Hspi.Database
             }
         }
 
-        public void Record(in RecordData recordData)
-        {
-            queue.Add(recordData);
-        }
-
         private static IDisposable CreateStatementAutoReset(sqlite3_stmt stmt)
         {
             ugly.reset(stmt);
             return Disposable.Create(() => ugly.reset(stmt));
         }
 
-        private IDisposable CreateAutoUnlockForDBConnection()
+        private IDisposable CreateLockForDBConnection()
         {
-            connectionLock.Wait(shutdownToken);
-            return Disposable.Create(() => connectionLock.Release());
+            connectionMutex.Wait(shutdownToken);
+            return Disposable.Create(() => connectionMutex.Release());
         }
 
         private sqlite3_stmt CreateStatement(string sql)
@@ -401,7 +404,7 @@ namespace Hspi.Database
 
         private double? ExecRefIdMinMaxStatement(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds, sqlite3_stmt stmt)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
             using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, refId);
             ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
@@ -413,7 +416,7 @@ namespace Hspi.Database
 
         private void InsertRecord(in RecordData record)
         {
-            using var lock2 = CreateAutoUnlockForDBConnection();
+            using var lock2 = CreateLockForDBConnection();
             sqlite3_stmt stmt = insertCommand;
             using var stmtRest = CreateStatementAutoReset(stmt);
             ugly.bind_int64(stmt, 1, record.TimeStamp.ToUnixTimeSeconds());
@@ -429,7 +432,7 @@ namespace Hspi.Database
             {
                 Log.Information("Starting maintaining database");
 
-                using var lock2 = CreateAutoUnlockForDBConnection();
+                using var lock2 = CreateLockForDBConnection();
                 var deletedCount = PruneRecords();
                 if (deletedCount > 0)
                 {
@@ -540,7 +543,7 @@ namespace Hspi.Database
             {
                 if (sqlite3_threadsafe() == 0)
                 {
-                    throw new ApplicationException(@"Sqlite is not thread safe");
+                    throw new SqliteInvalidException(@"Sqlite is not thread safe");
                 }
 
                 if (Version.TryParse(sqlite3_libversion().utf8_to_string(), out var version))
@@ -548,7 +551,7 @@ namespace Hspi.Database
                     var minSupportedVersion = new Version(3, 37);
                     if (version < minSupportedVersion)
                     {
-                        throw new ApplicationException("Sqlite version on machine is too old. Need 3.37+");
+                        throw new SqliteInvalidException("Sqlite version on machine is too old. Need 3.37+");
                     }
                 }
             }
@@ -562,21 +565,16 @@ namespace Hspi.Database
                 try
                 {
                     var record = queue.Take(shutdownToken);
-                    try
-                    {
-                        Log.Verbose("Adding to database: {@record}", record);
-                        InsertRecord(record);
-                    }
-                    catch (Exception ex) when (!ex.IsCancelException())
-                    {
-                        Log.Warning("Failed to update {record} with {error}}", record, ExceptionHelper.GetFullMessage(ex));
-                    }
+                    Log.Verbose("Adding to database: {@record}", record);
+                    InsertRecord(record);
+                    RecordUpdateException = null;
                 }
                 catch (Exception ex)
                 {
                     if (!ex.IsCancelException())
                     {
-                        Log.Warning("Error in records update thread : {error}", ex.GetFullMessage());
+                        Log.Warning("Error in records update thread : {error}. Retrying in 30s.", ex.GetFullMessage());
+                        this.RecordUpdateException = ex;
                         shutdownToken.WaitHandle.WaitOne(30 * 1000);
                     }
                 }
@@ -632,7 +630,7 @@ namespace Hspi.Database
                 LIMIT $limit OFFSET $offset";
 
         private readonly sqlite3_stmt allRefOldestRecordsCommand;
-        private readonly SemaphoreSlim connectionLock = new(1, 1);
+        private readonly SemaphoreSlim connectionMutex = new(1, 1);
         private readonly sqlite3_stmt deleteAllRecordByRefCommand;
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
         private readonly sqlite3_stmt getEarliestAndOldestRecordCommand;
@@ -644,7 +642,7 @@ namespace Hspi.Database
         private readonly sqlite3_stmt getTimeAndValueCommand;
         private readonly sqlite3_stmt insertCommand;
         private readonly Timer maintainanceTimer;
-        private readonly RecordDataProducerConsumerQueue queue = new();
+        private readonly RecordDataProducerConsumerQueue queue;
         private readonly IDBSettings settings;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;

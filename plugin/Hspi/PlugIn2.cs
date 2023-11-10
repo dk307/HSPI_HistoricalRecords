@@ -151,10 +151,10 @@ namespace Hspi
 
         protected virtual ISystemClock CreateClock() => new SystemClock();
 
-        private static TimeSpan GetDefaultGroupInterval(TimeSpan duration)
+        private static TimeSpan GetDefaultGroupInterval(TimeSpan duration, int points)
         {
-            // aim for 256 points on graph
-            return TimeSpan.FromSeconds(duration.TotalSeconds / MaxGraphPoints);
+            // aim for points on graph
+            return TimeSpan.FromSeconds(duration.TotalSeconds / points);
         }
 
         private static void GetRefIdMinMaxRequestParameters(JObject jsonData, out int refId, out long min, out long max)
@@ -164,7 +164,7 @@ namespace Hspi
             max = GetJsonValue<long>(jsonData, "max");
             if (max < min)
             {
-                throw new ArgumentException("max < min");
+                throw new ArgumentException("Max is less than Min");
             }
         }
 
@@ -288,8 +288,14 @@ namespace Hspi
             GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
 
             var fillStrategy = GetFillStrategy(jsonData);
+            var points = GetJsonValue<int>(jsonData, "points");
 
-            long groupBySeconds = (long)Math.Round(GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max - min)).TotalSeconds);
+            if (points <= 0)
+            {
+                throw new ArgumentException("points is not correct");
+            }
+
+            long groupBySeconds = (long)Math.Round(GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max - min), points).TotalSeconds);
             bool shouldGroup = groupBySeconds >= 5;
 
             var queryData = shouldGroup ?
@@ -353,14 +359,14 @@ namespace Hspi
 
                 if (max < min)
                 {
-                    throw new ArgumentException("max < min");
+                    throw new ArgumentException("Max is less than Min");
                 }
 
                 totalResultsCount = Collector.GetRecordsCount(refId, min, max);
             }
             else
             {
-                throw new ArgumentException("min/max not specified");
+                throw new ArgumentException("Min or max not specified");
             }
 
             var queryData = Collector.GetRecords(refId,
@@ -470,11 +476,12 @@ namespace Hspi
                 jsonWriter.WritePropertyName("labels");
                 jsonWriter.WriteStartArray();
 
-                foreach (var row in result)
+                foreach (var key in result.Select(x => x.Key))
                 {
-                    string label = Collector.GetStringForValue(refId, row.Key) ?? row.Key.ToString("g", CultureInfo.InvariantCulture);
+                    string label = Collector.GetStringForValue(refId, key) ?? key.ToString("g", CultureInfo.InvariantCulture);
                     jsonWriter.WriteValue(label);
                 }
+
                 if (leftOver > 0)
                 {
                     jsonWriter.WriteValue((string?)null);
@@ -541,7 +548,5 @@ namespace Hspi
 
             return "{}";
         }
-
-        public const int MaxGraphPoints = 256;
     }
 }

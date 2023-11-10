@@ -4,6 +4,7 @@ using System.Linq;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
+using Hspi;
 using Hspi.Device;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -249,14 +250,15 @@ namespace HSPI_HistoricalRecordsTest
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
             int statsDeviceRefId = 10300;
-            int statsFeatureRefId = 10300;
+            int statsFeatureRefId = 10301;
             int trackedDeviceRefId = 100;
 
-            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
-                                             statsDeviceRefId, trackedDeviceRefId);
+            hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
+                                             statsFeatureRefId, trackedDeviceRefId);
 
-            hsControllerMock.SetupDevice(102984);
-            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsDeviceRefId });
+            hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.AssociatedDevices, new HashSet<int> { statsDeviceRefId });
+            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId });
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 

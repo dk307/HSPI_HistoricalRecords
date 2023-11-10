@@ -20,6 +20,8 @@ namespace HSPI_HistoricalRecordsTest
 {
     internal class FakeHSController : IHsController
     {
+        public string DBPath => Path.Combine((this as IHsController).GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+
         public FakeHSController()
         {
             // log level to verbose for tests

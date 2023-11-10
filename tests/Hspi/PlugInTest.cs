@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
@@ -11,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
+using static HomeSeer.PluginSdk.PluginStatus;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -47,7 +49,8 @@ namespace HSPI_HistoricalRecordsTest
                 { "LogToFileId", logToFile.ToString() }
             };
 
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(settingsFromIni);
+            TestHelper.CreateMockPlugInAndHsController2(settingsFromIni, out var plugInMock, out var _);
+            using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
             PlugIn plugIn = plugInMock.Object;
 
@@ -70,10 +73,34 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void CheckPlugInStatus()
         {
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(new Dictionary<string, string>());
+            TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var _);
+            using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
-            PlugIn plugIn = plugInMock.Object;
-            Assert.AreEqual(plugIn.OnStatusCheck().Status, PluginStatus.Ok().Status);
+            Assert.AreEqual(plugInMock.Object.OnStatusCheck().Status, PluginStatus.Ok().Status);
+        }
+
+        [TestMethod]
+        public void CheckPlugInStatusOnFailedSqliteInit()
+        {
+            // locking file does not work on ubuntu
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var hsMockController);
+
+                string dbPath = hsMockController.DBPath;
+
+                Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
+
+                //lock the sqlite 3 db
+                using var lockFile = new FileStream(dbPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+
+                using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
+
+                var status = plugInMock.Object.OnStatusCheck();
+
+                Assert.AreEqual(EPluginStatus.Critical, status.Status);
+                Assert.AreEqual("Unable to open database file", status.StatusText);
+            }
         }
 
         [TestMethod]
@@ -85,7 +112,8 @@ namespace HSPI_HistoricalRecordsTest
                 { SettingsPages.LogToFileId, true.ToString()},
             };
 
-            var (plugInMock, _) = TestHelper.CreateMockPluginAndHsController2(settingsFromIni);
+            TestHelper.CreateMockPlugInAndHsController2(settingsFromIni, out var plugInMock, out var _);
+            using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
             PlugIn plugIn = plugInMock.Object;
 
@@ -258,7 +286,10 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.VALUE_CHANGE, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId));
+            mockHsController.Verify(x => x.RegisterEventCB((Constants.HSEvent)0x200, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "dbstats.html", "Database statistics"));
+            mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "alldevices.html", "Device statistics"));
+            mockHsController.Verify(x => x.RegisterDeviceIncPage(PlugInData.PlugInId, "adddevice.html", "Add a statistics device"));
 
             string dbPath = Path.Combine(mockHsController.Object.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
             Assert.IsTrue(File.Exists(dbPath));
@@ -297,6 +328,15 @@ namespace HSPI_HistoricalRecordsTest
         {
             var plugin = new PlugIn();
             Assert.AreEqual(plugin.PostBackProc("Random", "data", "user", 0), string.Empty);
+        }
+
+        [TestMethod]
+        public void UseWithoutInit()
+        {
+            var plugin = new PlugIn();
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.PruneDatabase());
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.DeleteAllRecords(10));
+            Assert.ThrowsException<InvalidOperationException>(() => plugin.GetDatabaseStats());
         }
 
         [TestMethod]

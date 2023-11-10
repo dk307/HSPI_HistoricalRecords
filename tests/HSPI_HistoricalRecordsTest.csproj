@@ -44,10 +44,9 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\plugin\shared\tests\ExceptionHelperTest.cs">
-      <Link>shared\ExceptionHelperTest.cs</Link>
-    </Compile>
     <Compile Include="FakeHSController.cs" />
+    <Compile Include="Hspi\BackupTest.cs" />
+    <Compile Include="Hspi\Utils\ExceptionHelperTest.cs" />
     <Compile Include="Hspi\HistogramTest.cs" />
     <Compile Include="Hspi\ExecSqlTest.cs" />
     <Compile Include="Hspi\ScrbianFunctionsTest.cs" />
@@ -59,6 +58,7 @@
     <Compile Include="Hspi\DeviceChangedinHSTest.cs" />
     <Compile Include="Hspi\PlugInTest.cs" />
     <Compile Include="Hspi\SettingsPagesTest.cs" />
+    <Compile Include="Hspi\Utils\SqliteInvalidExceptionTest.cs" />
     <Compile Include="Hspi\Utils\HsDeviceInvalidExceptionTests.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIteratorTests.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesAverageTest.cs" />
@@ -94,7 +94,7 @@
       <Version>13.0.3</Version>
     </PackageReference>
     <PackageReference Include="Serilog">
-      <Version>3.0.1</Version>
+      <Version>3.1.0</Version>
     </PackageReference>
     <PackageReference Include="SonarAnalyzer.CSharp">
       <Version>9.12.0.78982</Version>
