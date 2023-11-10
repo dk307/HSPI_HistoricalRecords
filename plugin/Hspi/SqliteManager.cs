@@ -42,10 +42,17 @@ namespace Hspi
                 }
                 else
                 {
-                    var collectorCopy = Volatile.Read(ref this.collector);
-                    var collectorError = collectorCopy?.RecordUpdateException;
-                    return collectorError != null ?
-                                PluginStatus.Warning(collectorError.GetFullMessage()) : PluginStatus.Ok();
+                    if (started)
+                    {
+                        var collectorCopy = Volatile.Read(ref this.collector);
+                        var collectorError = collectorCopy?.RecordUpdateException;
+                        return collectorError != null ?
+                                    PluginStatus.Warning(collectorError.GetFullMessage()) : PluginStatus.Ok();
+                    }
+                    else
+                    {
+                        return PluginStatus.Warning("Device records are not being stored");
+                    }
                 }
             }
         }

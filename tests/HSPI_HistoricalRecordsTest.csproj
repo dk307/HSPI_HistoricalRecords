@@ -45,6 +45,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="FakeHSController.cs" />
+    <Compile Include="Hspi\BackupTest.cs" />
     <Compile Include="Hspi\Utils\ExceptionHelperTest.cs" />
     <Compile Include="Hspi\HistogramTest.cs" />
     <Compile Include="Hspi\ExecSqlTest.cs" />

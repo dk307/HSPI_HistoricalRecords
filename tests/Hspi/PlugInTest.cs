@@ -87,7 +87,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var hsMockController);
 
-                string dbPath = Path.Combine((hsMockController as IHsController).GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+                string dbPath = hsMockController.DBPath;
 
                 Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
 
