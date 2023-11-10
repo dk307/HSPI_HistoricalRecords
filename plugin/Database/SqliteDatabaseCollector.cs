@@ -137,6 +137,7 @@ namespace Hspi.Database
             getMinValueCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
             sqliteConnection?.manual_close_v2();
+            sqliteConnection?.Dispose();
             maintainanceTimer.Dispose();
             connectionMutex.Dispose();
         }
