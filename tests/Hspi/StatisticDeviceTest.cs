@@ -168,7 +168,7 @@ namespace HSPI_HistoricalRecordsTest
 
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 10;
-            TestHelper.SetupStatisticsDevice(statisticsFunction, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsFeature(statisticsFunction, plugIn, hsControllerMock, aTime,
                                              statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
@@ -218,7 +218,7 @@ namespace HSPI_HistoricalRecordsTest
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 99;
 
-            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
@@ -252,7 +252,7 @@ namespace HSPI_HistoricalRecordsTest
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 100;
 
-            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
@@ -299,7 +299,7 @@ namespace HSPI_HistoricalRecordsTest
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 100;
 
-            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
@@ -336,7 +336,7 @@ namespace HSPI_HistoricalRecordsTest
             int statsDeviceRefId = 1000;
             int trackedDeviceRefId = 100;
 
-            TestHelper.SetupStatisticsDevice(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
