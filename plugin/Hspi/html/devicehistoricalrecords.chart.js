@@ -28,9 +28,9 @@ function startFetchWithMinMax(chart, min, max) {
 	   points: Math.max(Math.abs((chart.chartArea.right - chart.chartArea.left)/5), 25),
 	};
 	
-	ajaxPostPlugIn("graphrecords", formObject, function (result) {	 
+	ajaxPostPlugIn("graphrecords", formObject, function (result) {		
 		console.log('Fetched data between ' + min + ' and ' + max);
-		chart.data.datasets[0].data =  result.data;
+		chart.data.datasets[0].data = result.data;
 		chart.stop(); // make sure animations are not running
 		chart.options.plugins.subtitle.text = getRangeString(min, max);
 		
@@ -40,19 +40,13 @@ function startFetchWithMinMax(chart, min, max) {
 			chart.options.scales.x.time.displayFormats.hour = "hA";
 		}
 		
-		if (result.groupedbyseconds == 0) {
-			chartFunction(4);
-		} else {
-			chartFunction(3);
-		}
-		
-		chart.update('none');	
+		chart.update();	
 	});
 }
 
 function startFetch({chart}) {
   const {min, max} = chart.scales.x;
-  startFetchWithMinMax(chart, min, max);
+  startFetchWithMinMax(chart, Math.round(min), Math.round(max));
 }
 	
 const zoomOptions = {
@@ -75,6 +69,9 @@ const zoomOptions = {
 	pinch: {
 	  enabled: true
 	},
+	limits: {
+      x: {minRange: 60},        
+    },
 	mode: 'x',
 	onZoomComplete: startFetch
   }
@@ -109,7 +106,7 @@ const scales = {
 };
 
 const tooltip = {
-    enabled: true,
+    enabled: false,
     callbacks: { 
       label: (data) => { 
            return roundValue(data.formattedValue).toString() + deviceUnits;
@@ -179,6 +176,7 @@ function chartFunction(reason) {
 	{
 		case 0:
 		chart.resetZoom();
+		startFetch({chart});
 		break;
 		case 1:
 		chart.data.datasets[0].stepped = 'before';
@@ -192,18 +190,6 @@ function chartFunction(reason) {
 		chart.update();
 		startFetch({chart});
 		break;	
-		case 3:
-		chart.data.datasets[0].pointStyle = false;
-		chart.update();
-		break;	
-		case 4:
-		chart.data.datasets[0].pointStyle = 'circle';
-		chart.update();	
-		break;	
-		case 5:
-		chart.data.datasets[0].pointStyle = 'line';
-		chart.update();
-		break;
 	}
 }
 
