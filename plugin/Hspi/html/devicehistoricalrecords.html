@@ -15,7 +15,7 @@
 	
 	<style>
 		canvas {
-			 width: 100%;  
+			 width: 100% !important;  
 			 object-fit: contain; 
 			 margin: auto;
 		}
@@ -82,8 +82,6 @@
 						 ["Last 365 days", 31536000, "365d"],
 					 ]		 
 					 			 
-			
-
 		for rangeOption in rangeOptionsForOthers
 			if  rangeOption[1] <= oldestRecordTimeSpan
 				rangeOptions = rangeOptions | array.add rangeOption
@@ -137,11 +135,8 @@ const displayEndDate = new Date({{displayMax}} * 1000).getTime();
 const displayStartDate = new Date({{displayMin}} * 1000).getTime();
 {{end}}	
 
-function getRangeString(min, max) {
-	const minDateString = (new Date(min)).toLocaleString();
-	const maxDateString = (new Date(max)).toLocaleString();
-	return minDateString + " - " + maxDateString;
-}
+const featureId = {{featureId}};
+const deviceUnits = '{{deviceUnits}}';
 </script>
 	
 <body class="body homeseer-skin ml-0 mr-0" style="min-height: 3rem" aria-busy="true">	
@@ -201,7 +196,6 @@ function getRangeString(min, max) {
 				<label class="mdb-main-label" for="displaySelect">View Type</label>
 			</div>	
 				
-
 			<div class="md-form my-0 mr-3">
 				<select id="displayPeriod" class="mdb-select md-form colorful-select" name="displayPeriod">
 					{{for rangeOption in rangeOptions}}
@@ -242,8 +236,6 @@ function getRangeString(min, max) {
 			end
 		}}
 
-		{{needDataTables=false}}
-		{{needChartJs=false}}
 		{{if displaySelect=="table"}}
 			<table id="dt-persistence" class="table table-sm mb-0 table-striped"  width="100%">	
 				<thead>
@@ -255,7 +247,6 @@ function getRangeString(min, max) {
 					</tr>
 				</thead>			
 			</table>	
-			{{needDataTables=true}}
 		{{else if displaySelect=="chart"}}
 			<div class="btn-group mt-2 mx-auto" role="group" aria-label="Graph options">
 			  <button type="button" class="btn btn-info"  onclick="chartFunction(0)">Reset Zoom</button>
@@ -267,19 +258,10 @@ function getRangeString(min, max) {
 				  <a class="dropdown-item"  onclick="chartFunction(2)">Linear</a>
 				</div>
 			  </div>
-			  <!-- <div class="btn-group" role="group"> -->
-				<!-- <button id="btnGroupDropPoint" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Point</button> -->
-				<!-- <div class="dropdown-menu" aria-labelledby="btnGroupDrop1"> -->
-				  <!-- <a class="dropdown-item" onclick="chartFunction(3)">None</a> -->
-				  <!-- <a class="dropdown-item" onclick="chartFunction(4)">Circle</a> -->
-				  <!-- <a class="dropdown-item" onclick="chartFunction(5)">Line</a> -->
-				<!-- </div> -->
-			  <!-- </div> -->
 			</div>
 			<div class="chart-container">
 				<canvas id="myLineChart"></canvas>
 			</div>
-			{{needChartJs=true}}
 		{{else if displaySelect=="stats"}}
 			<table id="dt-persistence" class="table table-sm mb-0 table-striped"  width="100%">	
 				<thead style=" display:none;">
@@ -289,7 +271,6 @@ function getRangeString(min, max) {
 					</tr>
 				</thead> 
 			<table>		
-			{{needDataTables=true}}		
 		{{else if displaySelect=="histogram"}}
 			<div class="d-flex mt-3 flex-wrap justify-content-center">
 				<div class="p-2">
@@ -306,7 +287,6 @@ function getRangeString(min, max) {
 					</table>
 				</div>
 			</div>
-			{{needChartJs=true}}		
 		{{end}}		
 	{{else if device}}
 		Not Configured
@@ -360,19 +340,7 @@ function getRangeString(min, max) {
 
 {{includefile 'bootstrap/js/page_common.js'}}
 <script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
-
-{{if needDataTables}}
-<script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>
-{{end}}
-
-{{if needChartJs}}
-<script type="text/javascript" src="/HistoricalRecords/chart.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
-<script type="text/javascript" src="/HistoricalRecords/chartjs-adapter-moment.min.js"></script>
-<script type="text/javascript" src="/HistoricalRecords/hammer.min.js"></script>
-<script type="text/javascript" src="/HistoricalRecords/chartjs-plugin-zoom.min.js"></script>
-{{end}}
-
 <script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/humanize-duration.js"></script>
 
@@ -426,441 +394,31 @@ $(function() {
 	});	 
 });
 
-
 function roundValue(num) {
 	return Math.round(num * 10 ** {{devicePrecision}}) / 10 ** {{devicePrecision}};
 }
+</script>
+
 
 {{if displaySelect=="table"}}
-
-function humanizeTime(unix_timestamp) {
-	const date = new Date(unix_timestamp);
-	const nowDate = new Date(Date.now());
-	
-	const isSameDay = (date.getDate() === nowDate.getDate() 
-				    && date.getMonth() === nowDate.getMonth()
-				    && date.getFullYear() === nowDate.getFullYear())
-				   
-	if (isSameDay) {
-		return "Today, " + date.toLocaleTimeString();
-	}					
-	
-	return date.toLocaleString();
-}
-
-function setUpPersistanceTable() {
-  $('#dt-persistence').DataTable({
-	bLengthChange : true,
-    bFilter : false,
-	searching : false,
-	order: [[0, 'desc']],
-	paging: true,
-	processing: true,
-	responsive: true,
-	stateSave: false,
-    serverSide: true,
-	  ajax: {
-        url: '../HistoricalRecords/historyrecords',
-        type: 'POST',
-		data: function (d) {
-            d.refId = {{featureId}};	 
-			d.min = displayStartDate;
-			d.max = displayEndDate;	 
-        }
-    },
-	columnDefs: [
-		{
-			targets: 0,
-			render: function (data, type, full, meta) {
-				return humanizeTime(data);
-			}
-		},
-		{
-			targets: 1,
-			render: function (data, type, full, meta) {
-				return roundValue(data);
-			}
-		},
-		{
-			targets: 3,
-			render: function (data, type, full, meta) {
-				if (data === null) {
-					return "";
-				} else {
-					return humanizeDuration(data * 1000);
-				}
-			}
-		},
-	],
-	initComplete: function () {
-	},
-  });
-  
-  $(".dataTables_length").addClass("bs-select"); 
-}
-
-$(document).ready(function () {
-	setUpPersistanceTable();
-	$('#loading').hide();
-});	
-
+<script src="/bootstrap/js/addons/datatables.min.js"></script>
+<script src="/HistoricalRecords/devicehistoricalrecords.table.js"></script>
 {{else if displaySelect=="chart"}}
-	let chart;
- 
-	const colors = {
-	  blue: {
-		default: "#007bff",
-		half: "rgba(00, 123, 233, 0.5)",
-		quarter: "rgba(00, 123, 233, 0.25)",
-		zero: "rgba(00, 123, 233, 0)"
-	  }, 
-	};
-	
-	const defaultTension = 0.1;
-	
-	function startFetchWithMinMax(chart, min, max) {
-		console.log('Fetching data between ' + min + ' and ' + max);
-		const formObject = {
-		   refId : {{featureId}},
-		   min: min,
-		   max: max,
-		   fill: chart.data.datasets[0].stepped ? 0 : 1,
-		};
-		
-		ajaxPostPlugIn("graphrecords", formObject, function (result) {	 
-			console.log('Fetched data between ' + min + ' and ' + max);
-			chart.data.datasets[0].data =  result.data;
-			chart.stop(); // make sure animations are not running
-			chart.options.plugins.subtitle.text = getRangeString(min, max);
-			
-			if ((max - min) > (1000 * 60 * 60 * 24 * 2)) {
-				chart.options.scales.x.time.displayFormats.hour = "MMM D";
-			} else {
-				chart.options.scales.x.time.displayFormats.hour = "hA";
-			}
-			
-			if (result.groupedbyseconds == 0) {
-				chartFunction(4);
-			} else {
-				chartFunction(3);
-			}
-			
-			chart.update('none');		 
-		});
-	}
-	
-	function startFetch({chart}) {
-	  const {min, max} = chart.scales.x;
-	  startFetchWithMinMax(chart, min, max);
-	}
-		
-	const zoomOptions = {
-	  limits: {
-		x: {min: 'original', max: 'original', minRange: 60 * 1000},
-	  },
-	  pan: {
-		enabled: true,
-		mode: 'x',
-		modifierKey: 'ctrl',
-		onPanComplete: startFetch
-	  },
-	  zoom: {
-		wheel: {
-		  enabled: true,
-		},
-		drag: {
-		  enabled: true,
-		},
-		pinch: {
-		  enabled: true
-		},
-		mode: 'x',
-		onZoomComplete: startFetch
-	  }
-	};
-	
-	const scales = {
-	  x: {
-		position: 'bottom',
-		min: displayStartDate,
-		max: displayEndDate,
-		time: {
-			displayFormats: {
-			  hour: "hA"
-			},
-		},
-		type: 'time',
-		ticks: {
-		  autoSkip: true,
-		  autoSkipPadding: 50,
-		  maxRotation: 0
-		},	
-	  },
-	  y: {
-		type: 'linear',
-		position: 'left',
-		ticks: {
-			callback: function(value, index, ticks) {
-				return Chart.Ticks.formatters.numeric.apply(this, [value, index, ticks]) + '{{deviceUnits}}'
-			}
-        }
-	  },
-	};
-
-	function setUpChart() { 
-		Chart.defaults.font.family = "sans-serif";
-		Chart.defaults.font.size = 16;
-		
-		let ctx = document.getElementById("myLineChart").getContext('2d'); 
-		
-		let gradient = ctx.createLinearGradient(0, 25, 0, 300);
-		gradient.addColorStop(0, colors.blue.half);
-		gradient.addColorStop(0.35, colors.blue.quarter);
-		gradient.addColorStop(1, colors.blue.zero);
-
-
-		let myChart = new Chart(ctx, {
-		  type: "line",
-		  data: {
-				datasets: [{
-					label: "Value",
-					data: [],			 
-					stepped : false,
-					tension : defaultTension,
-					pointStyle : false,
-					fill: true,
-					backgroundColor: gradient,
-					pointBackgroundColor: colors.blue.default,
-					borderColor: colors.blue.default,
-					borderWidth: 2,
-					pointRadius: 3
-				}, 			 
-			]
-		  },
-		  options: {
-			scales: scales,
-			responsive: true,
-			maintainAspectRatio: false,
-			plugins: {
-			    zoom: zoomOptions,
-				legend: {
-					display: false
-				},	
-			    subtitle: {
-					display: true,
-					text: '',
-				}				
-			},
-			transitions: {
-			  zoom: {
-				animation: {
-				  duration: 100
-				}
-			  }
-			}
-		  },  
-		});
-		 
-		chart = myChart;
-		startFetchWithMinMax(myChart, displayStartDate, displayEndDate);
-	}
-	
-function chartFunction(reason) {
-	switch(reason)
-	{
-		case 0:
-		chart.resetZoom();
-		break;
-		case 1:
-		chart.data.datasets[0].stepped = 'before';
-		chart.data.datasets[0].tension = 0;
-		chart.update();
-		startFetch({chart});
-		break;
-		case 2:
-		chart.data.datasets[0].stepped = false;
-		chart.data.datasets[0].tension = defaultTension;
-		chart.update();
-		startFetch({chart});
-		break;	
-		case 3:
-		chart.data.datasets[0].pointStyle = false;
-		chart.update();
-		break;	
-		case 4:
-		chart.data.datasets[0].pointStyle = 'circle';
-		chart.update();	
-		break;	
-		case 5:
-		chart.data.datasets[0].pointStyle = 'line';
-		chart.update();
-		break;
-	}
-}
-
-$(document).ready(function () {
-	setUpChart();
-	$('#loading').hide();
-});
-
+<script src="/HistoricalRecords/chart.min.js"></script>
+<script src="/HistoricalRecords/chartjs-adapter-moment.min.js"></script>
+<script src="/HistoricalRecords/hammer.min.js"></script>
+<script src="/HistoricalRecords/chartjs-plugin-zoom.min.js"></script>
+<script src="/HistoricalRecords/devicehistoricalrecords.chart.js"></script>
 {{else if displaySelect=="stats"}}
-
-function getJsonValue(value, nullSub) {
-	
-	if (value == null) {
-		return nullSub;
-	} else {
-		const unit={{if deviceUnits}}' {{deviceUnits}}'{{end}};
-		return roundValue(value.toString()) + unit;
-	}
-}
-
-function setUpPersistanceTable() {
-  $('#dt-persistence').dataTable({
-	paging: false,
-	responsive: true,
-	bInfo : false, 
-	ajax: function (data, callback, settings) {
-		const formObject = {
-		   refId : {{featureId}},
-		   min: displayStartDate,
-		   max: displayEndDate,   
-		};
-		
-		ajaxPostPlugIn("statisticsforrecords", formObject, function (result) {	
-			const data= result["data"];
-			const jsonResult =
-			{
-				data: [
-					[	
-					 "Average (Step)",
-					 getJsonValue(data[0], '-'),
-					],
-					[	
-					 "Average (Linear)",
-					 getJsonValue(data[1], '-'),
-					],
-					[	
-					 "Minimum Value",
-					 getJsonValue(data[2], 'No records found'),
-					],
-					[	
-					 "Maximum Value",
-					 getJsonValue(data[3], 'No records found'),
-					],
-				]
-			};			
-			callback(jsonResult);
-		});
-	},
-  });
-  
-  $(".dataTables_length").addClass("bs-select"); 
-}
-
-$(document).ready(function () {
-	setUpPersistanceTable();
-	$('#loading').hide();
-});
-
-
+<script src="/bootstrap/js/addons/datatables.min.js"></script>
+<script src="/HistoricalRecords/devicehistoricalrecords.stats.js"></script>
 {{else if displaySelect=="histogram"}}
-let chart;
-
-//https://www.patternfly.org/charts/colors-for-charts/
-const colors = ['#8BC1F7','#BDE2B9','#A2D9D9','#B2B0EA','#F9E0A2','#F4B678','#C9190B','#519DE9', '#7CC674', '#73C5C5','#8481DD','#F6D173','#EF9234','#A30000'];
-			  
-let dynamicColors = function(label, index) {	 
-	if (label) {
-		switch (label.toLowerCase()) {
-			case "on": return "#FFC154";
-			case "off": return "#47B39C";
-		}
-	} else {
-		return "#D2D2D2"; //others
-	}
-	return colors[index];
-};
-
-const data = {
-  labels: [],
-  datasets: [{
-    data: [],
-  }]
-};
-
-const tooltip = {
-    enabled: true,
-    callbacks: { 
-      // To change label in tooltip
-      label: (data) => { 
-           return humanizeDuration(data.parsed);
-      },
-    }
-};
-
-function updateChart(chart) {
-	 
-	const formObject = {
-	   refId : {{featureId}},
-	   min: displayStartDate,
-	   max: displayEndDate,
-	   count: 10,
-	};
-	
-	ajaxPostPlugIn("histogramforrecords", formObject, function (result) {	  
-		chart.data.datasets[0].data =  result.time;
-		chart.data.datasets[0].backgroundColor =  Array.from(result.labels, (x,i) => dynamicColors(x,i));
-		
-		chart.data.labels = Array.from( result.labels, (x) => (x === null ? "Others" : x));
-		chart.update('none');		
-
-		let legandTableBody = $('#idPieLegand tbody');
-		for(let i=0; i< chart.data.datasets[0].data.length; i++) {	
-			var row = $("<tr>");			
-			row.append($("<th class='scope'>").html('<div style="background-color:' + chart.data.datasets[0].backgroundColor[i] + ';width:20px;height:20px;"></div>'));
-			row.append($("<td>").text(chart.data.labels[i]));	
-			row.append($("<td>").text(humanizeDuration(chart.data.datasets[0].data[i])));	
-			row.appendTo(legandTableBody);    
-		}
-	});
-}
- 
-function setUpChart() { 
-	Chart.defaults.font.family = "sans-serif";
-	Chart.defaults.font.size = 16;
-	
-	let ctx = document.getElementById("myPieChart").getContext('2d'); 
-	
-	let myChart = new Chart(ctx, {
-		type: 'pie',
-		data: data,
-		options: {
-			plugins: {
-				tooltip: tooltip,
-				legend: {
-					display: false,
-				},
-			},
-			
-			responsive: true,
-		},
-	});
-	 
-	chart = myChart;
-	updateChart(chart);
-}
-
-$(document).ready(function () {
-	setUpChart();
-	$('#loading').hide();
-});
+<script src="/HistoricalRecords/chart.min.js"></script>
+<script src="/HistoricalRecords/devicehistoricalrecords.histogram.js"></script>
 {{else}}	
 $(document).ready(function () {
 	$('#loading').hide();
 });
 {{end}}
-
-</script>
 </body>
 </html>
