@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using Hspi;
 using Hspi.Utils;
@@ -60,12 +61,12 @@ namespace HSPI_HistoricalRecordsTest
         [DataTestMethod]
         [DataRow(FillStrategy.LOCF)]
         [DataRow(FillStrategy.Linear)]
-        public void GetRecordsWithoutGrouping(FillStrategy fillStrategy)
+        public void GetRecordsWithUpscaling(FillStrategy fillStrategy)
         {
             var plugin = TestHelper.CreatePlugInMock();
             var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin);
 
-            DateTime time = DateTime.Now;
+            DateTime time = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
 
             int deviceRefId = 35673;
             mockHsController.SetupFeature(deviceRefId,
@@ -77,13 +78,16 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.WaitForRecordCountAndDeleteAll(plugin, deviceRefId, 1);
 
+            var added = new List<RecordData>();
             for (var i = 0; i < 100; i++)
             {
-                TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                        deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1);
+                added.Add(TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                        deviceRefId, i, "33", time.AddSeconds(i * 5), i + 1));
             }
 
-            string format = $"{{ refId:{deviceRefId}, min:{time.ToUnixTimeMilliseconds()}, max:{mockHsController.GetFeatureLastChange(deviceRefId).ToUnixTimeMilliseconds()}, fill:{(int)fillStrategy}, points:{MaxGraphPoints}}}";
+            long max = mockHsController.GetFeatureLastChange(deviceRefId).ToUnixTimeMilliseconds();
+            long min = time.ToUnixTimeMilliseconds();
+            string format = $"{{ refId:{deviceRefId}, min:{min}, max:{max}, fill:{(int)fillStrategy}, points:{max - min}}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
             Assert.IsNotNull(data);
 
@@ -91,14 +95,35 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsNotNull(jsonData);
 
             var result = (JArray)jsonData["result"]["data"];
-            Assert.AreEqual(0, (int)jsonData["result"]["groupedbyseconds"]);
-            Assert.AreEqual(100, result.Count);
+            Assert.AreEqual(1, (int)jsonData["result"]["groupedbyseconds"]);
+            int expectedCount = (int)(1 + (max - min) / 1000);
+            Assert.AreEqual(expectedCount, result.Count);
 
-            for (var i = 0; i < 100; i++)
+            if (fillStrategy == FillStrategy.LOCF)
             {
-                long ts = ((DateTimeOffset)time.AddSeconds(i * 5)).ToUnixTimeSeconds() * 1000;
-                Assert.AreEqual(ts, (long)result[i]["x"]);
-                Assert.AreEqual((double)i, (double)result[i]["y"]);
+                for (var i = 0; i < expectedCount - 1; i++)
+                {
+                    long ts = ((DateTimeOffset)time.AddSeconds(i)).ToUnixTimeSeconds() * 1000;
+                    Assert.AreEqual(ts, (long)result[i]["x"]);
+                    int expectedRecord = i / 5;
+                    Assert.AreEqual(added[expectedRecord].DeviceValue, (double)result[i]["y"]);
+                }
+
+                Assert.AreEqual(max, (long)result[result.Count - 1]["x"]);
+                Assert.AreEqual(added[^1].DeviceValue, (double)result[result.Count - 1]["y"]);
+            }
+            else if (fillStrategy == FillStrategy.Linear)
+            {
+                for (var i = 0; i < expectedCount - 1; i++)
+                {
+                    long ts = ((DateTimeOffset)time.AddSeconds(i)).ToUnixTimeSeconds() * 1000;
+                    Assert.AreEqual(ts, (long)result[i]["x"]);
+                    var expectedValue = (double)((long)Math.Round((0.1D + (i * 0.2D)) * 10000D)) / 10000D; // *10000 and /10000 to fix float round issues
+                    Assert.AreEqual(expectedValue, (double)result[i]["y"]);
+                }
+
+                Assert.AreEqual(max, (long)result[result.Count - 1]["x"]);
+                Assert.AreEqual(added[^1].DeviceValue, (double)result[result.Count - 1]["y"]);
             }
         }
 

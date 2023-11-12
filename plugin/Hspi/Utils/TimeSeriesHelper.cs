@@ -61,6 +61,14 @@ namespace Hspi.Utils
             }
         }
 
+        /// <summary>
+        /// This function create a average value in the interval using spceified fill stratgey.
+        /// The time stamps returned are left edge of the interval with average of value from the interval.
+        /// </summary>
+        /// <param name="intervalUnixTimeSeconds"></param>
+        /// <param name="fillStrategy"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentOutOfRangeException"> if interval <=0</exception>
         public IEnumerable<TimeAndValue> ReduceSeriesWithAverage(long intervalUnixTimeSeconds, FillStrategy fillStrategy)
         {
             if (intervalUnixTimeSeconds <= 0)

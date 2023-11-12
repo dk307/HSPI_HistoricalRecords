@@ -154,7 +154,7 @@ namespace Hspi
         private static TimeSpan GetDefaultGroupInterval(TimeSpan duration, int points)
         {
             // aim for points on graph
-            return TimeSpan.FromSeconds(duration.TotalSeconds / points);
+            return TimeSpan.FromSeconds(Math.Max(1D, duration.TotalSeconds / points));
         }
 
         private static void GetRefIdMinMaxRequestParameters(JObject jsonData, out int refId, out long min, out long max)
@@ -296,16 +296,13 @@ namespace Hspi
             }
 
             long groupBySeconds = (long)Math.Round(GetDefaultGroupInterval(TimeSpan.FromMilliseconds(max - min), points).TotalSeconds);
-            bool shouldGroup = groupBySeconds >= 5;
 
-            var queryData = shouldGroup ?
-                             TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy) :
-                             Collector.GetGraphValues(refId, min / 1000, max / 1000);
+            var queryData = TimeAndValueQueryHelper.GetGroupedGraphValues(Collector, refId, min / 1000, max / 1000, groupBySeconds, fillStrategy);
 
             return WriteJsonResult((jsonWriter) =>
             {
                 jsonWriter.WritePropertyName("groupedbyseconds");
-                jsonWriter.WriteValue(shouldGroup ? groupBySeconds : 0);
+                jsonWriter.WriteValue(groupBySeconds);
 
                 jsonWriter.WritePropertyName("data");
                 jsonWriter.WriteStartArray();

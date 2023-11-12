@@ -36,3 +36,15 @@ async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback
 
     return result;
 }
+
+function humanizeTime(unix_timestamp) {	
+	const ts = moment(unix_timestamp);	
+	return ts.calendar({
+		sameDay: '[Today], LTS',
+		nextDay: '[Tomorrow], LTS',
+		nextWeek: 'dddd, LTS',
+		lastDay: '[Yesterday], LTS',
+		lastWeek: '[Last] dddd, LTS',
+		sameElse: 'll, LTS'
+	});
+}
