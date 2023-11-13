@@ -71,7 +71,7 @@
 	
 	rangeOptions=[]	
 	durationSeconds = ""
-	if displaySelect != ""									 
+	if displaySelect != ""		
 		rangeOptionsForOthers=[ 
 						 ["Last 6 hours", 21600, "6hr"],
 						 ["Last 24 hours", 86400, "1d"],
@@ -81,16 +81,18 @@
 						 ["Last 180 days", 15552000, "180d"],
 						 ["Last 365 days", 31536000, "365d"],
 					 ]		 
-					 			 
+			
+		# Add range options less than oldest time stamp
 		for rangeOption in rangeOptionsForOthers
 			if  rangeOption[1] <= oldestRecordTimeSpan
 				rangeOptions = rangeOptions | array.add rangeOption
-		 	else  
-				# add one more after the limit
-				rangeOptions = rangeOptions | array.add rangeOption
-				break
 			end
 		end	
+
+		# add max
+		maxRangeOption = ["Maximum", oldestRecordTimeSpan, "max"]
+		rangeOptions = rangeOptions | array.add maxRangeOption
+
 		
 		rangeOptionFound = false
 		for rangeOption in rangeOptions
