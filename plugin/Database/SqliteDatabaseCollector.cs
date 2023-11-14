@@ -125,6 +125,7 @@ namespace Hspi.Database
 
         public void Dispose()
         {
+            Log.Debug("Disposing Sqlite connection");
             getHistoryCommand?.Dispose();
             getEarliestAndOldestRecordCommand?.Dispose();
             getRecordHistoryCountCommand?.Dispose();
