@@ -137,7 +137,11 @@ namespace Hspi.Database
             getMaxValueCommand?.Dispose();
             getMinValueCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
-            sqliteConnection?.manual_close_v2();
+            if (SQLITE_OK != sqliteConnection?.manual_close_v2())
+            {
+                Log.Warning("Sqlite has open handles during close");
+            }
+
             sqliteConnection?.Dispose();
             maintainanceTimer?.Dispose();
             connectionMutex?.Dispose();
