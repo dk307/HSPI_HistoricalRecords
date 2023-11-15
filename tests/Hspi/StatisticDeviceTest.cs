@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
@@ -16,11 +15,6 @@ namespace HSPI_HistoricalRecordsTest
     [TestClass]
     public class StatisticsDeviceTest
     {
-        public StatisticsDeviceTest()
-        {
-            cancellationTokenSource.CancelAfter(30 * 1000);
-        }
-
         [DataTestMethod]
         [DataRow(StatisticsFunction.AverageStep)]
         [DataRow(StatisticsFunction.AverageLinear)]
@@ -166,10 +160,11 @@ namespace HSPI_HistoricalRecordsTest
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
-            int statsDeviceRefId = 1000;
+            int statsDeviceRefId = 100;
+            int statsFeatureRefId = 1000;
             int trackedDeviceRefId = 10;
             TestHelper.SetupStatisticsFeature(statisticsFunction, plugIn, hsControllerMock, aTime,
-                                             statsDeviceRefId, trackedDeviceRefId);
+                                             statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
@@ -182,7 +177,7 @@ namespace HSPI_HistoricalRecordsTest
                                            Constants.HSEvent.VALUE_CHANGE,
                                            trackedDeviceRefId, 20, "20", aTime.AddMinutes(-5), 2);
 
-            plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId);
+            Assert.IsTrue(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
 
             double ExpectedValue = 0;
             switch (statisticsFunction)
@@ -201,9 +196,9 @@ namespace HSPI_HistoricalRecordsTest
                     break;
             }
 
-            TestHelper.WaitTillExpectedValue(hsControllerMock, statsDeviceRefId, ExpectedValue);
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, ExpectedValue);
 
-            Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsDeviceRefId, EProperty.InvalidValue));
+            Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue));
         }
 
         [TestMethod]
@@ -215,11 +210,12 @@ namespace HSPI_HistoricalRecordsTest
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
-            int statsDeviceRefId = 1000;
+            int statsDeviceRefId = 100;
+            int statsFeatureRefId = 1000;
             int trackedDeviceRefId = 99;
 
             TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
-                                  statsDeviceRefId, trackedDeviceRefId);
+                                  statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
 
             List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
             hsControllerMock.SetupDevOrFeatureValue(trackedDeviceRefId, EProperty.StatusGraphics, statusGraphics);
@@ -234,9 +230,44 @@ namespace HSPI_HistoricalRecordsTest
 
             plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId);
 
-            TestHelper.WaitTillExpectedValue(hsControllerMock, statsDeviceRefId, 11.9D);
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, 11.9D);
 
-            Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsDeviceRefId, EProperty.InvalidValue));
+            Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue));
+        }
+
+        [DataTestMethod]
+        [DataRow(true)]
+        [DataRow(false)]
+        public void DevicePolled(bool device)
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            int statsDeviceRefId = 100;
+            int statsFeatureRefId = 1000;
+            int trackedDeviceRefId = 99;
+
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
+
+            List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
+            hsControllerMock.SetupDevOrFeatureValue(trackedDeviceRefId, EProperty.StatusGraphics, statusGraphics);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId, 1);
+
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedDeviceRefId, 11.85733, "11.2", aTime.AddMinutes(-10), 1);
+
+            Assert.AreEqual(EPollResponse.Ok, plugIn.Object.UpdateStatusNow(device ? statsDeviceRefId : statsFeatureRefId));
+
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, 11.9D);
+
+            Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue));
         }
 
         [DataTestMethod]
@@ -249,17 +280,18 @@ namespace HSPI_HistoricalRecordsTest
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
-            int statsDeviceRefId = 1000;
+            int statsDeviceRefId = 100;
+            int statsFeatureRefId = 1000;
             int trackedDeviceRefId = 100;
 
             TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
-                                  statsDeviceRefId, trackedDeviceRefId);
+                                  statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
             JObject editRequest = new()
             {
-                { "ref" , new JValue(statsDeviceRefId) },
+                { "ref" , new JValue(statsFeatureRefId) },
                 { "data" , new JObject() {
                     { "TrackedRef", new JValue(trackedDeviceRefId) },
                     { "StatisticsFunction", new JValue(function) },
@@ -277,11 +309,11 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsNull((string)result2["error"]);
 
             // get return function value for feature
-            string json = plugIn.Object.GetStatisticDeviceDataAsJson(statsDeviceRefId);
+            string json = plugIn.Object.GetStatisticDeviceDataAsJson(statsFeatureRefId);
             Assert.AreEqual(JsonConvert.DeserializeObject<StatisticsDeviceData>(editRequest["data"].ToString()),
                             JsonConvert.DeserializeObject<StatisticsDeviceData>(json));
 
-            var plugExtraData = (PlugExtraData)hsControllerMock.GetFeatureValue(statsDeviceRefId, EProperty.PlugExtraData);
+            var plugExtraData = (PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.PlugExtraData);
             Assert.AreEqual(1, plugExtraData.NamedKeys.Count);
             Assert.AreEqual(JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"]),
                             JsonConvert.DeserializeObject<StatisticsDeviceData>(json));
@@ -297,10 +329,11 @@ namespace HSPI_HistoricalRecordsTest
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
             int statsDeviceRefId = 1000;
+            int statsFeatureRefId = 1000;
             int trackedDeviceRefId = 100;
 
             TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
-                                  statsDeviceRefId, trackedDeviceRefId);
+                                  statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
@@ -308,7 +341,7 @@ namespace HSPI_HistoricalRecordsTest
             {
                 { "ref" , new JValue(trackedDeviceRefId) }, // wrong ref
                 { "data" , new JObject() {
-                    { "TrackedRef", new JValue(trackedDeviceRefId) },
+                    { "TrackedRef", new JValue(statsFeatureRefId) },
                     { "StatisticsFunction", new JValue(StatisticsFunction.AverageLinear) },
                     { "FunctionDurationSeconds", new JValue((long)new TimeSpan(5, 1, 10, 3).TotalSeconds) },
                     { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 5, 1, 30).TotalSeconds) },
@@ -333,17 +366,19 @@ namespace HSPI_HistoricalRecordsTest
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
-            int statsDeviceRefId = 1000;
+            int statsDeviceRefId = 1080;
+            int statsFeatureRefId = 1000;
             int trackedDeviceRefId = 100;
 
             TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
-                                  statsDeviceRefId, trackedDeviceRefId);
+                                  statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
             Assert.IsTrue(TestHelper.TimedWaitTillTrue(() => plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
 
             Assert.IsTrue(hsControllerMock.RemoveFeatureOrDevice(statsDeviceRefId));
+            Assert.IsTrue(hsControllerMock.RemoveFeatureOrDevice(statsFeatureRefId));
             plugIn.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE,
                                   new object[] { null, null, null, statsDeviceRefId, 2 });
 
@@ -351,8 +386,7 @@ namespace HSPI_HistoricalRecordsTest
 
             // not more tracking after delete
             Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+            Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
         }
-
-        private readonly CancellationTokenSource cancellationTokenSource = new();
     }
 }
