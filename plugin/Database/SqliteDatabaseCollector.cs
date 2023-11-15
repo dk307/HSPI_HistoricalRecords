@@ -18,18 +18,6 @@ namespace Hspi.Database
 {
     public sealed class SqliteDatabaseCollector : IDisposable
     {
-        static SqliteDatabaseCollector()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Batteries_V2.Init();
-            }
-            else
-            {
-                SetProvider(new SQLite3Provider_sqlite3());
-            }
-        }
-
         public SqliteDatabaseCollector(IDBSettings settings,
                                        ISystemClock systemClock,
                                        RecordDataProducerConsumerQueue queue,
