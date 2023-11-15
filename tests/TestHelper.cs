@@ -240,14 +240,20 @@ namespace HSPI_HistoricalRecordsTest
                                                   Mock<PlugIn> plugIn,
                                                   FakeHSController hsControllerMock,
                                                   DateTime aTime,
+                                                  int statsDeviceRefId,
                                                   int statsFeatureRefId,
                                                   int trackedFeatureRefId)
         {
             Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
 
+            hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
+
             hsControllerMock.SetupFeature(statsFeatureRefId, 12.132, featureInterface: PlugInData.PlugInId);
             hsControllerMock.SetupFeature(trackedFeatureRefId, 2);
+
+            hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.AssociatedDevices, new HashSet<int> { statsDeviceRefId });
+            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId });
 
             PlugExtraData plugExtraData = new();
             plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeatureRefId},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDurationSeconds\":600,\"RefreshIntervalSeconds\":30}}");

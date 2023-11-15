@@ -155,10 +155,7 @@ namespace Hspi
             statisticsDeviceUpdater = new StatisticsDeviceUpdater(hs, Collector, systemClock, hsFeatureCachedDataProvider, shutdownToken);
         }
 
-        private void StartTimer(object state)
-        {
-            TryStart();
-        }
+        private void StartTimer(object state) => TryStart();
 
         private void StopImpl()
         {

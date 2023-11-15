@@ -131,21 +131,21 @@ namespace Hspi.Device
             }
         }
 
-        public static void EditDevice(IHsController hsController, int refId, StatisticsDeviceData data)
+        public static void EditDevice(IHsController hsController, int featureRefId, StatisticsDeviceData data)
         {
             // check same interface and is a feature
-            var deviceInterface = (string)hsController.GetPropertyByRef(refId, EProperty.Interface);
-            var eRelationship = (ERelationship)hsController.GetPropertyByRef(refId, EProperty.Relationship);
+            var deviceInterface = (string)hsController.GetPropertyByRef(featureRefId, EProperty.Interface);
+            var eRelationship = (ERelationship)hsController.GetPropertyByRef(featureRefId, EProperty.Relationship);
             if (deviceInterface != PlugInData.PlugInId || eRelationship != ERelationship.Feature)
             {
-                throw new HsDeviceInvalidException(Invariant($"Device or feature {refId} not a plugin feature"));
+                throw new HsDeviceInvalidException(Invariant($"Device or feature {featureRefId} not a plugin feature"));
             }
 
             var plugExtraData = new PlugExtraData();
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
-            hsController.UpdatePropertyByRef(refId, EProperty.PlugExtraData, plugExtraData);
+            hsController.UpdatePropertyByRef(featureRefId, EProperty.PlugExtraData, plugExtraData);
 
-            Log.Information("Updated device {refId} with {data}", refId, data);
+            Log.Information("Updated device {refId} with {data}", featureRefId, data);
         }
 
         public static string GetDataFromFeatureAsJson(IHsController hs, int refId) => GetPlugExtraDataString(hs, refId, DataKey);

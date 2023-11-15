@@ -255,10 +255,7 @@ namespace HSPI_HistoricalRecordsTest
 
             hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
             TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
-                                             statsFeatureRefId, trackedDeviceRefId);
-
-            hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.AssociatedDevices, new HashSet<int> { statsDeviceRefId });
-            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId });
+                                             statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
