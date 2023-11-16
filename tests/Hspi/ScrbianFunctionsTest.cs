@@ -8,13 +8,14 @@ using Hspi;
 using Hspi.Device;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace HSPI_HistoricalRecordsTest
 {
     [TestClass]
     public class ScrbianFunctionsTest
     {
+
+
         [TestMethod]
         public void GetAllDevicesProperties()
         {
@@ -265,6 +266,28 @@ namespace HSPI_HistoricalRecordsTest
             string json = plugIn.Object.GetStatisticDeviceDataAsJson(isDevice ? statsDeviceRefId : statsFeatureRefId);
             Assert.AreEqual(JsonConvert.DeserializeObject<StatisticsDeviceData>(data),
                             JsonConvert.DeserializeObject<StatisticsDeviceData>(json));
+        }
+
+        [TestMethod]
+        public void GetTrackedDeviceList()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
+
+            List<int> hsFeatures = new();
+
+            for (int i = 0; i < 15; i++)
+            {
+                mockHsController.SetupFeature(1307 + i, 1.1, displayString: "1.1", lastChange: nowTime);
+                hsFeatures.Add(1307 + i);
+            }
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            var stats = plugin.Object.GetTrackedDeviceList();
+
+            CollectionAssert.AreEqual(hsFeatures, stats);
         }
     }
 }
