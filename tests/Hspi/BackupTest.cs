@@ -77,7 +77,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugin = TestHelper.CreatePlugInMock();
             var hsMockController = TestHelper.SetupHsControllerAndSettings2(plugin);
 
-            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);                           
 
             plugin.Object.HsEvent(BackUpEvent, new object[] { 512, 1 });
 

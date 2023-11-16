@@ -37,15 +37,31 @@ namespace Hspi.Device
             }
         }
 
-        public bool HasRefId(int refId)
+        public string GetDataFromFeatureAsJson(int devOrFeatRefId)
         {
-            return deviceAndFeatures.ContainsKey(refId) ||
-                   deviceAndFeatures.Values.SelectMany(x => x).Any(x => x.RefId == refId);
+            if (deviceAndFeatures.TryGetValue(devOrFeatRefId, out var childDevices))
+            {
+                // find child
+                return childDevices.Count == 1
+                    ? childDevices[0].GetDataFromFeatureAsJson()
+                    : throw new HsDeviceInvalidException($"{devOrFeatRefId} has invalid number of features({childDevices.Count})");
+            }
+
+            var feature = deviceAndFeatures.Values.SelectMany(x => x).FirstOrDefault(x => x.RefId == devOrFeatRefId);
+            return feature != null
+                ? feature.GetDataFromFeatureAsJson()
+                : throw new HsDeviceInvalidException($"{devOrFeatRefId} is not a plugin device or feature)");
         }
 
-        public bool UpdateData(int refId)
+        public bool HasRefId(int devOrFeatRefId)
         {
-            if (deviceAndFeatures.TryGetValue(refId, out var childDevices))
+            return deviceAndFeatures.ContainsKey(devOrFeatRefId) ||
+                   deviceAndFeatures.Values.SelectMany(x => x).Any(x => x.RefId == devOrFeatRefId);
+        }
+
+        public bool UpdateData(int devOrFeatRefId)
+        {
+            if (deviceAndFeatures.TryGetValue(devOrFeatRefId, out var childDevices))
             {
                 foreach (var entry in childDevices)
                 {
@@ -54,7 +70,7 @@ namespace Hspi.Device
                 return true;
             }
 
-            var feature = deviceAndFeatures.Values.SelectMany(x => x).FirstOrDefault(x => x.RefId == refId);
+            var feature = deviceAndFeatures.Values.SelectMany(x => x).FirstOrDefault(x => x.RefId == devOrFeatRefId);
             if (feature != null)
             {
                 feature.UpdateNow();
