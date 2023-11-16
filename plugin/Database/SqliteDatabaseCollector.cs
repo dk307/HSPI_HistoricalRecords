@@ -18,18 +18,6 @@ namespace Hspi.Database
 {
     public sealed class SqliteDatabaseCollector : IDisposable
     {
-        static SqliteDatabaseCollector()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Batteries_V2.Init();
-            }
-            else
-            {
-                SetProvider(new SQLite3Provider_sqlite3());
-            }
-        }
-
         public SqliteDatabaseCollector(IDBSettings settings,
                                        ISystemClock systemClock,
                                        RecordDataProducerConsumerQueue queue,
@@ -125,6 +113,7 @@ namespace Hspi.Database
 
         public void Dispose()
         {
+            Log.Debug("Disposing Sqlite connection");
             getHistoryCommand?.Dispose();
             getEarliestAndOldestRecordCommand?.Dispose();
             getRecordHistoryCountCommand?.Dispose();
@@ -136,7 +125,11 @@ namespace Hspi.Database
             getMaxValueCommand?.Dispose();
             getMinValueCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
-            sqliteConnection?.manual_close_v2();
+            if (SQLITE_OK != sqliteConnection?.manual_close_v2())
+            {
+                Log.Warning("Sqlite has open handles during close");
+            }
+
             sqliteConnection?.Dispose();
             maintainanceTimer?.Dispose();
             connectionMutex?.Dispose();

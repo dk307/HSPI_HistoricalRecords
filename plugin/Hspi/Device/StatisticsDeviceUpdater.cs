@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi.Database;
 using Hspi.Utils;
 using Serilog;
@@ -26,55 +26,66 @@ namespace Hspi.Device
             this.systemClock = systemClock;
             this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
             this.cancellationToken = cancellationToken;
-
-            var (list, dict) = GetCurrentDevices();
-            this.allRefIds = list.ToImmutableList();
-            this.devices = dict.ToImmutableDictionary();
+            this.deviceAndFeatures = GetCurrentDevices();
         }
 
         public void Dispose()
         {
-            foreach (var device in devices)
+            foreach (var device in deviceAndFeatures.Values.SelectMany(x => x))
             {
-                device.Value.Dispose();
+                device.Dispose();
             }
         }
 
         public bool HasRefId(int refId)
         {
-            return allRefIds.Contains(refId);
+            return deviceAndFeatures.ContainsKey(refId) ||
+                   deviceAndFeatures.Values.SelectMany(x => x).Any(x => x.RefId == refId);
         }
 
         public bool UpdateData(int refId)
         {
-            if (devices.TryGetValue(refId, out var data))
+            if (deviceAndFeatures.TryGetValue(refId, out var childDevices))
             {
-                data.UpdateNow();
+                foreach (var entry in childDevices)
+                {
+                    entry.UpdateNow();
+                }
+                return true;
+            }
+
+            var feature = deviceAndFeatures.Values.SelectMany(x => x).FirstOrDefault(x => x.RefId == refId);
+            if (feature != null)
+            {
+                feature.UpdateNow();
                 return true;
             }
 
             return false;
         }
 
-        private (List<int>, Dictionary<int, StatisticsDevice>) GetCurrentDevices()
+        private ImmutableDictionary<int, ImmutableList<StatisticsDevice>> GetCurrentDevices()
         {
-            var refIds = HS.GetRefsByInterface(PlugInData.PlugInId);
+            var refDeviceIds = HS.GetRefsByInterface(PlugInData.PlugInId, true);
 
-            var currentChildDevices = new Dictionary<int, StatisticsDevice>();
+            var result = new Dictionary<int, ImmutableList<StatisticsDevice>>();
 
-            foreach (var refId in refIds)
+            foreach (var refId in refDeviceIds)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    ERelationship relationship = (ERelationship)HS.GetPropertyByRef(refId, EProperty.Relationship);
+                    var childDevices = new List<StatisticsDevice>();
+                    var features = (HashSet<int>)HS.GetPropertyByRef(refId, EProperty.AssociatedDevices);
 
                     //data is stored in feature(child)
-                    if (relationship == ERelationship.Feature)
+                    foreach (var featureRefId in features)
                     {
-                        var importDevice = new StatisticsDevice(HS, collector, refId, systemClock, hsFeatureCachedDataProvider, cancellationToken);
-                        currentChildDevices.Add(refId, importDevice);
+                        var importDevice = new StatisticsDevice(HS, collector, featureRefId, systemClock, hsFeatureCachedDataProvider, cancellationToken);
+                        childDevices.Add(importDevice);
                     }
+
+                    result.Add(refId, childDevices.ToImmutableList());
                 }
                 catch (Exception ex)
                 {
@@ -82,13 +93,12 @@ namespace Hspi.Device
                 }
             }
 
-            return (refIds, currentChildDevices);
+            return result.ToImmutableDictionary();
         }
 
-        private readonly ImmutableList<int> allRefIds;
         private readonly CancellationToken cancellationToken;
         private readonly SqliteDatabaseCollector collector;
-        private readonly ImmutableDictionary<int, StatisticsDevice> devices;
+        private readonly ImmutableDictionary<int, ImmutableList<StatisticsDevice>> deviceAndFeatures;
         private readonly IHsController HS;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
         private readonly ISystemClock systemClock;

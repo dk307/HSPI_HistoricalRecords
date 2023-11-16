@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
@@ -6,6 +7,7 @@ using Hspi.Device;
 using Hspi.Utils;
 using Nito.Disposables;
 using Serilog;
+using SQLitePCL;
 
 #nullable enable
 
@@ -13,6 +15,18 @@ namespace Hspi
 {
     public sealed class SqliteManager : IDisposable
     {
+        static SqliteManager()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Batteries_V2.Init();
+            }
+            else
+            {
+                SQLitePCL.raw.SetProvider(new SQLite3Provider_sqlite3());
+            }
+        }
+
         public SqliteManager(IHsController hs,
                              RecordDataProducerConsumerQueue queue,
                              IDBSettings settings,
@@ -155,10 +169,7 @@ namespace Hspi
             statisticsDeviceUpdater = new StatisticsDeviceUpdater(hs, Collector, systemClock, hsFeatureCachedDataProvider, shutdownToken);
         }
 
-        private void StartTimer(object state)
-        {
-            TryStart();
-        }
+        private void StartTimer(object state) => TryStart();
 
         private void StopImpl()
         {

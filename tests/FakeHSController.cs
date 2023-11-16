@@ -568,7 +568,7 @@ namespace HSPI_HistoricalRecordsTest
                 {
                     if (deviceOnly && x.Value.TryGetValue(EProperty.Relationship, out var rel))
                     {
-                        return (ERelationship)rel == ERelationship.Feature;
+                        return (ERelationship)rel == ERelationship.Device;
                     }
 
                     return true;

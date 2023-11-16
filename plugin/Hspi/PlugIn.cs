@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
+using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
 using Hspi.Utils;
@@ -116,7 +117,20 @@ namespace Hspi
             }
         }
 
-        public void PruneDatabase() => Collector.DoMaintainance();
+        public override EPollResponse UpdateStatusNow(int devOrFeatRef)
+        {
+            try
+            {
+                return this.UpdateStatisticsFeature(devOrFeatRef) ? EPollResponse.Ok : EPollResponse.NotFound;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Failed to update statistics device {deviceOrFeature} with {error}", devOrFeatRef, ex.GetFullMessage());
+                return EPollResponse.UnknownError;
+            }
+        }
+
+        internal void PruneDatabase() => Collector.DoMaintainance();
 
         protected override void BeforeReturnStatus()
         {
