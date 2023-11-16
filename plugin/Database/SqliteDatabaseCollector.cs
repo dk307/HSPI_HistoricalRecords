@@ -230,20 +230,6 @@ namespace Hspi.Database
                         DateTimeOffset.FromUnixTimeSeconds(stmt.column<long>(1)));
         }
 
-        /// <summary>
-        /// Returns the values between the range and one above and below the range.  Order is time stamp ascending.
-        /// </summary>
-        /// <param name="refId"></param>
-        /// <param name="minUnixTimeSeconds"></param>
-        /// <param name="maxUnixTimeSeconds"></param>
-        /// <returns></returns>
-        public IList<TimeAndValue> GetGraphValues(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
-        {
-            List<TimeAndValue> records = new();
-            IterateGraphValues(refId, minUnixTimeSeconds, maxUnixTimeSeconds, (x) => records.AddRange(x));
-            return records;
-        }
-
         public double? GetMaxValue(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
             return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMaxValueCommand);
