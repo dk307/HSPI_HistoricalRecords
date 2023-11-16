@@ -148,14 +148,16 @@ namespace Hspi.Device
             Log.Information("Updated device {refId} with {data}", featureRefId, data);
         }
 
-        public static string GetDataFromFeatureAsJson(IHsController hs, int refId) => GetPlugExtraDataString(hs, refId, DataKey);
-
         public void Dispose()
         {
             timer?.Dispose();
             combinedToken.Cancel();
         }
 
+        public string GetDataFromFeatureAsJson()
+        {
+            return GetPlugExtraDataString(HS, RefId, DataKey);
+        }
         public void UpdateNow() => timer.Change(0, RefreshInterval);
 
         private static T GetPlugExtraData<T>(IHsController hsController,

@@ -82,14 +82,17 @@ namespace Hspi
 
         public void OnDeviceDeletedInHS(int refId)
         {
-            // currently these events are only for devices not features
-            if ((statisticsDeviceUpdater?.HasRefId(refId) ?? false))
+            if (statisticsDeviceUpdater != null)
             {
-                RestartStatisticsDeviceUpdate();
-            }
-            else
-            {
-                Collector.DeleteAllRecordsForRef(refId);
+                // currently these events are only for devices not features
+                if (statisticsDeviceUpdater.HasRefId(refId))
+                {
+                    RestartStatisticsDeviceUpdate();
+                }
+                else
+                {
+                    Collector.DeleteAllRecordsForRef(refId);
+                }
             }
         }
 
@@ -178,6 +181,12 @@ namespace Hspi
             collector?.Dispose();
             statisticsDeviceUpdater = null;
             collector = null;
+        }
+
+        public string GetStatisticDeviceDataAsJson(int refId)
+        {
+            return statisticsDeviceUpdater?.GetDataFromFeatureAsJson(refId) ??
+                    throw new HsDeviceInvalidException($"Not initialized");
         }
 
         private readonly IHsController hs;

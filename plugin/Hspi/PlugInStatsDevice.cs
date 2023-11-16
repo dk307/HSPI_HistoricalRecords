@@ -21,21 +21,7 @@ namespace Hspi
             var refId = Hspi.Utils.TypeConverter.TryGetFromObject<int>(refIdString)
                 ?? throw new ArgumentException(null, nameof(refIdString));
 
-            if (HomeSeerSystem.IsRefDevice(refId))
-            {
-                // find child
-                var children = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
-                if (children.Count == 1)
-                {
-                    refId = children.First();
-                }
-                else
-                {
-                    throw new HsDeviceInvalidException($"{refId} has invalid number of features({children.Count})");
-                }
-            }
-
-            return StatisticsDevice.GetDataFromFeatureAsJson(HomeSeerSystem, refId);
+            return sqliteManager?.GetStatisticDeviceDataAsJson(refId);
         }
 
         public List<int> GetTrackedDeviceList() => HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();

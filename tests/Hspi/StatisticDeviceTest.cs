@@ -282,7 +282,7 @@ namespace HSPI_HistoricalRecordsTest
 
             int statsDeviceRefId = 100;
             int statsFeatureRefId = 1000;
-            int trackedDeviceRefId = 100;
+            int trackedDeviceRefId = 10;
 
             TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
                                   statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
@@ -328,7 +328,7 @@ namespace HSPI_HistoricalRecordsTest
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
-            int statsDeviceRefId = 1000;
+            int statsDeviceRefId = 199;
             int statsFeatureRefId = 1000;
             int trackedDeviceRefId = 100;
 
