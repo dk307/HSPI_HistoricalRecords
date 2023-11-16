@@ -205,9 +205,6 @@
     <PackageReference Include="SQLitePCLRaw.core">
       <Version>2.1.6</Version>
     </PackageReference>
-    <PackageReference Include="SQLitePCLRaw.provider.e_sqlite3">
-      <Version>2.1.6</Version>
-    </PackageReference>
     <PackageReference Include="SQLitePCLRaw.provider.sqlite3">
       <Version>2.1.6</Version>
     </PackageReference>
