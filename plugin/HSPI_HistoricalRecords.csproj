@@ -141,6 +141,12 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="Properties\app.manifest" />
+    <None Include="runtimes\linux-arm\native\libe_sqlite3.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\linux-x64\native\libe_sqlite3.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
@@ -260,6 +266,8 @@
     <Copy SourceFiles="@(DllFilePaths)" DestinationFolder="$(ShippedDllsDirectory)" />
     <Copy SourceFiles="$(OutputPath)\runtimes\win-x64\native\e_sqlite3.dll" DestinationFiles="$(ShippedDllsDirectory)\runtimes\win-x64\native\e_sqlite3.dll" />
     <Copy SourceFiles="$(OutputPath)\runtimes\win-x86\native\e_sqlite3.dll" DestinationFiles="$(ShippedDllsDirectory)\runtimes\win-x86\native\e_sqlite3.dll" />
+    <Copy SourceFiles="$(OutputPath)\runtimes\linux-arm\native\libe_sqlite3.so" DestinationFiles="$(ShippedDllsDirectory)\runtimes\linux-arm\native\libe_sqlite3.so" />
+    <Copy SourceFiles="$(OutputPath)\runtimes\linux-x64\native\libe_sqlite3.so" DestinationFiles="$(ShippedDllsDirectory)\runtimes\linux-x64\native\libe_sqlite3.so" />
     <ZipDirectory SourceDirectory="$(ShippedDllsDirectory)" DestinationFile="$(OutputPath)\dlls.zip" Overwrite="true" />
   </Target>
   <Target Name="ZipHtmlFiles" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
