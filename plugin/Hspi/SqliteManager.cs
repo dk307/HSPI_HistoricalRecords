@@ -23,7 +23,7 @@ namespace Hspi
             }
             catch (Exception ex)
             {
-                Log.Debug("Using bundled sqlite failed with {error}", ex.GetFullMessage());
+                Log.Debug("Using bundled sqlite failed with {error}", ex.Message);
                 SQLitePCL.raw.SetProvider(new SQLite3Provider_sqlite3());
                 Log.Information("Using system sqlite");
             }
