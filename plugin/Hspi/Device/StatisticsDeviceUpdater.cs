@@ -21,17 +21,15 @@ namespace Hspi.Device
                                        HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
                                        CancellationToken cancellationToken)
         {
-            this.HS = hs;
-            this.collector = collector;
-            this.systemClock = systemClock;
-            this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
             this.cancellationToken = cancellationToken;
-            this.deviceAndFeatures = GetCurrentDevices();
+            this.deviceAndFeatures = GetCurrentDevices(hs, collector, systemClock, hsFeatureCachedDataProvider);
         }
+
+        private IEnumerable<StatisticsDevice> AllStatisticsFeatures => deviceAndFeatures.Values.SelectMany(x => x);
 
         public void Dispose()
         {
-            foreach (var device in deviceAndFeatures.Values.SelectMany(x => x))
+            foreach (var device in AllStatisticsFeatures)
             {
                 device.Dispose();
             }
@@ -43,20 +41,20 @@ namespace Hspi.Device
             {
                 // find child
                 return childDevices.Count == 1
-                    ? childDevices[0].GetDataFromFeatureAsJson()
+                    ? childDevices[0].DataFromFeatureAsJson
                     : throw new HsDeviceInvalidException($"{devOrFeatRefId} has invalid number of features({childDevices.Count})");
             }
 
-            var feature = deviceAndFeatures.Values.SelectMany(x => x).FirstOrDefault(x => x.RefId == devOrFeatRefId);
+            var feature = AllStatisticsFeatures.FirstOrDefault(x => x.FeatureRefId == devOrFeatRefId);
             return feature != null
-                ? feature.GetDataFromFeatureAsJson()
+                ? feature.DataFromFeatureAsJson
                 : throw new HsDeviceInvalidException($"{devOrFeatRefId} is not a plugin device or feature)");
         }
 
         public bool HasRefId(int devOrFeatRefId)
         {
             return deviceAndFeatures.ContainsKey(devOrFeatRefId) ||
-                   deviceAndFeatures.Values.SelectMany(x => x).Any(x => x.RefId == devOrFeatRefId);
+                   AllStatisticsFeatures.Any(x => x.FeatureRefId == devOrFeatRefId);
         }
 
         public bool UpdateData(int devOrFeatRefId)
@@ -70,7 +68,7 @@ namespace Hspi.Device
                 return true;
             }
 
-            var feature = deviceAndFeatures.Values.SelectMany(x => x).FirstOrDefault(x => x.RefId == devOrFeatRefId);
+            var feature = AllStatisticsFeatures.FirstOrDefault(x => x.FeatureRefId == devOrFeatRefId);
             if (feature != null)
             {
                 feature.UpdateNow();
@@ -80,9 +78,12 @@ namespace Hspi.Device
             return false;
         }
 
-        private ImmutableDictionary<int, ImmutableList<StatisticsDevice>> GetCurrentDevices()
+        private ImmutableDictionary<int, ImmutableList<StatisticsDevice>> GetCurrentDevices(
+            IHsController hs, SqliteDatabaseCollector collector,
+                                       ISystemClock systemClock,
+                                       HsFeatureCachedDataProvider hsFeatureCachedDataProvider)
         {
-            var refDeviceIds = HS.GetRefsByInterface(PlugInData.PlugInId, true);
+            var refDeviceIds = hs.GetRefsByInterface(PlugInData.PlugInId, true);
 
             var result = new Dictionary<int, ImmutableList<StatisticsDevice>>();
 
@@ -92,12 +93,12 @@ namespace Hspi.Device
                 try
                 {
                     var childDevices = new List<StatisticsDevice>();
-                    var features = (HashSet<int>)HS.GetPropertyByRef(refId, EProperty.AssociatedDevices);
+                    var features = (HashSet<int>)hs.GetPropertyByRef(refId, EProperty.AssociatedDevices);
 
                     //data is stored in feature(child)
                     foreach (var featureRefId in features)
                     {
-                        var importDevice = new StatisticsDevice(HS, collector, featureRefId, systemClock, hsFeatureCachedDataProvider, cancellationToken);
+                        var importDevice = new StatisticsDevice(hs, collector, featureRefId, systemClock, hsFeatureCachedDataProvider, cancellationToken);
                         childDevices.Add(importDevice);
                     }
 
@@ -113,10 +114,6 @@ namespace Hspi.Device
         }
 
         private readonly CancellationToken cancellationToken;
-        private readonly SqliteDatabaseCollector collector;
         private readonly ImmutableDictionary<int, ImmutableList<StatisticsDevice>> deviceAndFeatures;
-        private readonly IHsController HS;
-        private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
-        private readonly ISystemClock systemClock;
     }
 }

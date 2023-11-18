@@ -10,7 +10,6 @@ Serilog.Sinks.File.dll
 SQLitePCLRaw.batteries_v2.dll
 SQLitePCLRaw.core.dll
 SQLitePCLRaw.provider.dynamic_cdecl.dll
-SQLitePCLRaw.provider.e_sqlite3.dll
 SQLitePCLRaw.provider.sqlite3.dll
 SQLitePCLRaw.ugly.dll
 System.AppContext.dll

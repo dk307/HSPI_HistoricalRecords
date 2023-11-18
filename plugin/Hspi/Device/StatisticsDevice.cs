@@ -21,36 +21,36 @@ namespace Hspi.Device
     {
         public StatisticsDevice(IHsController hs,
                                 SqliteDatabaseCollector collector,
-                                int refId,
+                                int featureRefId,
                                 ISystemClock systemClock,
                                 HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
                                 CancellationToken cancellationToken)
         {
             this.HS = hs;
             this.collector = collector;
-            this.RefId = refId;
+            this.FeatureRefId = featureRefId;
             this.systemClock = systemClock;
             this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
-            this.combinedToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            this.deviceData = GetPlugExtraData<StatisticsDeviceData>(hs, refId, DataKey);
+            this.featureData = GetPlugExtraData<StatisticsDeviceData>(hs, featureRefId, DataKey);
             timer = new Timer(UpdateDeviceValueFromDatabase, null, 0, RefreshInterval);
 
-            combinedToken.Token.Register(() =>
+            cancellationToken.Register(() =>
             {
                 timer?.Dispose();
             });
         }
 
-        public int RefId { get; }
+        public string DataFromFeatureAsJson => GetPlugExtraDataString(HS, FeatureRefId, DataKey);
+        public int FeatureRefId { get; }
 
-        private string NameForLog => HsHelper.GetNameForLog(HS, RefId);
+        private string NameForLog => HsHelper.GetNameForLog(HS, FeatureRefId);
 
         private int RefreshInterval
         {
             get
             {
-                var refreshInterval = Math.Max(deviceData.RefreshIntervalSeconds * 1000, 1000);
+                var refreshInterval = Math.Max(featureData.RefreshIntervalSeconds * 1000, 1000);
                 var refreshInterval2 = (int)Math.Min(refreshInterval, int.MaxValue);
                 return refreshInterval2;
             }
@@ -151,13 +151,8 @@ namespace Hspi.Device
         public void Dispose()
         {
             timer?.Dispose();
-            combinedToken.Cancel();
         }
 
-        public string GetDataFromFeatureAsJson()
-        {
-            return GetPlugExtraDataString(HS, RefId, DataKey);
-        }
         public void UpdateNow() => timer.Change(0, RefreshInterval);
 
         private static T GetPlugExtraData<T>(IHsController hsController,
@@ -197,25 +192,25 @@ namespace Hspi.Device
         {
             if (Log.IsEnabled(LogEventLevel.Information))
             {
-                var existingValue = Convert.ToDouble(HS.GetPropertyByRef(RefId, EProperty.Value));
+                var existingValue = Convert.ToDouble(HS.GetPropertyByRef(FeatureRefId, EProperty.Value));
 
                 Log.Write(existingValue != data ? LogEventLevel.Information : LogEventLevel.Debug,
                           "Updated value {value} for the {name}", data, NameForLog);
             }
 
-            HS.UpdatePropertyByRef(RefId, EProperty.InvalidValue, false);
+            HS.UpdatePropertyByRef(FeatureRefId, EProperty.InvalidValue, false);
 
             if (data.HasValue && HasValue(data.Value))
             {
                 // only this call triggers events
-                if (!HS.UpdateFeatureValueByRef(RefId, data.Value))
+                if (!HS.UpdateFeatureValueByRef(FeatureRefId, data.Value))
                 {
                     throw new InvalidOperationException($"Failed to update device {NameForLog}");
                 }
             }
             else
             {
-                HS.UpdatePropertyByRef(RefId, EProperty.InvalidValue, true);
+                HS.UpdatePropertyByRef(FeatureRefId, EProperty.InvalidValue, true);
             }
 
             static bool HasValue(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
@@ -226,28 +221,28 @@ namespace Hspi.Device
             try
             {
                 var max = systemClock.Now.ToUnixTimeSeconds();
-                var min = max - this.deviceData.FunctionDurationSeconds;
+                var min = max - this.featureData.FunctionDurationSeconds;
 
                 if (min < 0)
                 {
                     throw new ArgumentException("Duration too long");
                 }
 
-                var result = this.deviceData.StatisticsFunction switch
+                var result = this.featureData.StatisticsFunction switch
                 {
                     StatisticsFunction.AverageStep or StatisticsFunction.AverageLinear => TimeAndValueQueryHelper.Average(collector,
-                                                                                     deviceData.TrackedRef,
+                                                                                     featureData.TrackedRef,
                                                                                      min,
                                                                                      max,
-                                                                                     this.deviceData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
-                    StatisticsFunction.MinValue => collector.GetMinValue(deviceData.TrackedRef, min, max),
-                    StatisticsFunction.MaxValue => collector.GetMaxValue(deviceData.TrackedRef, min, max),
+                                                                                     this.featureData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
+                    StatisticsFunction.MinValue => collector.GetMinValue(featureData.TrackedRef, min, max),
+                    StatisticsFunction.MaxValue => collector.GetMaxValue(featureData.TrackedRef, min, max),
                     _ => throw new NotImplementedException(),
                 };
 
                 if (result.HasValue)
                 {
-                    var precision = hsFeatureCachedDataProvider.GetPrecision(deviceData.TrackedRef);
+                    var precision = hsFeatureCachedDataProvider.GetPrecision(featureData.TrackedRef);
                     result = Math.Round(result.Value, precision);
                 }
 
@@ -264,10 +259,7 @@ namespace Hspi.Device
 
         private const string DataKey = "data";
         private readonly SqliteDatabaseCollector collector;
-#pragma warning disable CA2213 // Disposable fields should be disposed
-        private readonly CancellationTokenSource combinedToken;
-#pragma warning restore CA2213 // Disposable fields should be disposed
-        private readonly StatisticsDeviceData deviceData;
+        private readonly StatisticsDeviceData featureData;
         private readonly IHsController HS;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
         private readonly ISystemClock systemClock;

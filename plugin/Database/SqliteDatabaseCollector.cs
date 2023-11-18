@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Hspi.Utils;
 using Humanizer;
@@ -125,11 +124,10 @@ namespace Hspi.Database
             getMaxValueCommand?.Dispose();
             getMinValueCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
-            if (SQLITE_OK != sqliteConnection?.manual_close_v2())
+            if (sqliteConnection != null && SQLITE_OK != sqliteConnection.manual_close_v2())
             {
                 Log.Warning("Sqlite has open handles during close");
             }
-
             sqliteConnection?.Dispose();
             maintainanceTimer?.Dispose();
             connectionMutex?.Dispose();

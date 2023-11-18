@@ -119,7 +119,7 @@ namespace Hspi
             using var unLock = Disposable.Create(() => startStopMutex.Release());
             started = false;
             StopImpl();
-            startTimer = new Timer(StartTimer, null, restartTimer, Timeout.Infinite);
+            startTimer = new Timer(StartDBCallback, null, restartTimer, Timeout.Infinite);
         }
 
         public bool TryStart()
@@ -172,7 +172,7 @@ namespace Hspi
             statisticsDeviceUpdater = new StatisticsDeviceUpdater(hs, Collector, systemClock, hsFeatureCachedDataProvider, shutdownToken);
         }
 
-        private void StartTimer(object state) => TryStart();
+        private void StartDBCallback(object state) => TryStart();
 
         private void StopImpl()
         {
