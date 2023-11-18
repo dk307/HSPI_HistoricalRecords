@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
@@ -16,16 +17,13 @@ namespace Hspi
     {
         static SqliteManager()
         {
-            try
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Batteries_V2.Init();
-                Log.Information("Using bundled sqlite");
             }
-            catch (Exception ex)
+            else
             {
-                Log.Debug("Using bundled sqlite failed with {error}", ex.Message);
                 SQLitePCL.raw.SetProvider(new SQLite3Provider_sqlite3());
-                Log.Information("Using system sqlite");
             }
         }
 
