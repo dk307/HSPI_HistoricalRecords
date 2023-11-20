@@ -65,6 +65,7 @@ namespace Hspi.Device
                 {
                     entry.UpdateNow();
                 }
+
                 return true;
             }
 

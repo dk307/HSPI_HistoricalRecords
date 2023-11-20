@@ -14,8 +14,6 @@ namespace HSPI_HistoricalRecordsTest
     [TestClass]
     public class ScrbianFunctionsTest
     {
-
-
         [TestMethod]
         public void GetAllDevicesProperties()
         {
