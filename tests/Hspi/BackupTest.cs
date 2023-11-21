@@ -91,7 +91,7 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.SetupHsControllerAndSettings2(plugin);
             var mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugin);
             mockClock.Setup(x => x.IntervalToRetrySqliteCollection).Returns(TimeSpan.FromMilliseconds(5));
-            mockClock.Setup(x => x.TimoutForBackup).Returns(TimeSpan.FromMilliseconds(5));
+            mockClock.Setup(x => x.TimeoutForBackup).Returns(TimeSpan.FromMilliseconds(5));
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 

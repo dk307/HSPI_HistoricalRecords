@@ -108,7 +108,8 @@ namespace HSPI_HistoricalRecordsTest
             var mockClock = new Mock<IGlobalTimerAndClock>(MockBehavior.Strict);
             plugIn.Protected().Setup<IGlobalTimerAndClock>("CreateClock").Returns(mockClock.Object);
             mockClock.Setup(x => x.IntervalToRetrySqliteCollection).Returns(TimeSpan.FromSeconds(600));
-            mockClock.Setup(x => x.TimoutForBackup).Returns(TimeSpan.FromSeconds(600));
+            mockClock.Setup(x => x.TimeoutForBackup).Returns(TimeSpan.FromSeconds(600));
+            mockClock.Setup(x => x.MaintenanceInterval).Returns(TimeSpan.FromSeconds(600));
             return mockClock;
         }
 

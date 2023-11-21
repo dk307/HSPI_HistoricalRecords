@@ -18,12 +18,12 @@ namespace Hspi.Database
     public sealed class SqliteDatabaseCollector : IDisposable
     {
         public SqliteDatabaseCollector(IDBSettings settings,
-                                       IGlobalTimerAndClock systemClock,
+                                       IGlobalTimerAndClock globalTimerAndClock,
                                        RecordDataProducerConsumerQueue queue,
                                        CancellationToken shutdownToken)
         {
             this.settings = settings;
-            this.systemClock = systemClock;
+            this.globalTimerAndClock = globalTimerAndClock;
             this.queue = queue;
             this.shutdownToken = shutdownToken;
             CreateDBDirectory(settings.DBPath);
@@ -52,7 +52,7 @@ namespace Hspi.Database
             var recordUpdateThread = new Thread(UpdateRecords);
             recordUpdateThread.Start();
 
-            maintainanceTimer = new Timer(Maintenance, null, 0, 60 * 60 * 1000);
+            maintainanceTimer = new Timer(Maintenance, null, 0, (int)globalTimerAndClock.MaintenanceInterval.TotalMilliseconds);
 
             static void CreateDBDirectory(string dbPath)
             {
@@ -452,7 +452,7 @@ namespace Hspi.Database
                 allRefOldestRecordsCommand.reset();
 
                 long deletedCount = 0;
-                DateTimeOffset now = systemClock.Now;
+                DateTimeOffset now = globalTimerAndClock.Now;
                 while ((ugly.step(allRefOldestRecordsCommand) != SQLITE_DONE) &&
                        !shutdownToken.IsCancellationRequested)
                 {
@@ -623,6 +623,6 @@ namespace Hspi.Database
         private readonly IDBSettings settings;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;
-        private readonly IGlobalTimerAndClock systemClock;
+        private readonly IGlobalTimerAndClock globalTimerAndClock;
     }
 }

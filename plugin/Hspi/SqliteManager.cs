@@ -129,7 +129,7 @@ namespace Hspi
             StopTimerWithWait();
             StopNow();
             startTimer = new Timer((_) => StartDatabase(), null,
-                                   (int)globalTimerAndClock.TimoutForBackup.TotalMilliseconds, startDatabaseTimerInterval);
+                                   (int)globalTimerAndClock.TimeoutForBackup.TotalMilliseconds, startDatabaseTimerInterval);
 
             void StopNow()
             {

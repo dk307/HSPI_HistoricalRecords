@@ -10,7 +10,9 @@ namespace Hspi
 
         TimeSpan IntervalToRetrySqliteCollection { get; }
 
-        TimeSpan TimoutForBackup { get; }
+        TimeSpan TimeoutForBackup { get; }
+
+        TimeSpan MaintenanceInterval { get; }
     };
 
     public class GlobalTimerAndClock : IGlobalTimerAndClock
@@ -19,6 +21,8 @@ namespace Hspi
 
         public TimeSpan IntervalToRetrySqliteCollection => TimeSpan.FromSeconds(15);
 
-        public TimeSpan TimoutForBackup => TimeSpan.FromSeconds(240);
+        public TimeSpan TimeoutForBackup => TimeSpan.FromSeconds(240);
+
+        public TimeSpan MaintenanceInterval => TimeSpan.FromHours(1);
     }
 }
