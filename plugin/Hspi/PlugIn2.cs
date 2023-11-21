@@ -149,7 +149,7 @@ namespace Hspi
                      FeatureCachedDataProvider.IsMonitorableTypeFeature(refId);
         }
 
-        protected virtual ISystemClock CreateClock() => new SystemClock();
+        protected virtual IGlobalTimerAndClock CreateClock() => new GlobalTimerAndClock();
 
         private static TimeSpan GetDefaultGroupInterval(TimeSpan duration, int points)
         {

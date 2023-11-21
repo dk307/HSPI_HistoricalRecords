@@ -265,7 +265,7 @@ namespace Hspi
                 {
                     case 1:
                         Log.Information("Back up starting. Shutting down database connection");
-                        sqliteManager?.Stop();
+                        sqliteManager?.StopForBackup();
                         break;
 
                     case 2:

@@ -18,7 +18,7 @@ namespace Hspi.Database
     public sealed class SqliteDatabaseCollector : IDisposable
     {
         public SqliteDatabaseCollector(IDBSettings settings,
-                                       ISystemClock systemClock,
+                                       IGlobalTimerAndClock systemClock,
                                        RecordDataProducerConsumerQueue queue,
                                        CancellationToken shutdownToken)
         {
@@ -623,6 +623,6 @@ namespace Hspi.Database
         private readonly IDBSettings settings;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;
-        private readonly ISystemClock systemClock;
+        private readonly IGlobalTimerAndClock systemClock;
     }
 }

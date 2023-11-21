@@ -105,7 +105,7 @@
     <Compile Include="Hspi\PlugInStatsDevice.cs" />
     <Compile Include="Hspi\Device\StatisticsFunction.cs" />
     <Compile Include="Hspi\SqliteManager.cs" />
-    <Compile Include="Hspi\SystemClock.cs" />
+    <Compile Include="Hspi\GlobalTimerAndClock.cs" />
     <Compile Include="Hspi\PlugIn2.cs" />
     <Compile Include="Hspi\Utils\FillStrategy.cs" />
     <Compile Include="Hspi\Utils\HsDeviceInvalidException.cs" />

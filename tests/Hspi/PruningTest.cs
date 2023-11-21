@@ -21,7 +21,7 @@ namespace HSPI_HistoricalRecordsTest
             var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin,
                 new Dictionary<string, string>() { { "GlobalRetentionPeriod", pruningTimePeriod.ToString() } });
 
-            var mockClock = TestHelper.CreateMockSystemClock(plugin);
+            var mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(10));
 
@@ -55,7 +55,7 @@ namespace HSPI_HistoricalRecordsTest
             var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin,
                 new Dictionary<string, string>() { { "GlobalRetentionPeriod", pruningTimePeriod.ToString() } });
 
-            var mockClock = TestHelper.CreateMockSystemClock(plugin);
+            var mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(200));
 
@@ -85,7 +85,7 @@ namespace HSPI_HistoricalRecordsTest
             var mockHsController = TestHelper.SetupHsControllerAndSettings2(plugin,
                 new Dictionary<string, string>() { { "GlobalRetentionPeriod", pruningTimePeriod.ToString() } });
 
-            var mockClock = TestHelper.CreateMockSystemClock(plugin);
+            var mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(10));
 

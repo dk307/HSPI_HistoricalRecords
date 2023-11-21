@@ -22,14 +22,14 @@ namespace Hspi.Device
         public StatisticsDevice(IHsController hs,
                                 SqliteDatabaseCollector collector,
                                 int featureRefId,
-                                ISystemClock systemClock,
+                                IGlobalTimerAndClock globalTimerAndClock,
                                 HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
                                 CancellationToken cancellationToken)
         {
             this.HS = hs;
             this.collector = collector;
             this.FeatureRefId = featureRefId;
-            this.systemClock = systemClock;
+            this.globalTimerAndClock = globalTimerAndClock;
             this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
 
             this.featureData = GetPlugExtraData<StatisticsDeviceData>(hs, featureRefId, DataKey);
@@ -220,7 +220,7 @@ namespace Hspi.Device
         {
             try
             {
-                var max = systemClock.Now.ToUnixTimeSeconds();
+                var max = globalTimerAndClock.Now.ToUnixTimeSeconds();
                 var min = max - this.featureData.FunctionDurationSeconds;
 
                 if (min < 0)
@@ -262,7 +262,7 @@ namespace Hspi.Device
         private readonly StatisticsDeviceData featureData;
         private readonly IHsController HS;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
-        private readonly ISystemClock systemClock;
+        private readonly IGlobalTimerAndClock globalTimerAndClock;
         private readonly System.Threading.Timer timer;
     }
 }

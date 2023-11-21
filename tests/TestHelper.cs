@@ -103,10 +103,12 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController = TestHelper.SetupHsControllerAndSettings(plugin, new Dictionary<string, string>());
         }
 
-        public static Mock<ISystemClock> CreateMockSystemClock(Mock<PlugIn> plugIn)
+        public static Mock<IGlobalTimerAndClock> CreateMockSystemGlobalTimerAndClock(Mock<PlugIn> plugIn)
         {
-            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
-            plugIn.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
+            var mockClock = new Mock<IGlobalTimerAndClock>(MockBehavior.Strict);
+            plugIn.Protected().Setup<IGlobalTimerAndClock>("CreateClock").Returns(mockClock.Object);
+            mockClock.Setup(x => x.IntervalToRetrySqliteCollection).Returns(TimeSpan.FromSeconds(600));
+            mockClock.Setup(x => x.TimoutForBackup).Returns(TimeSpan.FromSeconds(600));
             return mockClock;
         }
 
@@ -218,8 +220,7 @@ namespace HSPI_HistoricalRecordsTest
 
         public static DateTime SetUpMockSystemClockForCurrentTime(Mock<PlugIn> plugin)
         {
-            var mockClock = new Mock<ISystemClock>(MockBehavior.Strict);
-            plugin.Protected().Setup<ISystemClock>("CreateClock").Returns(mockClock.Object);
+            var mockClock = CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime nowTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
             mockClock.Setup(x => x.Now).Returns(nowTime);
             return nowTime;
@@ -244,7 +245,7 @@ namespace HSPI_HistoricalRecordsTest
                                                   int statsFeatureRefId,
                                                   int trackedFeatureRefId)
         {
-            Mock<ISystemClock> mockClock = TestHelper.CreateMockSystemClock(plugIn);
+            Mock<IGlobalTimerAndClock> mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugIn);
             mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
 
             hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
