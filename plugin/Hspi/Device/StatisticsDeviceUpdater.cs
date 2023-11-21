@@ -17,12 +17,12 @@ namespace Hspi.Device
     {
         public StatisticsDeviceUpdater(IHsController hs,
                                        SqliteDatabaseCollector collector,
-                                       ISystemClock systemClock,
+                                       IGlobalTimerAndClock globalTimerAndClock,
                                        HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
                                        CancellationToken cancellationToken)
         {
             this.cancellationToken = cancellationToken;
-            this.deviceAndFeatures = GetCurrentDevices(hs, collector, systemClock, hsFeatureCachedDataProvider);
+            this.deviceAndFeatures = GetCurrentDevices(hs, collector, globalTimerAndClock, hsFeatureCachedDataProvider);
         }
 
         private IEnumerable<StatisticsDevice> AllStatisticsFeatures => deviceAndFeatures.Values.SelectMany(x => x);
@@ -65,6 +65,7 @@ namespace Hspi.Device
                 {
                     entry.UpdateNow();
                 }
+
                 return true;
             }
 
@@ -80,7 +81,7 @@ namespace Hspi.Device
 
         private ImmutableDictionary<int, ImmutableList<StatisticsDevice>> GetCurrentDevices(
             IHsController hs, SqliteDatabaseCollector collector,
-                                       ISystemClock systemClock,
+                                       IGlobalTimerAndClock globalTimerAndClock,
                                        HsFeatureCachedDataProvider hsFeatureCachedDataProvider)
         {
             var refDeviceIds = hs.GetRefsByInterface(PlugInData.PlugInId, true);
@@ -98,7 +99,7 @@ namespace Hspi.Device
                     //data is stored in feature(child)
                     foreach (var featureRefId in features)
                     {
-                        var importDevice = new StatisticsDevice(hs, collector, featureRefId, systemClock, hsFeatureCachedDataProvider, cancellationToken);
+                        var importDevice = new StatisticsDevice(hs, collector, featureRefId, globalTimerAndClock, hsFeatureCachedDataProvider, cancellationToken);
                         childDevices.Add(importDevice);
                     }
 

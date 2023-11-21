@@ -80,19 +80,22 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void CheckPlugInStatusOnFailedSqliteInit()
+        public void CheckPlugInStatusOnFailedSqliteInitAndRecovers()
         {
             // locking file does not work on ubuntu
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var hsMockController);
 
+                var mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugInMock);
+                mockClock.Setup(x => x.IntervalToRetrySqliteCollection).Returns(TimeSpan.FromMilliseconds(5));
+
                 string dbPath = hsMockController.DBPath;
 
                 Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
 
                 //lock the sqlite 3 db
-                using var lockFile = new FileStream(dbPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                var lockFile = new FileStream(dbPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 
                 using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
@@ -100,6 +103,16 @@ namespace HSPI_HistoricalRecordsTest
 
                 Assert.AreEqual(EPluginStatus.Critical, status.Status);
                 Assert.AreEqual("Unable to open database file", status.StatusText);
+
+                //unlock file
+                lockFile.Dispose();
+
+                Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+                {
+                    return EPluginStatus.Ok == plugInMock.Object.OnStatusCheck().Status;
+                }));
+
+                plugInMock.Object.PruneDatabase();
             }
         }
 

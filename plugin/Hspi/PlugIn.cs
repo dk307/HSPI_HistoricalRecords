@@ -217,23 +217,29 @@ namespace Hspi
 
         private void HSEventImpl(Constants.HSEvent eventType, object[] parameters)
         {
-            if ((eventType == Constants.HSEvent.VALUE_CHANGE) && (parameters.Length > 4))
+            switch (eventType)
             {
-                int deviceRefId = ConvertToInt32(4);
-                RecordDeviceValue(deviceRefId);
-            }
-            else if ((eventType == Constants.HSEvent.STRING_CHANGE) && (parameters.Length > 3))
-            {
-                int deviceRefId = ConvertToInt32(3);
-                RecordDeviceValue(deviceRefId);
-            }
-            else if ((eventType == Constants.HSEvent.CONFIG_CHANGE) && (parameters.Length > 4) && ConvertToInt32(1) == 0)
-            {
-                HandleConfigChange();
-            }
-            else if ((eventType == BackupEvent) && (parameters.Length > 1))
-            {
-                HandleBackupStartStop();
+                case Constants.HSEvent.VALUE_CHANGE when parameters.Length > 4:
+                    {
+                        int deviceRefId = ConvertToInt32(4);
+                        RecordDeviceValue(deviceRefId);
+                        break;
+                    }
+
+                case Constants.HSEvent.STRING_CHANGE when parameters.Length > 3:
+                    {
+                        int deviceRefId = ConvertToInt32(3);
+                        RecordDeviceValue(deviceRefId);
+                        break;
+                    }
+
+                case Constants.HSEvent.CONFIG_CHANGE when parameters.Length > 4 && ConvertToInt32(1) == 0:
+                    HandleConfigChange();
+                    break;
+
+                case BackupEvent when parameters.Length > 1:
+                    HandleBackupStartStop();
+                    break;
             }
 
             int ConvertToInt32(int index)
@@ -259,7 +265,7 @@ namespace Hspi
                 {
                     case 1:
                         Log.Information("Back up starting. Shutting down database connection");
-                        sqliteManager?.Stop();
+                        sqliteManager?.StopForBackup();
                         break;
 
                     case 2:
@@ -347,12 +353,8 @@ namespace Hspi
 
                 var (minValue, maxValue) = SettingsPages.GetDeviceRangeForValidValues(deviceRefId);
 
-                if (minValue != null && deviceValue < minValue)
-                {
-                    return false;
-                }
-
-                if (maxValue != null && deviceValue > maxValue)
+                if (minValue != null && deviceValue < minValue ||
+                    maxValue != null && deviceValue > maxValue)
                 {
                     return false;
                 }
