@@ -128,6 +128,7 @@ namespace Hspi.Database
             {
                 Log.Warning("Sqlite has open handles during close");
             }
+
             sqliteConnection?.Dispose();
             maintainanceTimer?.Dispose();
             connectionMutex?.Dispose();
