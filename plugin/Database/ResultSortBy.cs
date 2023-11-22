@@ -2,7 +2,7 @@
 
 namespace Hspi.Database
 {
-    public enum ResultSortBy
+    internal enum ResultSortBy
     {
         TimeDesc = 0,
         ValueDesc = 1,

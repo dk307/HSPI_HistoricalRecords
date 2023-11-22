@@ -13,7 +13,7 @@ using SQLitePCL;
 
 namespace Hspi
 {
-    public sealed class SqliteManager : IDisposable
+    internal sealed class SqliteManager : IDisposable
     {
         static SqliteManager()
         {
@@ -152,7 +152,7 @@ namespace Hspi
             return statisticsDeviceUpdater?.UpdateData(refId) ?? false;
         }
 
-        private IDisposable CreateStartStopLock()
+        private Disposable CreateStartStopLock()
         {
             startStopMutex.Wait(shutdownToken);
             var unLock = Disposable.Create(() => startStopMutex.Release());

@@ -4,7 +4,7 @@
 
 namespace Hspi
 {
-    public interface IGlobalTimerAndClock
+    internal interface IGlobalTimerAndClock
     {
         DateTimeOffset Now { get; }
 
@@ -15,7 +15,7 @@ namespace Hspi
         TimeSpan MaintenanceInterval { get; }
     };
 
-    public class GlobalTimerAndClock : IGlobalTimerAndClock
+    internal class GlobalTimerAndClock : IGlobalTimerAndClock
     {
         public DateTimeOffset Now => DateTimeOffset.UtcNow;
 

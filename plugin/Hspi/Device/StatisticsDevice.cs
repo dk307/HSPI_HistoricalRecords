@@ -17,7 +17,7 @@ using static System.FormattableString;
 
 namespace Hspi.Device
 {
-    public sealed class StatisticsDevice : IDisposable
+    internal sealed class StatisticsDevice : IDisposable
     {
         public StatisticsDevice(IHsController hs,
                                 SqliteDatabaseCollector collector,
