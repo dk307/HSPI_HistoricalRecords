@@ -4,7 +4,7 @@
 
 namespace Hspi.Database
 {
-    public interface IDBSettings
+    internal interface IDBSettings
     {
         string DBPath { get; }
 

@@ -15,7 +15,7 @@ using static SQLitePCL.raw;
 
 namespace Hspi.Database
 {
-    public sealed class SqliteDatabaseCollector : IDisposable
+    internal sealed class SqliteDatabaseCollector : IDisposable
     {
         public SqliteDatabaseCollector(IDBSettings settings,
                                        IGlobalTimerAndClock globalTimerAndClock,
@@ -24,6 +24,7 @@ namespace Hspi.Database
         {
             this.settings = settings;
             this.globalTimerAndClock = globalTimerAndClock;
+            this.MaintainanceIntervalMs = (int)globalTimerAndClock.MaintenanceInterval.TotalMilliseconds;
             this.queue = queue;
             this.shutdownToken = shutdownToken;
             CreateDBDirectory(settings.DBPath);
@@ -52,7 +53,7 @@ namespace Hspi.Database
             var recordUpdateThread = new Thread(UpdateRecords);
             recordUpdateThread.Start();
 
-            maintainanceTimer = new Timer(Maintenance, null, 0, (int)globalTimerAndClock.MaintenanceInterval.TotalMilliseconds);
+            maintainanceTimer = new Timer(Maintenance, null, 0, MaintainanceIntervalMs);
 
             static void CreateDBDirectory(string dbPath)
             {
@@ -142,6 +143,7 @@ namespace Hspi.Database
 
         public IList<IDictionary<string, object?>> ExecSql(string sql)
         {
+            Log.Debug("Executing Sql: {sql}", sql);
             using var lock2 = CreateLockForDBConnection();
             using var stmt = CreateStatement(sql);
 
@@ -211,7 +213,7 @@ namespace Hspi.Database
             long GetTotalRecordsInLastDay()
             {
                 using var lock2 = CreateLockForDBConnection();
-                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>(STRFTIME('%s')-86400)");
+                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>=(STRFTIME('%s')-86400)");
             }
         }
 
@@ -362,13 +364,13 @@ namespace Hspi.Database
             }
         }
 
-        private static IDisposable CreateStatementAutoReset(sqlite3_stmt stmt)
+        private static Disposable CreateStatementAutoReset(sqlite3_stmt stmt)
         {
             ugly.reset(stmt);
             return Disposable.Create(() => ugly.reset(stmt));
         }
 
-        private IDisposable CreateLockForDBConnection()
+        private Disposable CreateLockForDBConnection()
         {
             connectionMutex.Wait(shutdownToken);
             return Disposable.Create(() => connectionMutex.Release());
@@ -496,6 +498,7 @@ namespace Hspi.Database
             ugly.exec(sqliteConnection, "PRAGMA temp_store=MEMORY");
             ugly.exec(sqliteConnection, "PRAGMA auto_vacuum=INCREMENTAL");
             ugly.exec(sqliteConnection, "PRAGMA integrity_check");
+            ugly.exec(sqliteConnection, "PRAGMA cache_size=4000");
 
             ugly.wal_autocheckpoint(sqliteConnection, 512);
 
@@ -506,7 +509,6 @@ namespace Hspi.Database
                 ugly.exec(sqliteConnection, "CREATE TABLE IF NOT EXISTS history(ts INTEGER NOT NULL, ref INTEGER NOT NULL, value REAL NOT NULL, str TEXT, PRIMARY KEY(ts,ref)) WITHOUT ROWID, STRICT");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_index ON history (ts);");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_ref_index ON history (ref);");
-                ugly.exec(sqliteConnection, "CREATE UNIQUE INDEX IF NOT EXISTS history_time_ref_index ON history (ts, ref);");
                 ugly.exec(sqliteConnection, "CREATE VIEW IF NOT EXISTS history_with_duration as select ts, value, str, (lag(ts, 1) OVER ( PARTITION BY ref ORDER BY ts desc) - ts) as duration, ref from history order by ref, ts desc");
                 ugly.exec(sqliteConnection, "PRAGMA user_version=1");
                 ugly.exec(sqliteConnection, "COMMIT");
@@ -590,7 +592,6 @@ namespace Hspi.Database
               SELECT ts, value FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max ORDER BY ts";
 
         private const string InsertSql = "INSERT OR REPLACE INTO history(ts, ref, value, str) VALUES(?,?,?,?)";
-        private const int MaintainanceIntervalMs = 60 * 1000 * 1000;
         private const string RecordsHistoryCountSql = "SELECT COUNT(*) FROM history WHERE ref=? AND ts>=? AND ts<=?";
 
         private const string RecordsHistorySql = @"
@@ -618,12 +619,13 @@ namespace Hspi.Database
         private readonly sqlite3_stmt getRecordHistoryCountCommand;
         private readonly sqlite3_stmt getStrForRefAndValueCommand;
         private readonly sqlite3_stmt getTimeAndValueCommand;
+        private readonly IGlobalTimerAndClock globalTimerAndClock;
         private readonly sqlite3_stmt insertCommand;
+        private readonly int MaintainanceIntervalMs;
         private readonly Timer maintainanceTimer;
         private readonly RecordDataProducerConsumerQueue queue;
         private readonly IDBSettings settings;
         private readonly CancellationToken shutdownToken;
         private readonly sqlite3 sqliteConnection;
-        private readonly IGlobalTimerAndClock globalTimerAndClock;
     }
 }

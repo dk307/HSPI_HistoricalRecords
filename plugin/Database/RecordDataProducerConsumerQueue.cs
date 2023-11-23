@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace Hspi.Database
 {
-    public sealed class RecordDataProducerConsumerQueue : IDisposable
+    internal sealed class RecordDataProducerConsumerQueue : IDisposable
     {
         public void Add(in RecordData t)
         {

@@ -10,7 +10,7 @@ using HomeSeer.PluginSdk.Devices.Identification;
 
 namespace Hspi
 {
-    public sealed class HsFeatureCachedDataProvider
+    internal sealed class HsFeatureCachedDataProvider
     {
         public HsFeatureCachedDataProvider(IHsController hs)
         {
