@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 namespace Hspi
 {
-    public sealed class HsFeatureCachedProperty<T>
+    internal sealed class HsFeatureCachedProperty<T>
     {
         public HsFeatureCachedProperty(Func<int, T> propertyGetter)
         {
