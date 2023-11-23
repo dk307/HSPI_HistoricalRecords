@@ -143,6 +143,7 @@ namespace Hspi.Database
 
         public IList<IDictionary<string, object?>> ExecSql(string sql)
         {
+            Log.Debug("Executing Sql: {sql}", sql);
             using var lock2 = CreateLockForDBConnection();
             using var stmt = CreateStatement(sql);
 
@@ -212,7 +213,14 @@ namespace Hspi.Database
             long GetTotalRecordsInLastDay()
             {
                 using var lock2 = CreateLockForDBConnection();
-                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>(STRFTIME('%s')-86400)");
+                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>=(STRFTIME('%s')-86400)");
+            }
+
+            double GetPercentageFreeSpace()
+            {
+                using var lock2 = CreateLockForDBConnection();
+                ugly.query_scalar<long>(sqliteConnection, "PRAGMA ");
+                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>=(STRFTIME('%s')-86400)");
             }
         }
 
@@ -497,6 +505,7 @@ namespace Hspi.Database
             ugly.exec(sqliteConnection, "PRAGMA temp_store=MEMORY");
             ugly.exec(sqliteConnection, "PRAGMA auto_vacuum=INCREMENTAL");
             ugly.exec(sqliteConnection, "PRAGMA integrity_check");
+            ugly.exec(sqliteConnection, "PRAGMA cache_size=4000");
 
             ugly.wal_autocheckpoint(sqliteConnection, 512);
 
@@ -507,7 +516,6 @@ namespace Hspi.Database
                 ugly.exec(sqliteConnection, "CREATE TABLE IF NOT EXISTS history(ts INTEGER NOT NULL, ref INTEGER NOT NULL, value REAL NOT NULL, str TEXT, PRIMARY KEY(ts,ref)) WITHOUT ROWID, STRICT");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_index ON history (ts);");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_ref_index ON history (ref);");
-                ugly.exec(sqliteConnection, "CREATE UNIQUE INDEX IF NOT EXISTS history_time_ref_index ON history (ts, ref);");
                 ugly.exec(sqliteConnection, "CREATE VIEW IF NOT EXISTS history_with_duration as select ts, value, str, (lag(ts, 1) OVER ( PARTITION BY ref ORDER BY ts desc) - ts) as duration, ref from history order by ref, ts desc");
                 ugly.exec(sqliteConnection, "PRAGMA user_version=1");
                 ugly.exec(sqliteConnection, "COMMIT");
