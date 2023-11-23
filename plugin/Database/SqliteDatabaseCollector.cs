@@ -215,13 +215,6 @@ namespace Hspi.Database
                 using var lock2 = CreateLockForDBConnection();
                 return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>=(STRFTIME('%s')-86400)");
             }
-
-            double GetPercentageFreeSpace()
-            {
-                using var lock2 = CreateLockForDBConnection();
-                ugly.query_scalar<long>(sqliteConnection, "PRAGMA ");
-                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>=(STRFTIME('%s')-86400)");
-            }
         }
 
         public Tuple<DateTimeOffset, DateTimeOffset> GetEarliestAndOldestRecordTimeDate(long refId)
