@@ -16,7 +16,7 @@ async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback
 			}
 			catch(e) {
 				result = {
-					error:"Failed with " + e.message;
+					error: "Failed with " + e.message,
 				};
 			}
 			let errorMessage = result.error;
