@@ -9,7 +9,16 @@ async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback
         timeout: 60000,
 		context: contextValue,
         success: function (response) {
-			let result = JSON.parse(response);
+			
+			let result;
+			try {
+				result = JSON.parse(response);
+			}
+			catch(e) {
+				result = {
+					error:"Failed with " + e.message;
+				};
+			}
 			let errorMessage = result.error;
 
 			if (errorMessage != null) {	
