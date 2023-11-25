@@ -84,6 +84,19 @@ namespace Hspi
             return hashSet.ToList();
         }
 
+        public IList<Dictionary<string, object?>> ExecSql(string sql)
+        {
+            try
+            {
+                return Collector.ExecSql(sql);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Error in executing {sql} with {error}", sql, ex.GetFullMessage());
+                throw;
+            }
+        }
+
         public override string PostBackProc(string page, string data, string user, int userRights)
         {
             Log.Debug("PostBackProc for {page} for {param}", page, data);

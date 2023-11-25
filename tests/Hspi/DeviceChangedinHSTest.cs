@@ -276,7 +276,7 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.WaitTillTotalRecords(plugin, refId, 1);
 
             // make db readonly
-            plugin.Object.PostBackProc("execsql", @"{sql: 'PRAGMA query_only = true'}", string.Empty, 0);
+            plugin.Object.ExecSql(@"PRAGMA query_only = true");
 
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId,
                                            100, string.Empty, now, 1);
