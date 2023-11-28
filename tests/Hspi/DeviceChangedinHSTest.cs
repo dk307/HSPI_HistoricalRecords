@@ -276,7 +276,7 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.WaitTillTotalRecords(plugin, refId, 1);
 
             // make db readonly
-            plugin.Object.PostBackProc("execsql", @"{sql: 'PRAGMA query_only = true'}", string.Empty, 0);
+            plugin.Object.ExecSql(@"PRAGMA query_only = true");
 
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId,
                                            100, string.Empty, now, 1);
@@ -286,7 +286,7 @@ namespace HSPI_HistoricalRecordsTest
                 return EPluginStatus.Warning == plugin.Object.OnStatusCheck().Status;
             }));
 
-            Assert.AreEqual("Attempt to write a readonly database", plugin.Object.OnStatusCheck().StatusText);
+            Assert.AreEqual("attempt to write a readonly database", plugin.Object.OnStatusCheck().StatusText);
 
             Assert.AreEqual(1, plugin.Object.GetTotalRecords(refId));
         }

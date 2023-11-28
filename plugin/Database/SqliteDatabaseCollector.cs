@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using Hspi.Utils;
-using Humanizer;
 using Nito.Disposables;
 using Serilog;
 using SQLitePCL;
@@ -141,22 +140,33 @@ namespace Hspi.Database
             maintainanceTimer.Change(0, MaintainanceIntervalMs);
         }
 
-        public IList<IDictionary<string, object?>> ExecSql(string sql)
+        public IList<Dictionary<string, object?>> ExecSql(string sql)
         {
             Log.Debug("Executing Sql: {sql}", sql);
             using var lock2 = CreateLockForDBConnection();
             using var stmt = CreateStatement(sql);
 
-            List<IDictionary<string, object?>> list = new();
+            List<Dictionary<string, object?>> list = new();
+
+            List<Tuple<string, int>> colInfo = new();
 
             while (ugly.step(stmt) != SQLITE_DONE)
             {
-                Dictionary<string, object?> records = new();
-                for (var i = 0; i < ugly.column_count(stmt); i++)
+                // fill the columns info once
+                if (colInfo.Count == 0)
                 {
-                    var name = ugly.column_name(stmt, i);
-                    var type = ugly.column_type(stmt, i);
-                    object? value = type switch
+                    for (var i = 0; i < ugly.column_count(stmt); i++)
+                    {
+                        var name = ugly.column_name(stmt, i) ?? string.Empty;
+                        var type = ugly.column_type(stmt, i);
+                        colInfo.Add(new Tuple<string, int>(name, type));
+                    }
+                }
+
+                Dictionary<string, object?> records = new();
+                for (var i = 0; i < colInfo.Count; i++)
+                {
+                    object? value = colInfo[i].Item2 switch
                     {
                         SQLITE_INTEGER => ugly.column_int64(stmt, i),
                         SQLITE_FLOAT => ugly.column_double(stmt, i),
@@ -164,57 +174,13 @@ namespace Hspi.Database
                         SQLITE_BLOB => ugly.column_bytes(stmt, i),
                         _ => null,
                     };
-                    records.Add(name, value);
+                    records.Add(colInfo[i].Item1, value);
                 }
 
                 list.Add(records);
             }
 
             return list;
-        }
-
-        public IDictionary<string, string> GetDatabaseStats()
-        {
-            return new Dictionary<string, string>()
-            {
-                { "Path", settings.DBPath },
-                { "Sqlite version", raw.sqlite3_libversion().utf8_to_string() },
-                { "Size", GetTotalFileSize().Bytes().Humanize() },
-                { "Total records", GetTotalRecords().ToString("N0") },
-                { "Total records from last 24 hr", GetTotalRecordsInLastDay().ToString("N0") },
-            };
-
-            long GetTotalFileSize()
-            {
-                return GetFileSizeIfExists(settings.DBPath) +
-                       GetFileSizeIfExists(settings.DBPath + "-shm") +
-                       GetFileSizeIfExists(settings.DBPath + "-wal");
-            }
-
-            long GetFileSizeIfExists(string dBPath)
-            {
-                try
-                {
-                    var info = new FileInfo(dBPath);
-                    return info.Length;
-                }
-                catch (FileNotFoundException)
-                {
-                    return 0;
-                }
-            }
-
-            long GetTotalRecords()
-            {
-                using var lock2 = CreateLockForDBConnection();
-                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history");
-            }
-
-            long GetTotalRecordsInLastDay()
-            {
-                using var lock2 = CreateLockForDBConnection();
-                return ugly.query_scalar<long>(sqliteConnection, "SELECT COUNT(*) FROM history WHERE ts>=(STRFTIME('%s')-86400)");
-            }
         }
 
         public Tuple<DateTimeOffset, DateTimeOffset> GetEarliestAndOldestRecordTimeDate(long refId)

@@ -125,33 +125,16 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetDatabaseStats()
         {
-            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
-
-            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
-
-            int ref1 = 42;
-            int ref2 = 43;
-
-            mockHsController.SetupFeature(ref1, 1.1, displayString: "1.1", lastChange: nowTime);
-            mockHsController.SetupFeature(ref2, 1.1, displayString: "4.5", lastChange: nowTime);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            for (int i = 0; i < 10; i++)
-            {
-                TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                                         ref1, i, i.ToString(), nowTime.AddMinutes(i), i + 1);
-                TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
-                                                         ref2, i, i.ToString(), nowTime.AddMinutes(i), i + 1);
-            }
-
             var stats = plugin.Object.GetDatabaseStats();
             Assert.IsNotNull(stats);
-            Assert.IsTrue(stats.ContainsKey("Path"));
-            Assert.IsTrue(stats.ContainsKey("Sqlite version"));
-            Assert.IsTrue(stats.ContainsKey("Size"));
-            Assert.AreEqual("20", stats["Total records"]);
-            Assert.AreEqual("20", stats["Total records from last 24 hr"]);
+            Assert.IsTrue(stats.ContainsKey("path"));
+            Assert.IsTrue(stats.ContainsKey("version"));
+            Assert.IsTrue(stats.ContainsKey("size"));
+            Assert.IsTrue(stats.ContainsKey("retentionPeriod"));
         }
 
         [TestMethod]

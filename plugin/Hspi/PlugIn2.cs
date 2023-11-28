@@ -21,6 +21,19 @@ namespace Hspi
 {
     internal partial class PlugIn : HspiBase
     {
+        public IList<Dictionary<string, object?>> ExecSql(string sql)
+        {
+            try
+            {
+                return Collector.ExecSql(sql);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Error in executing {sql} with {error}", sql, ex.GetFullMessage());
+                throw;
+            }
+        }
+
         public List<string> GetAllowedDisplays(object? refIdString)
         {
             var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
@@ -157,17 +170,6 @@ namespace Hspi
             return TimeSpan.FromSeconds(Math.Max(1D, duration.TotalSeconds / points));
         }
 
-        private static void GetRefIdMinMaxRequestParameters(JObject jsonData, out int refId, out long min, out long max)
-        {
-            refId = GetJsonValue<int>(jsonData, "refId");
-            min = GetJsonValue<long>(jsonData, "min");
-            max = GetJsonValue<long>(jsonData, "max");
-            if (max < min)
-            {
-                throw new ArgumentException("Max is less than Min");
-            }
-        }
-
         private static T GetJsonValue<T>(JObject json, string tokenStr)
         {
             try
@@ -198,6 +200,17 @@ namespace Hspi
             catch (Exception ex)
             {
                 throw new ArgumentException(tokenStr + " is not correct", ex);
+            }
+        }
+
+        private static void GetRefIdMinMaxRequestParameters(JObject jsonData, out int refId, out long min, out long max)
+        {
+            refId = GetJsonValue<int>(jsonData, "refId");
+            min = GetJsonValue<long>(jsonData, "min");
+            max = GetJsonValue<long>(jsonData, "max");
+            if (max < min)
+            {
+                throw new ArgumentException("max is less than min");
             }
         }
 
@@ -333,6 +346,79 @@ namespace Hspi
             }
         }
 
+        private string HandleHistogramForRecords(string data)
+        {
+            var jsonData = ParseToJObject(data);
+            GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
+            long minUnixTimeSeconds = min / 1000;
+            long maxUnixTimeSeconds = max / 1000;
+
+            var count = GetJsonValue<int>(jsonData, "count");
+
+            var histogram = TimeAndValueQueryHelper.Histogram(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds);
+            var result = GetTopValues(count, histogram, out var leftOver);
+
+            return WriteJsonResult((jsonWriter) =>
+            {
+                // labels array
+                jsonWriter.WritePropertyName("labels");
+                jsonWriter.WriteStartArray();
+
+                foreach (var key in result.Select(x => x.Key))
+                {
+                    string label = Collector.GetStringForValue(refId, key) ?? key.ToString("g", CultureInfo.InvariantCulture);
+                    jsonWriter.WriteValue(label);
+                }
+
+                if (leftOver > 0)
+                {
+                    jsonWriter.WriteValue((string?)null);
+                }
+
+                jsonWriter.WriteEndArray();
+
+                // time in milliseconds array
+                jsonWriter.WritePropertyName("time");
+                jsonWriter.WriteStartArray();
+
+                foreach (var row in result)
+                {
+                    jsonWriter.WriteValue(row.Value * 1000);
+                }
+
+                if (leftOver > 0)
+                {
+                    jsonWriter.WriteValue(leftOver * 1000);
+                }
+
+                jsonWriter.WriteEndArray();
+            });
+
+            static IList<KeyValuePair<double, long>> GetTopValues(int maxCount,
+                                                          IDictionary<double, long> histogram,
+                                                          out long leftOver)
+            {
+                leftOver = 0;
+
+                List<KeyValuePair<double, long>> result = new();
+                var count = maxCount - 1; // -1 for others
+                foreach (var pair in histogram.OrderByDescending(x => x.Value))
+                {
+                    if (count > 0)
+                    {
+                        result.Add(pair);
+                        count--;
+                    }
+                    else
+                    {
+                        leftOver += pair.Value;
+                    }
+                }
+
+                return result;
+            }
+        }
+
         private string HandleHistoryRecords(string data)
         {
             Log.Debug("HandleHistoryRecords {data}", data);
@@ -356,14 +442,14 @@ namespace Hspi
 
                 if (max < min)
                 {
-                    throw new ArgumentException("Max is less than Min");
+                    throw new ArgumentException("max is less than min");
                 }
 
                 totalResultsCount = Collector.GetRecordsCount(refId, min, max);
             }
             else
             {
-                throw new ArgumentException("Min or max not specified");
+                throw new ArgumentException("min or max not specified");
             }
 
             var queryData = Collector.GetRecords(refId,
@@ -453,79 +539,6 @@ namespace Hspi
                 jsonWriter.WriteEndArray();
                 jsonWriter.WriteEndObject();
             });
-        }
-
-        private string HandleHistogramForRecords(string data)
-        {
-            var jsonData = ParseToJObject(data);
-            GetRefIdMinMaxRequestParameters(jsonData, out var refId, out var min, out var max);
-            long minUnixTimeSeconds = min / 1000;
-            long maxUnixTimeSeconds = max / 1000;
-
-            var count = GetJsonValue<int>(jsonData, "count");
-
-            var histogram = TimeAndValueQueryHelper.Histogram(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds);
-            var result = GetTopValues(count, histogram, out var leftOver);
-
-            return WriteJsonResult((jsonWriter) =>
-            {
-                // labels array
-                jsonWriter.WritePropertyName("labels");
-                jsonWriter.WriteStartArray();
-
-                foreach (var key in result.Select(x => x.Key))
-                {
-                    string label = Collector.GetStringForValue(refId, key) ?? key.ToString("g", CultureInfo.InvariantCulture);
-                    jsonWriter.WriteValue(label);
-                }
-
-                if (leftOver > 0)
-                {
-                    jsonWriter.WriteValue((string?)null);
-                }
-
-                jsonWriter.WriteEndArray();
-
-                // time in milliseconds array
-                jsonWriter.WritePropertyName("time");
-                jsonWriter.WriteStartArray();
-
-                foreach (var row in result)
-                {
-                    jsonWriter.WriteValue(row.Value * 1000);
-                }
-
-                if (leftOver > 0)
-                {
-                    jsonWriter.WriteValue(leftOver * 1000);
-                }
-
-                jsonWriter.WriteEndArray();
-            });
-
-            static IList<KeyValuePair<double, long>> GetTopValues(int maxCount,
-                                                          IDictionary<double, long> histogram,
-                                                          out long leftOver)
-            {
-                leftOver = 0;
-
-                List<KeyValuePair<double, long>> result = new();
-                var count = maxCount - 1; // -1 for others
-                foreach (var pair in histogram.OrderByDescending(x => x.Value))
-                {
-                    if (count > 0)
-                    {
-                        result.Add(pair);
-                        count--;
-                    }
-                    else
-                    {
-                        leftOver += pair.Value;
-                    }
-                }
-
-                return result;
-            }
         }
 
         private string HandleUpdatePerDeviceSettings(string data)

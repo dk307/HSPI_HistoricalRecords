@@ -102,7 +102,7 @@ namespace HSPI_HistoricalRecordsTest
                 var status = plugInMock.Object.OnStatusCheck();
 
                 Assert.AreEqual(EPluginStatus.Critical, status.Status);
-                Assert.AreEqual("Unable to open database file", status.StatusText);
+                Assert.AreEqual("unable to open database file", status.StatusText);
 
                 //unlock file
                 lockFile.Dispose();

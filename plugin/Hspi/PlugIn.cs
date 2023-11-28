@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Runtime;
 using System.Threading;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
@@ -12,6 +14,8 @@ using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
 using Hspi.Utils;
 using Serilog;
+using SQLitePCL.Ugly;
+using SQLitePCL;
 using Constants = HomeSeer.PluginSdk.Constants;
 
 #nullable enable
@@ -75,7 +79,36 @@ namespace Hspi
             return result;
         }
 
-        public IDictionary<string, string> GetDatabaseStats() => Collector.GetDatabaseStats();
+        public Dictionary<string, string> GetDatabaseStats()
+        {
+            return new Dictionary<string, string>()
+            {
+                { "path", SettingsPages.DBPath },
+                { "version", raw.sqlite3_libversion().utf8_to_string() },
+                { "size", GetTotalFileSize().ToString(CultureInfo.InvariantCulture) },
+                { "retentionPeriod", ((long)SettingsPages.GlobalRetentionPeriod.TotalSeconds).ToString(CultureInfo.InvariantCulture) },
+            };
+
+            long GetTotalFileSize()
+            {
+                return GetFileSizeIfExists(SettingsPages.DBPath) +
+                       GetFileSizeIfExists(SettingsPages.DBPath + "-shm") +
+                       GetFileSizeIfExists(SettingsPages.DBPath + "-wal");
+            }
+
+            long GetFileSizeIfExists(string dBPath)
+            {
+                try
+                {
+                    var info = new FileInfo(dBPath);
+                    return info.Length;
+                }
+                catch (IOException)
+                {
+                    return 0;
+                }
+            }
+        }
 
         public override string GetJuiDeviceConfigPage(int devOrFeatRef)
         {

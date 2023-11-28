@@ -12,18 +12,18 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void SimpleExceptionMessage()
         {
-            Assert.AreEqual("Message", ExceptionHelper.GetFullMessage(new Exception("message")));
-            Assert.AreEqual("Message", ExceptionHelper.GetFullMessage(new ArgumentException("message")));
+            Assert.AreEqual("message", ExceptionHelper.GetFullMessage(new Exception("message")));
+            Assert.AreEqual("message", ExceptionHelper.GetFullMessage(new ArgumentException("message")));
         }
 
         [TestMethod]
         public void InnerExceptionMessage()
         {
             var ex = new Exception("message", new Exception("inner exception"));
-            Assert.AreEqual(ExceptionHelper.GetFullMessage(ex), "Message" + Environment.NewLine + "Inner exception");
+            Assert.AreEqual(ExceptionHelper.GetFullMessage(ex), "message" + Environment.NewLine + "inner exception");
 
             var ex2 = new Exception("message2", ex);
-            Assert.AreEqual(ExceptionHelper.GetFullMessage(ex2), "Message 2" + Environment.NewLine + "Message" + Environment.NewLine + "Inner exception");
+            Assert.AreEqual(ExceptionHelper.GetFullMessage(ex2), "message2" + Environment.NewLine + "message" + Environment.NewLine + "inner exception");
         }
 
         [TestMethod]
@@ -32,22 +32,22 @@ namespace HSPI_HistoricalRecordsTest
             var ex = new Exception("message", new Exception("inner exception"));
 
             var ex2 = new Exception("Message", ex);
-            Assert.AreEqual(ExceptionHelper.GetFullMessage(ex2), "Message" + Environment.NewLine + "Inner exception");
+            Assert.AreEqual(ExceptionHelper.GetFullMessage(ex2), "Message" + Environment.NewLine + "message" + Environment.NewLine + "inner exception");
         }
 
         [TestMethod]
         public void MessageWithEOL()
         {
             var ex = new Exception("message", new Exception("inner exception"));
-            Assert.AreEqual("Message<BR>Inner exception", ExceptionHelper.GetFullMessage(ex, "<BR>"));
+            Assert.AreEqual("message<BR>inner exception", ExceptionHelper.GetFullMessage(ex, "<BR>"));
         }
 
         [TestMethod]
         public void AggregateExceptionException()
         {
-            var exceptions = new List<Exception>() { new Exception("message1"), new Exception("message2") };
+            var exceptions = new List<Exception>() { new("message1"), new("message2") };
             var ex = new AggregateException("message8", exceptions);
-            Assert.AreEqual("Message 1<BR>Message 2", ExceptionHelper.GetFullMessage(ex, "<BR>"));
+            Assert.AreEqual("message1<BR>message2", ExceptionHelper.GetFullMessage(ex, "<BR>"));
         }
 
         [TestMethod]

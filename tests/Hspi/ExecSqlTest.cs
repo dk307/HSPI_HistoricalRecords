@@ -4,6 +4,7 @@ using HomeSeer.PluginSdk;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using static SQLitePCL.Ugly.ugly;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -11,7 +12,45 @@ namespace HSPI_HistoricalRecordsTest
     public class ExecSqlTest
     {
         [TestMethod]
-        public void ExecSqlCount()
+        public void ExecSqlAsFunctionSingleFeatureAllValues()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
+
+            int refId = 100;
+            mockHsController.SetupFeature(refId, 1.1, displayString: "1.1", lastChange: nowTime);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            TestHelper.WaitTillTotalRecords(plugin, refId, 1);
+            TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
+                                           refId, 10, 10.ToString(), nowTime.AddSeconds(1), 2);
+
+            var data = plugin.Object.ExecSql(@"SELECT ref, value, str FROM history");
+
+            Assert.IsNotNull(data);
+            Assert.AreEqual(2, data.Count);
+            Assert.AreEqual((long)refId, data[0]["ref"]);
+            Assert.AreEqual(1.1D, data[0]["value"]);
+            Assert.AreEqual("1.1", data[0]["str"]);
+            Assert.AreEqual((long)refId, data[1]["ref"]);
+            Assert.AreEqual(10D, data[1]["value"]);
+            Assert.AreEqual("10", data[1]["str"]);
+        }
+
+        [TestMethod]
+        public void ExecSqlAsFunctionWithError()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            Assert.ThrowsException<sqlite3_exception>(() => plugin.Object.ExecSql(@"SELECT ref1, value, str FROM history"));
+        }
+
+        [TestMethod]
+        public void ExecSqlAsPostCount()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
@@ -52,7 +91,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void ExecSqlSingleFeatureAllValues()
+        public void ExecSqlAsPostSingleFeatureAllValues()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
@@ -91,7 +130,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestMethod]
-        public void ExecSqlVacuum()
+        public void ExecSqlAsPostVacuum()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
@@ -118,6 +157,22 @@ namespace HSPI_HistoricalRecordsTest
             var data = json["result"]["data"] as JArray;
             Assert.IsNotNull(data);
             Assert.AreEqual(0, data.Count);
+        }
+
+        [TestMethod]
+        public void ExecSqlAsPostWithError()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            var jsonString = plugin.Object.PostBackProc("execsql", @"{sql: 'SELECT COUNT(*) AS TotalCount FROM history1'}", string.Empty, 0);
+
+            var json = (JObject)JsonConvert.DeserializeObject(jsonString);
+            Assert.IsNotNull(json);
+
+            var error = (string)json["error"];
+            Assert.AreEqual("no such table: history1", error);
         }
     }
 }

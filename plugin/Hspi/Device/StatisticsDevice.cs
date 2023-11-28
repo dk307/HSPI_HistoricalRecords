@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Identification;
 using Hspi.Database;
 using Hspi.Utils;
-using Humanizer;
 using Newtonsoft.Json;
 using Serilog;
 using Serilog.Events;
@@ -73,7 +71,7 @@ namespace Hspi.Device
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
 
             string featureName = GetStatisticsFunctionForName(data.StatisticsFunction) + " - " +
-                                                              TimeSpan.FromSeconds(data.FunctionDurationSeconds).Humanize(culture: CultureInfo.InvariantCulture);
+                                                              HumanizeTimeSpan(TimeSpan.FromSeconds(data.FunctionDurationSeconds));
             var newFeatureData = FeatureFactory.CreateFeature(PlugInData.PlugInId)
                                                .WithName(featureName)
                                                .WithLocation(feature.Location)
@@ -188,6 +186,31 @@ namespace Hspi.Device
             return stringData;
         }
 
+        private static string HumanizeTimeSpan(TimeSpan timeSpan)
+        {
+            List<string> parts = new();
+
+            AddPart(timeSpan.Days, "day", parts);
+            AddPart(timeSpan.Hours, "hour", parts);
+            AddPart(timeSpan.Minutes, "minute", parts);
+            AddPart(timeSpan.Seconds, "second", parts);
+
+            return string.Join(" ", parts);
+
+            static string Plural(int value)
+            {
+                return value > 1 ? "s" : string.Empty;
+            }
+
+            static void AddPart(int part, string partName, List<string> parts)
+            {
+                if (part > 0)
+                {
+                    parts.Add($"{part} {partName}{Plural(part)}");
+                }
+            }
+        }
+
         private void UpdateDeviceValue(in double? data)
         {
             if (Log.IsEnabled(LogEventLevel.Information))
@@ -260,9 +283,9 @@ namespace Hspi.Device
         private const string DataKey = "data";
         private readonly SqliteDatabaseCollector collector;
         private readonly StatisticsDeviceData featureData;
+        private readonly IGlobalTimerAndClock globalTimerAndClock;
         private readonly IHsController HS;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
-        private readonly IGlobalTimerAndClock globalTimerAndClock;
         private readonly System.Threading.Timer timer;
     }
 }

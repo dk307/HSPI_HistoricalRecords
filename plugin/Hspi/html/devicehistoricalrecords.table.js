@@ -37,7 +37,7 @@ function setUpPersistanceTable() {
 				if (data === null) {
 					return "";
 				} else {
-					return humanizeDuration(data * 1000);
+					return humanizeDuration(data);
 				}
 			}
 		},
