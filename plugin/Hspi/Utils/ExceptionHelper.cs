@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using SQLitePCL;
 using SQLitePCL.Ugly;
-using Humanizer;
 
 #nullable enable
 
@@ -57,7 +56,7 @@ namespace Hspi.Utils
                         string message = string.IsNullOrWhiteSpace(sqlite3Exception.errmsg) ?
                                              raw.sqlite3_errstr(sqlite3Exception.errcode).utf8_to_string() :
                                             sqlite3Exception.errmsg;
-                        list.Add(message.Humanize());
+                        list.Add(message);
                     }
 
                     break;
@@ -65,7 +64,7 @@ namespace Hspi.Utils
                 default:
                     {
                         string message = ex.Message.Trim(' ', '\r', '\n');
-                        list.Add(message.Humanize());
+                        list.Add(message);
                         if (ex.InnerException != null)
                         {
                             list.AddRange(GetMessageList(ex.InnerException));

@@ -13,7 +13,6 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
 using Hspi.Utils;
-using Humanizer;
 using Serilog;
 using SQLitePCL.Ugly;
 using SQLitePCL;

@@ -172,7 +172,7 @@ namespace HSPI_HistoricalRecordsTest
             Assert.IsNotNull(json);
 
             var error = (string)json["error"];
-            Assert.AreEqual("No such table history 1", error);
+            Assert.AreEqual("no such table: history1", error);
         }
     }
 }

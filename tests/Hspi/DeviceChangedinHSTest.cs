@@ -286,7 +286,7 @@ namespace HSPI_HistoricalRecordsTest
                 return EPluginStatus.Warning == plugin.Object.OnStatusCheck().Status;
             }));
 
-            Assert.AreEqual("Attempt to write a readonly database", plugin.Object.OnStatusCheck().StatusText);
+            Assert.AreEqual("attempt to write a readonly database", plugin.Object.OnStatusCheck().StatusText);
 
             Assert.AreEqual(1, plugin.Object.GetTotalRecords(refId));
         }
