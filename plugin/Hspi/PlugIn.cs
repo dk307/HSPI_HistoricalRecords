@@ -80,13 +80,14 @@ namespace Hspi
             return result;
         }
 
-        public IDictionary<string, string> GetDatabaseStats()
+        public Dictionary<string, string> GetDatabaseStats()
         {
             return new Dictionary<string, string>()
             {
-                { "Path", SettingsPages.DBPath },
-                { "Sqlite version", raw.sqlite3_libversion().utf8_to_string() },
-                { "Size", GetTotalFileSize().Bytes().Humanize() },
+                { "path", SettingsPages.DBPath },
+                { "version", raw.sqlite3_libversion().utf8_to_string() },
+                { "size", GetTotalFileSize().ToString(CultureInfo.InvariantCulture) },
+                { "retentionPeriod", ((long)SettingsPages.GlobalRetentionPeriod.TotalSeconds).ToString(CultureInfo.InvariantCulture) },
             };
 
             long GetTotalFileSize()
@@ -103,7 +104,7 @@ namespace Hspi
                     var info = new FileInfo(dBPath);
                     return info.Length;
                 }
-                catch (FileNotFoundException)
+                catch (IOException)
                 {
                     return 0;
                 }

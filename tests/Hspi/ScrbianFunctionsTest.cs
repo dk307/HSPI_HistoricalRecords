@@ -125,15 +125,16 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void GetDatabaseStats()
         {
-            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var stats = plugin.Object.GetDatabaseStats();
             Assert.IsNotNull(stats);
-            Assert.IsTrue(stats.ContainsKey("Path"));
-            Assert.IsTrue(stats.ContainsKey("Sqlite version"));
-            Assert.IsTrue(stats.ContainsKey("Size"));
+            Assert.IsTrue(stats.ContainsKey("path"));
+            Assert.IsTrue(stats.ContainsKey("version"));
+            Assert.IsTrue(stats.ContainsKey("size"));
+            Assert.IsTrue(stats.ContainsKey("retentionPeriod"));
         }
 
         [TestMethod]

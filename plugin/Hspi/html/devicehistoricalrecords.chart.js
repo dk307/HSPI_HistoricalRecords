@@ -106,7 +106,7 @@ const scales = {
 };
 
 const tooltip = {
-    enabled: false,
+    enabled: true,
     callbacks: { 
       label: (data) => { 
            return roundValue(data.formattedValue).toString() + deviceUnits;

@@ -17,35 +17,179 @@
     {{includefile 'header.html'}}
     {{includefile 'navbar.html'}} 
 	{{
-		totalRecords={}
-		totalRecords.key="Total Records Count"
-		totalRecords.value=(plugin_function 'HistoricalRecords' 'ExecSql' ["Select COUNT(*) as totalcount from history"])[0]["totalcount"]
-	
 		dbStats=plugin_function 'HistoricalRecords' 'GetDatabaseStats' []
-		dbStats=dbStats | array.add totalRecords
+		retentionPeriodSeconds=dbStats["retentionPeriod"]
+		totalRecords=(plugin_function 'HistoricalRecords' 'ExecSql' ["Select COUNT(*) as totalcount from history"])[0]["totalcount"]
 	}}
-    <div class="container card">
+	
+		
+    <div class="container card" id='stats'>
 		<div class="streakhs grey lighten-2">
             Database Statistics
         </div>
-	
-		{{for item in dbStats}}         
-            <div class="row pl-1 {{if row==1}}hs-bg-blue-l4{{row=0}}{{else}}{{row=1}}{{end}}">
-                <div class="col-6">
-                    {{item.key | html.escape }}
-                </div>
-                <div class="col-6">
-                    {{item.value | html.escape }}
-                </div>
-            </div>
-        {{end}}        
+		    
+		<div class="row pl-1 hs-bg-blue-l4">
+			<div class="col-6">Path</div>
+			<div class="col-6"></div>
+		</div>
+		<div class="row pl-1">
+			<div class="col-6">Version</div>
+			<div class="col-6"></div>
+		</div>
+		<div class="row pl-1 hs-bg-blue-l4">
+			<div class="col-6">Size</div>
+			<div class="col-6"></div>
+		</div>           
+		<div class="row pl-1">
+			<div class="col-6">Record retention period</div>
+			<div class="col-6"></div>
+		</div>            
     </div>
-    
+	
+	<div class="container card mt-4">
+		<div class="streakhs grey lighten-2">
+            Records by period
+        </div>
+		<div class="chart-container">
+			<canvas id="myLineChart"></canvas>
+		</div>
+	</div>
+
 
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
      {{includefile 'bootstrap/js/page_common.js'}}
+	<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
+	<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+	<script src="/HistoricalRecords/chart.min.js"></script>
+	<script src="/HistoricalRecords/chartjs-adapter-moment.min.js"></script>
+	<script>
+	
+	
+	const unit = 12 * 60 * 60; // 12 hrs
+	const unitCount = 1 + Math.ceil({{retentionPeriodSeconds}} / unit);
+	const displayEndDate = 1000 * Math.round(Date.now() / 1000);
+	const displayStartDate = displayEndDate + 1000 - (unitCount * unit) * 1000;
+	
+	const colors = {
+	  blue: {
+		default: "#007bff",
+		half: "rgba(00, 123, 233, 0.5)",
+		quarter: "rgba(00, 123, 233, 0.25)",
+		zero: "rgba(00, 123, 233, 0)"
+	  }, 
+	};
+
+	const defaultTension = 0.1;
+
+	function getRangeString(min, max) {
+		const minDateString = humanizeTime(min);
+		const maxDateString = humanizeTime(max);
+		return minDateString + " - " + maxDateString;
+	}
+
+	function startFetch(chart)  {
+		const unitStr = unit.toString();
+		const sqlStatement = 'select 1000 * ' + unitStr +' * (ts/' + unitStr + '), count(*) from history group by ts/'+ unitStr +' order by ts desc limit ' + unitCount.toString();
+		const formObject = {
+		   sql:sqlStatement,
+		};
+		
+		ajaxPostPlugIn("execsql", formObject, function (result) {	
+			var resultData = [];
+			result.data.forEach(val => resultData.push({x: val[0], y:val[1]}))
+			chart.data.datasets[0].data = resultData;
+			chart.stop(); // make sure animations are not running
+			chart.update();	
+		});
+	}
+		
+	const scales = {
+	  x: {
+		position: 'bottom',
+		min: displayStartDate,
+		max: displayEndDate,
+		time: {
+			displayFormats: {
+			  hour: "MMM D"
+			},
+		},
+		type: 'time',
+		ticks: {
+		  autoSkip: true,
+		  autoSkipPadding: 50,
+		  maxRotation: 0
+		},	
+	  },
+	  y: {
+		type: 'linear',
+		position: 'left',
+	  },
+	};
+
+	const tooltip = {
+		enabled: true,
+	};
+
+	function setupLineChart() { 
+		Chart.defaults.font.family = "sans-serif";
+		Chart.defaults.font.size = 16;
+		
+		let ctx = document.getElementById("myLineChart").getContext('2d'); 
+		
+		let gradient = ctx.createLinearGradient(0, 25, 0, 300);
+		gradient.addColorStop(0, colors.blue.half);
+		gradient.addColorStop(0.35, colors.blue.quarter);
+		gradient.addColorStop(1, colors.blue.zero);
+
+		let myChart = new Chart(ctx, {
+		  type: "line",
+		  data: {
+				datasets: [{
+					data: [],			 
+					stepped : false,
+					tension : defaultTension,
+					pointStyle : false,
+					fill: true,
+					backgroundColor: gradient,
+					pointBackgroundColor: colors.blue.default,
+					borderColor: colors.blue.default,
+					borderWidth: 2,
+					pointRadius: 3
+				}, 			 
+			]
+		  },
+		  options: {
+			scales: scales,
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: {
+				tooltip: tooltip,
+				legend: {
+					display: false
+				},	
+			},
+		  },  
+		});
+		 
+		startFetch(myChart);
+	}
+	
+	
+	function updateStats() {
+		$('#stats div:nth-child(2) div:nth-child(2)').text('{{dbStats["path"] | string.replace '\\' '\\\\'}}');
+		$('#stats div:nth-child(3) div:nth-child(2)').text('{{dbStats["version"]}}');
+		$('#stats div:nth-child(4) div:nth-child(2)').text(humanizeSize({{dbStats["size"]}}));
+		$('#stats div:nth-child(5) div:nth-child(2)').text(humanizeDuration({{dbStats["retentionPeriod"]}}));
+	}
+		
+	$(document).ready(function () {
+		updateStats();
+		setupLineChart();
+	});
+
+	</script>
     
   </body>
 </html>
