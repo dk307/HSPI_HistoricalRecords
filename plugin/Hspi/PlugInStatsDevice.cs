@@ -6,9 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using HomeSeer.PluginSdk.Devices;
 using Hspi.Device;
-using Hspi.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -27,6 +25,15 @@ namespace Hspi
         public List<int> GetTrackedDeviceList() => HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();
 
         internal bool UpdateStatisticsFeature(int featureRefId) => sqliteManager?.TryUpdateStatisticDeviceData(featureRefId) ?? false;
+
+        private static void ExtractDeviceOperationParameters(string data, out JObject jsonData, out StatisticsDeviceData statisticsDeviceData)
+        {
+            jsonData = ParseToJObject(data);
+            var dataJObject = GetJsonValue<JObject>(jsonData, "data");
+            JsonSerializer serializer = new();
+            statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ??
+                                       throw new ArgumentException("data is incorrect", nameof(data));
+        }
 
         private static JObject ParseToJObject(string data)
         {
@@ -68,6 +75,30 @@ namespace Hspi
             return "{}";
         }
 
+        private string HandleDeviceCreate(string data)
+        {
+            ExtractDeviceOperationParameters(data, out var jsonData, out var statisticsDeviceData);
+
+            var name = GetJsonValue<string>(jsonData, "name");
+            var refId = StatisticsDevice.CreateDevice(HomeSeerSystem, name, statisticsDeviceData);
+
+            sqliteManager?.RestartStatisticsDeviceUpdate();
+
+            return SendRefIdResult(refId);
+        }
+
+        private string HandleDeviceEdit(string data)
+        {
+            ExtractDeviceOperationParameters(data, out var jsonData, out var statisticsDeviceData);
+
+            var refId = GetJsonValue<int>(jsonData, "ref");
+            StatisticsDevice.EditDevice(HomeSeerSystem, refId, statisticsDeviceData);
+
+            sqliteManager?.RestartStatisticsDeviceUpdate();
+
+            return SendRefIdResult(refId);
+        }
+
         private string HandleExecSql(string data)
         {
             var jsonData = ParseToJObject(data);
@@ -105,38 +136,6 @@ namespace Hspi
 
                 jsonWriter.WriteEndArray();
             });
-        }
-
-        private string HandleDeviceCreate(string data)
-        {
-            var jsonData = ParseToJObject(data);
-            var name = GetJsonValue<string>(jsonData, "name");
-            var dataJObject = GetJsonValue<JObject>(jsonData, "data");
-            JsonSerializer serializer = new();
-            var statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ??
-                                       throw new ArgumentException("data is incorrect", nameof(data));
-
-            var refId = StatisticsDevice.CreateDevice(HomeSeerSystem, name, statisticsDeviceData);
-
-            sqliteManager?.RestartStatisticsDeviceUpdate();
-
-            return SendRefIdResult(refId);
-        }
-
-        private string HandleDeviceEdit(string data)
-        {
-            var jsonData = ParseToJObject(data);
-            var refId = GetJsonValue<int>(jsonData, "ref");
-            var dataJObject = GetJsonValue<JObject>(jsonData, "data");
-            JsonSerializer serializer = new();
-            var statisticsDeviceData = serializer.Deserialize<StatisticsDeviceData>(new JTokenReader(dataJObject)) ??
-                                       throw new ArgumentException(nameof(data));
-
-            StatisticsDevice.EditDevice(HomeSeerSystem, refId, statisticsDeviceData);
-
-            sqliteManager?.RestartStatisticsDeviceUpdate();
-
-            return SendRefIdResult(refId);
         }
     }
 }

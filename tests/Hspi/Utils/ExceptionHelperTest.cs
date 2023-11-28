@@ -45,7 +45,7 @@ namespace HSPI_HistoricalRecordsTest
         [TestMethod]
         public void AggregateExceptionException()
         {
-            var exceptions = new List<Exception>() { new Exception("message1"), new Exception("message2") };
+            var exceptions = new List<Exception>() { new("message1"), new("message2") };
             var ex = new AggregateException("message8", exceptions);
             Assert.AreEqual("message1<BR>message2", ExceptionHelper.GetFullMessage(ex, "<BR>"));
         }
