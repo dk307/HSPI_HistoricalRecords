@@ -18,11 +18,13 @@
     {{includefile 'navbar.html'}} 
 	{{
 		dbStats=plugin_function 'HistoricalRecords' 'GetDatabaseStats' []
-		retentionPeriodSeconds=dbStats["retentionPeriod"]
-		totalRecords=(plugin_function 'HistoricalRecords' 'ExecSql' ["Select COUNT(*) as totalcount from history"])[0]["totalcount"]
+		if dbStats
+			retentionPeriodSeconds=dbStats["retentionPeriod"]
+			totalRecords=(plugin_function 'HistoricalRecords' 'ExecSql' ["Select COUNT(*) as totalcount from history"])[0]["totalcount"]
+		end	
 	}}
 	
-		
+	{{if dbStats}}	
     <div class="container card" id='stats'>
 		<div class="streakhs grey lighten-2">
             Database Statistics
@@ -54,6 +56,13 @@
 			<canvas id="myLineChart"></canvas>
 		</div>
 	</div>
+	{{else}}
+	<div class="container mt-4">
+		<div class="alert alert-danger" role="alert">
+		  Check Plugin status
+		</div>	
+	</div>
+	{{end}}
 
 
     <!-- Bootstrap core JavaScript
@@ -64,6 +73,8 @@
 	<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
 	<script src="/HistoricalRecords/chart.min.js"></script>
 	<script src="/HistoricalRecords/chartjs-adapter-moment.min.js"></script>
+	
+	{{if dbStats}}	
 	<script>
 	
 	
@@ -190,6 +201,7 @@
 	});
 
 	</script>
+	{{end}}
     
   </body>
 </html>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Hspi.Utils;
 using Nito.Disposables;
@@ -16,6 +17,18 @@ namespace Hspi.Database
 {
     internal sealed class SqliteDatabaseCollector : IDisposable
     {
+        static SqliteDatabaseCollector()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Batteries_V2.Init();
+            }
+            else
+            {
+                raw.SetProvider(new SQLite3Provider_sqlite3());
+            }
+        }
+
         public SqliteDatabaseCollector(IDBSettings settings,
                                        IGlobalTimerAndClock globalTimerAndClock,
                                        RecordDataProducerConsumerQueue queue,

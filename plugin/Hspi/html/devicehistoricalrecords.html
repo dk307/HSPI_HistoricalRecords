@@ -131,10 +131,10 @@
 <script>
 {{ if durationSeconds != "" }}
 const displayEndDate = 1000 * Math.round(Date.now() / 1000);
-const displayStartDate = displayEndDate + 1000 - {{durationSeconds}} * 1000;
+const displayStartDate = Math.min(displayEndDate, displayEndDate + 1000 - {{durationSeconds}} * 1000);
 {{else if displayMax != ""}}
 const displayEndDate = new Date({{displayMax}} * 1000).getTime();
-const displayStartDate = new Date({{displayMin}} * 1000).getTime();
+const displayStartDate = Math.min(displayEndDate, new Date({{displayMin}} * 1000).getTime());
 {{end}}	
 
 const featureId = {{featureId}};
