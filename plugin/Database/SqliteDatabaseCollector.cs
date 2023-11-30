@@ -65,6 +65,7 @@ namespace Hspi.Database
         }
 
         public Exception? RecordUpdateException { get; private set; }
+        public Version? SqliteVersion { get; private set; }
 
         public long DeleteAllRecordsForRef(long refId)
         {
@@ -472,7 +473,11 @@ namespace Hspi.Database
 
             try
             {
-                ugly.exec(sqliteConnection, "CREATE TABLE IF NOT EXISTS history(ts INTEGER NOT NULL, ref INTEGER NOT NULL, value REAL NOT NULL, str TEXT, PRIMARY KEY(ts,ref)) WITHOUT ROWID, STRICT");
+                // create strict table is sqlite version allows it
+                string createSql = Invariant($"CREATE TABLE IF NOT EXISTS history(ts INTEGER NOT NULL, ref INTEGER NOT NULL, value REAL NOT NULL, str TEXT, PRIMARY KEY(ts,ref)) WITHOUT ROWID{(IsStrictTableSupported ? ", STRICT" : string.Empty)}");
+                ugly.exec(sqliteConnection, createSql);
+
+                // create indexes
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_time_index ON history (ts);");
                 ugly.exec(sqliteConnection, "CREATE INDEX IF NOT EXISTS history_ref_index ON history (ref);");
                 ugly.exec(sqliteConnection, "CREATE VIEW IF NOT EXISTS history_with_duration as select ts, value, str, (lag(ts, 1) OVER ( PARTITION BY ref ORDER BY ts desc) - ts) as duration, ref from history order by ref, ts desc");
@@ -485,7 +490,7 @@ namespace Hspi.Database
                 throw;
             }
 
-            static void CheckSqliteValid()
+            void CheckSqliteValid()
             {
                 if (sqlite3_threadsafe() == 0)
                 {
@@ -494,14 +499,12 @@ namespace Hspi.Database
 
                 if (Version.TryParse(sqlite3_libversion().utf8_to_string(), out var version))
                 {
-                    var minSupportedVersion = new Version(3, 37);
-                    if (version < minSupportedVersion)
-                    {
-                        throw new SqliteInvalidException("Sqlite version on machine is too old. Need 3.37+");
-                    }
+                    SqliteVersion = version;
                 }
             }
         }
+
+        private bool IsStrictTableSupported => SqliteVersion >= new Version(3, 37);
 
         private void UpdateRecords()
         {

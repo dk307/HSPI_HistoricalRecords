@@ -28,7 +28,7 @@ const tooltip = {
     callbacks: { 
       // To change label in tooltip
       label: (data) => { 
-           return humanizeDuration(data.parsed);
+           return humanizeDuration(data.parsed / 1000);
       },	  
 	  afterLabel: (data) => { 
 		   const percentage = Math.round(100 * (data.parsed * 100)/totalDurationMs) /100;
@@ -58,7 +58,7 @@ function fetchPieChartData(chart) {
 			var row = $("<tr>");			
 			row.append($("<th class='scope'>").html('<div style="background-color:' + chart.data.datasets[0].backgroundColor[i] + ';width:20px;height:20px;"></div>'));
 			row.append($("<td>").text(chart.data.labels[i]));	
-			row.append($("<td>").text(humanizeDuration(chart.data.datasets[0].data[i])));	
+			row.append($("<td>").text(humanizeDuration(chart.data.datasets[0].data[i] / 1000)));	
 			row.appendTo(legandTableBody);    
 		}
 	});
