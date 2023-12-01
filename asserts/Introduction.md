@@ -21,10 +21,11 @@ The device's range can be set using device options. The values outside the range
 
 * When I encounter an error like "Sqlite version is too old" upon starting the plugin on a non-Windows system, what steps should I take to resolve it?
 
-On Windows, the sqlite is bundled with plugin. For other systems, the system provided version is used. The sqlite version needs to be above 3.37+.
+On Windows, the sqlite is bundled with plugin. For other systems, the system provided version is used. The sqlite version needs to be above 3.37+. Please update sqlite or OS Version.
 
 * How do I go about creating a statistical device associated with a specific device?
 
+This can be done via menu PlugIn->Add a statistic device.The multi step wizard on that page will guide creation of the device.
 
 * My database has become too large. What methods can I employ to reduce its size?
 

@@ -42,7 +42,11 @@
 			<div class="col-6">Size</div>
 			<div class="col-6"></div>
 		</div>           
-		<div class="row pl-1">
+		<div class="row pl-1 ">
+			<div class="col-6">Records Count</div>
+			<div class="col-6"></div>
+		</div>           
+		<div class="row pl-1 hs-bg-blue-l4">
 			<div class="col-6">Record retention period</div>
 			<div class="col-6"></div>
 		</div>            
@@ -192,7 +196,8 @@
 		$('#stats div:nth-child(2) div:nth-child(2)').text('{{dbStats["path"] | string.replace '\\' '\\\\'}}');
 		$('#stats div:nth-child(3) div:nth-child(2)').text('{{dbStats["version"]}}');
 		$('#stats div:nth-child(4) div:nth-child(2)').text(humanizeSize({{dbStats["size"]}}));
-		$('#stats div:nth-child(5) div:nth-child(2)').text(humanizeDuration({{dbStats["retentionPeriod"]}}));
+		$('#stats div:nth-child(5) div:nth-child(2)').text({{totalRecords}});
+		$('#stats div:nth-child(6) div:nth-child(2)').text(humanizeDuration({{dbStats["retentionPeriod"]}}));
 	}
 		
 	$(document).ready(function () {

@@ -172,7 +172,7 @@ const deviceUnits = '{{deviceUnits}}';
 			<div class="md-form my-0 mr-3" style="width:100%">
 				<select id="feature" class="mdb-select md-form dropdown-primary colorful-select" name="feature" >
 					{{for id in childrenRefIds}}
-						<option value="{{id}}" {{if id==featureId}}selected{{end}} >{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>	
+						<option value="{{id}}" {{if id==featureId}}selected{{end}} >{{device_prop id "name" | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>	
 					{{end}}			
 				</select> 
 				<label class="mdb-main-label" for="feature">Feature</label>
