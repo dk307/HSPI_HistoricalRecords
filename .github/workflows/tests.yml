@@ -66,7 +66,6 @@ jobs:
       - name: Install NUnit.ConsoleRunner
         run: nuget install NUnit.ConsoleRunner -Version 3.16.3 -DirectDownload -OutputDirectory .
 
-
       - name: Run tests
         shell: powershell
         run: ./NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ${{ env.TEST_FILE_WIN }} --framework=net-4.6
@@ -115,9 +114,16 @@ jobs:
           path: ./tests/bin/Debug
           name: Test-Files-${{ github.sha }}
 
+      - name: Install NUnit.ConsoleRunner
+        run: nuget install NUnit.ConsoleRunner -Version 3.16.3 -DirectDownload -OutputDirectory .
+
+
+
       - run: ls -l -R ./tests/bin/Debug
-      - name: Run Unit Tests
-        run: dotnet vstest --Parallel --logger:trx ${{ env.TEST_FILE_UBUNTU }};
+
+      - name: Run tests
+        shell: powershell
+        run: ./NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ${{ env.TEST_FILE_WIN }} --framework=mono
 
       - name: Test Report
         uses: dorny/test-reporter@v1
