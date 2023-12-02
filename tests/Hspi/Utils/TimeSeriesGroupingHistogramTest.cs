@@ -3,7 +3,6 @@ using System.Linq;
 using Hspi.Database;
 using Hspi.Utils;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 
 namespace HSPI_HistoricalRecordsTest
 {

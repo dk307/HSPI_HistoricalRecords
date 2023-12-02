@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 
 namespace HSPI_HistoricalRecordsTest
 {

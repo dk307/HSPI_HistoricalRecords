@@ -9,7 +9,6 @@ using Hspi.Device;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -75,10 +74,8 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
             Assert.That(newFeatureData.Feature[EProperty.Location], Is.EqualTo(trackedFeature.Location));
             Assert.That(newFeatureData.Feature[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
-#pragma warning disable S3265 // Non-flags enums should not be used in bitwise operations
             Assert.That(newFeatureData.Feature[EProperty.Misc],
                         Is.EqualTo((uint)(EMiscFlag.StatusOnly | EMiscFlag.SetDoesNotChangeLastChange | EMiscFlag.ShowValues)));
-#pragma warning restore S3265 // Non-flags enums should not be used in bitwise operations
 
             CollectionAssert.AreEqual((new HashSet<int> { hsControllerMock.CreatedDevices.First().Key }).ToImmutableArray(),
                                      ((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray());
