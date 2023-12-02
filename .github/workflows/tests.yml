@@ -68,15 +68,15 @@ jobs:
 
       - name: Run tests
         shell: powershell
-        run: ./NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ${{ env.TEST_FILE_UBUNTU }} --framework=net-4.6
+        run: ./NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ${{ env.TEST_FILE_UBUNTU }} --framework=net-4.6 --result=junit-results.xml;transform=./tests/nunit3-junit.xslt
 
-      - name: Generate HTML test report
-        uses: rjtngit/nunit-html-action@v1
-        if: always()
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
         with:
-         inputXmlPath: TestResult.xml
-         outputHtmlPath: results.html
-
+          name: Windows Unit Tests
+          path: junit-results.xml
+          reporter: java-junit
 
   cache-use-build-ubuntu:
     name: Test on Ubuntu
