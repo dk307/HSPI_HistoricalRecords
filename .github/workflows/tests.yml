@@ -112,7 +112,7 @@ jobs:
           name: Test-Files-${{ github.sha }}
 
       - name: Install NUnit.ConsoleRunner
-        run: nuget install NUnit.ConsoleRunner -Version 3.16.3 -DirectDownload -OutputDirectory ${{ env.$GITHUB_WORKSPACE }}
+        run: nuget install NUnit.ConsoleRunner -Version 3.16.3 -DirectDownload -OutputDirectory ${{ env.GITHUB_WORKSPACE }}
 
       - run: ls -l -R ./tests/bin/Debug
 
