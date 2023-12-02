@@ -70,13 +70,13 @@ jobs:
         shell: powershell
         run: ./NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ${{ env.TEST_FILE_UBUNTU }} --framework=net-4.6
 
-      - name: Test Report
-        uses: dorny/test-reporter@v1
-        if: success() || failure()
+      - name: Generate HTML test report
+        uses: rjtngit/nunit-html-action@v1
+        if: always()
         with:
-          name: Windows Unit Tests
-          path: TestResults/*.trx
-          reporter: dotnet-trx
+         inputXmlPath: TestResult.xml
+         outputHtmlPath: results.html
+
 
   cache-use-build-ubuntu:
     name: Test on Ubuntu
@@ -116,8 +116,6 @@ jobs:
 
       - name: Install NUnit.ConsoleRunner
         run: nuget install NUnit.ConsoleRunner -Version 3.16.3 -DirectDownload -OutputDirectory .
-
-
 
       - run: ls -l -R ./tests/bin/Debug
 
