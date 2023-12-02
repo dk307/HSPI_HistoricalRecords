@@ -2,14 +2,15 @@
 using System.Linq;
 using Hspi.Database;
 using Hspi.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
+using NUnit.Framework.Legacy;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class TimeSeriesGroupingLinearTest
     {
-        [TestMethod]
+        [Test]
         public void EndValuesAreMissingForLinear()
         {
             List<TimeAndValue> dbValues = new()
@@ -31,7 +32,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void HalfSampleForLinear()
         {
             List<TimeAndValue> dbValues = new()
@@ -57,7 +58,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void InitialValuesAreMissingForLinear()
         {
             List<TimeAndValue> dbValues = new()
@@ -78,7 +79,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(expected, result);
         }
 
-        [TestMethod]
+        [Test]
         public void LargeInitialValuesAreMissingForLinear()
         {
             List<TimeAndValue> dbValues = new()
@@ -98,7 +99,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void LargeMiddleValuesAreMissingForLinear()
         {
             List<TimeAndValue> dbValues = new()
@@ -125,7 +126,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void MinStartsAfterLaterInSeriesForLinear()
         {
             List<TimeAndValue> dbValues = new()
@@ -150,7 +151,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void MinValueAfterStartOfSeriesForLinear()
         {
             List<TimeAndValue> dbValues = new()
@@ -173,7 +174,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void SimpleIncrementingForLinear()
         {
             List<TimeAndValue> dbValues = new()

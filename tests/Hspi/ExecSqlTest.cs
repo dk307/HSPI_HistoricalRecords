@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using HomeSeer.PluginSdk;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using static SQLitePCL.Ugly.ugly;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class ExecSqlTest
     {
-        [TestMethod]
+        [Test]
         public void ExecSqlAsFunctionSingleFeatureAllValues()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -29,27 +29,27 @@ namespace HSPI_HistoricalRecordsTest
 
             var data = plugin.Object.ExecSql(@"SELECT ref, value, str FROM history");
 
-            Assert.IsNotNull(data);
-            Assert.AreEqual(2, data.Count);
-            Assert.AreEqual((long)refId, data[0]["ref"]);
-            Assert.AreEqual(1.1D, data[0]["value"]);
-            Assert.AreEqual("1.1", data[0]["str"]);
-            Assert.AreEqual((long)refId, data[1]["ref"]);
-            Assert.AreEqual(10D, data[1]["value"]);
-            Assert.AreEqual("10", data[1]["str"]);
+            Assert.That(data, Is.Not.Null);
+            Assert.That(data.Count, Is.EqualTo(2));
+            Assert.That(data[0]["ref"], Is.EqualTo((long)refId));
+            Assert.That(data[0]["value"], Is.EqualTo(1.1D));
+            Assert.That(data[0]["str"], Is.EqualTo("1.1"));
+            Assert.That(data[1]["ref"], Is.EqualTo((long)refId));
+            Assert.That(data[1]["value"], Is.EqualTo(10D));
+            Assert.That(data[1]["str"], Is.EqualTo("10"));
         }
 
-        [TestMethod]
+        [Test]
         public void ExecSqlAsFunctionWithError()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            Assert.ThrowsException<sqlite3_exception>(() => plugin.Object.ExecSql(@"SELECT ref1, value, str FROM history"));
+            Assert.Catch<sqlite3_exception>(() => plugin.Object.ExecSql(@"SELECT ref1, value, str FROM history"));
         }
 
-        [TestMethod]
+        [Test]
         public void ExecSqlAsPostCount()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -77,20 +77,20 @@ namespace HSPI_HistoricalRecordsTest
             var jsonString = plugin.Object.PostBackProc("execsql", @"{sql: 'SELECT COUNT(*) AS TotalCount FROM history'}", string.Empty, 0);
 
             var json = (JObject)JsonConvert.DeserializeObject(jsonString);
-            Assert.IsNotNull(json);
+            Assert.That(json, Is.Not.Null);
 
             var columns = json["result"]["columns"] as JArray;
-            Assert.IsNotNull(columns);
-            Assert.AreEqual(1, columns.Count);
-            Assert.AreEqual("TotalCount", columns[0].ToString());
+            Assert.That(columns, Is.Not.Null);
+            Assert.That(columns.Count, Is.EqualTo(1));
+            Assert.That(columns[0].ToString(), Is.EqualTo("TotalCount"));
 
             var data = json["result"]["data"] as JArray;
-            Assert.IsNotNull(data);
-            Assert.AreEqual(1, data.Count);
-            Assert.AreEqual((long)45, data[0][0]);
+            Assert.That(data, Is.Not.Null);
+            Assert.That(data.Count, Is.EqualTo(1));
+            Assert.That((long)data[0][0], Is.EqualTo(45L));
         }
 
-        [TestMethod]
+        [Test]
         public void ExecSqlAsPostSingleFeatureAllValues()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -109,27 +109,27 @@ namespace HSPI_HistoricalRecordsTest
             var jsonString = plugin.Object.PostBackProc("execsql", @"{sql: 'SELECT ref, value, str FROM history'}", string.Empty, 0);
 
             var json = (JObject)JsonConvert.DeserializeObject(jsonString);
-            Assert.IsNotNull(json);
+            Assert.That(json, Is.Not.Null);
 
             var columns = json["result"]["columns"] as JArray;
-            Assert.IsNotNull(columns);
-            Assert.AreEqual(3, columns.Count);
-            Assert.AreEqual("ref", columns[0].ToString());
-            Assert.AreEqual("value", columns[1].ToString());
-            Assert.AreEqual("str", columns[2].ToString());
+            Assert.That(columns, Is.Not.Null);
+            Assert.That(columns.Count, Is.EqualTo(3));
+            Assert.That(columns[0].ToString(), Is.EqualTo("ref"));
+            Assert.That(columns[1].ToString(), Is.EqualTo("value"));
+            Assert.That(columns[2].ToString(), Is.EqualTo("str"));
 
             var data = json["result"]["data"] as JArray;
-            Assert.IsNotNull(data);
-            Assert.AreEqual(2, data.Count);
-            Assert.AreEqual((long)refId, data[0][0]);
-            Assert.AreEqual(1.1D, data[0][1]);
-            Assert.AreEqual("1.1", data[0][2]);
-            Assert.AreEqual((long)refId, data[1][0]);
-            Assert.AreEqual(10D, data[1][1]);
-            Assert.AreEqual("10", data[1][2]);
+            Assert.That(data, Is.Not.Null);
+            Assert.That(data.Count, Is.EqualTo(2));
+            Assert.That((long)data[0][0], Is.EqualTo((long)refId));
+            Assert.That((double)data[0][1], Is.EqualTo(1.1D));
+            Assert.That((string)data[0][2], Is.EqualTo("1.1"));
+            Assert.That((long)data[1][0], Is.EqualTo((long)refId));
+            Assert.That((double)data[1][1], Is.EqualTo(10D));
+            Assert.That((string)data[1][2], Is.EqualTo("10"));
         }
 
-        [TestMethod]
+        [Test]
         public void ExecSqlAsPostVacuum()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -148,18 +148,18 @@ namespace HSPI_HistoricalRecordsTest
             var jsonString = plugin.Object.PostBackProc("execsql", "{sql: 'VACUUM'}", string.Empty, 0);
 
             var json = (JObject)JsonConvert.DeserializeObject(jsonString);
-            Assert.IsNotNull(json);
+            Assert.That(json, Is.Not.Null);
 
             var columns = json["result"]["columns"] as JArray;
-            Assert.IsNotNull(columns);
-            Assert.AreEqual(0, columns.Count);
+            Assert.That(columns, Is.Not.Null);
+            Assert.That(columns.Count, Is.EqualTo(0));
 
             var data = json["result"]["data"] as JArray;
-            Assert.IsNotNull(data);
-            Assert.AreEqual(0, data.Count);
+            Assert.That(data, Is.Not.Null);
+            Assert.That(data.Count, Is.EqualTo(0));
         }
 
-        [TestMethod]
+        [Test]
         public void ExecSqlAsPostWithError()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
@@ -169,10 +169,10 @@ namespace HSPI_HistoricalRecordsTest
             var jsonString = plugin.Object.PostBackProc("execsql", @"{sql: 'SELECT COUNT(*) AS TotalCount FROM history1'}", string.Empty, 0);
 
             var json = (JObject)JsonConvert.DeserializeObject(jsonString);
-            Assert.IsNotNull(json);
+            Assert.That(json, Is.Not.Null);
 
             var error = (string)json["error"];
-            Assert.AreEqual("no such table: history1", error);
+            Assert.That(error, Is.EqualTo("no such table: history1"));
         }
     }
 }

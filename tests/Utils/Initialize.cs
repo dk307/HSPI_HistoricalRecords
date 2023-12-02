@@ -1,22 +1,22 @@
 ﻿using Hspi;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Serilog;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
-    public static class Initialize
+    [SetUpFixture]
+    public class Initialize
     {
-        [AssemblyInitialize]
-        public static void AssemblyInitialize(TestContext context)
+        [OneTimeSetUp]
+        public void AssemblyInitialize()
         {
             Logger.ConfigureLogging(Serilog.Events.LogEventLevel.Debug, false);
 
             Log.Information("Starting Tests");
         }
 
-        [AssemblyCleanup]
-        public static void AssemblyCleanup()
+        [OneTimeTearDown]
+        public void AssemblyCleanup()
         {
             Log.Information("Finishing Tests");
         }

@@ -1,24 +1,21 @@
 using System;
 using Hspi.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class HsDeviceInvalidExceptionTests
     {
-        [TestMethod]
+        [Test]
         public void DefaultConstructor()
         {
             // Arrange
             HsDeviceInvalidException exception = new();
-
-            // Act & Assert
-            Assert.IsNotNull(exception);
-            Assert.IsInstanceOfType(exception, typeof(Exception));
+            Assert.That(exception, Is.InstanceOf<Exception>());
         }
 
-        [TestMethod]
+        [Test]
         public void MessageAndInnerExceptionConstructor()
         {
             // Arrange
@@ -27,13 +24,12 @@ namespace HSPI_HistoricalRecordsTest
             HsDeviceInvalidException exception = new(errorMessage, innerException);
 
             // Act & Assert
-            Assert.IsNotNull(exception);
-            Assert.IsInstanceOfType(exception, typeof(Exception));
-            Assert.AreEqual(errorMessage, exception.Message);
-            Assert.AreEqual(innerException, exception.InnerException);
+            Assert.That(exception, Is.InstanceOf<Exception>());
+            Assert.That(exception.Message, Is.EqualTo(errorMessage));
+            Assert.That(exception.InnerException, Is.EqualTo(innerException));
         }
 
-        [TestMethod]
+        [Test]
         public void MessageConstructor()
         {
             // Arrange
@@ -41,9 +37,8 @@ namespace HSPI_HistoricalRecordsTest
             HsDeviceInvalidException exception = new(errorMessage);
 
             // Act & Assert
-            Assert.IsNotNull(exception);
-            Assert.IsInstanceOfType(exception, typeof(Exception));
-            Assert.AreEqual(errorMessage, exception.Message);
+            Assert.That(exception, Is.InstanceOf<Exception>());
+            Assert.That(exception.Message, Is.EqualTo(errorMessage));
         }
     }
 }

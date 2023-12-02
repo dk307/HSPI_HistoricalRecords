@@ -1,14 +1,14 @@
 ﻿using System.Collections.Generic;
 using Hspi.Database;
 using Hspi.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class TimeSeriesAverageTest
     {
-        [TestMethod]
+        [Test]
         public void AverageForEmptyList()
         {
             List<TimeAndValue> dbValues = new()
@@ -18,10 +18,10 @@ namespace HSPI_HistoricalRecordsTest
             TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
             var result = timeSeriesHelper.Average(FillStrategy.Linear);
 
-            Assert.IsFalse(result.HasValue);
+            Assert.That(!result.HasValue);
         }
 
-        [TestMethod]
+        [Test]
         public void AverageForLinear()
         {
             List<TimeAndValue> dbValues = new()
@@ -34,10 +34,10 @@ namespace HSPI_HistoricalRecordsTest
             TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
             var result = timeSeriesHelper.Average(FillStrategy.Linear);
 
-            Assert.AreEqual(((150D * 15) + (10 * 250) + (75 * 300)) / 100D, result);
+            Assert.That(result, Is.EqualTo(((150D * 15) + (10 * 250) + (75 * 300)) / 100D));
         }
 
-        [TestMethod]
+        [Test]
         public void AverageForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -50,10 +50,10 @@ namespace HSPI_HistoricalRecordsTest
             TimeSeriesHelper timeSeriesHelper = new(1, 100, dbValues);
             var result = timeSeriesHelper.Average(FillStrategy.LOCF);
 
-            Assert.AreEqual(((100D * 15) + (10 * 200) + (75 * 300)) / 100D, result);
+            Assert.That(result, Is.EqualTo(((100D * 15) + (10 * 200) + (75 * 300)) / 100D));
         }
 
-        [TestMethod]
+        [Test]
         public void AverageStartsLaterForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -66,7 +66,7 @@ namespace HSPI_HistoricalRecordsTest
             TimeSeriesHelper timeSeriesHelper = new(6, 100, dbValues);
             var result = timeSeriesHelper.Average(FillStrategy.LOCF);
 
-            Assert.AreEqual(((100D * 10) + (10 * 200) + (75 * 300)) / 95D, result);
+            Assert.That(result, Is.EqualTo(((100D * 10) + (10 * 200) + (75 * 300)) / 95D));
         }
     }
 }

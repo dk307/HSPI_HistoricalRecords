@@ -13,7 +13,7 @@ using HomeSeer.PluginSdk.Energy;
 using HomeSeer.PluginSdk.Events;
 using HomeSeer.PluginSdk.Logging;
 using Hspi;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Serilog.Events;
 
 namespace HSPI_HistoricalRecordsTest

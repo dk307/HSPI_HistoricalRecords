@@ -4,13 +4,14 @@ using System.Linq;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework.Legacy;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class DevicePageHistoryCallbacksTest
     {
         public static IEnumerable<object[]> GetDatatableCallbacksData()
@@ -103,10 +104,9 @@ namespace HSPI_HistoricalRecordsTest
              };
         }
 
-        [DataTestMethod]
-        [DataRow("refId={0}&min=1001&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "max is less than min")]
-        [DataRow("refId={0}&min=abc&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min is invalid")]
-        [DataRow("refId={0}&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min or max not specified")]
+        [TestCase("refId={0}&min=1001&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "max is less than min")]
+        [TestCase("refId={0}&min=abc&max=99&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min is invalid")]
+        [TestCase("refId={0}&start=10&length=100&order[0][column]=1&order[0][dir]=desc", "min or max not specified")]
         public void DatatableCallbackMinMoreThanMax(string format, string exception)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
@@ -117,18 +117,18 @@ namespace HSPI_HistoricalRecordsTest
             string paramsForRecord = String.Format(format, devRefId);
 
             string data = plugin.Object.PostBackProc("historyrecords", paramsForRecord, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var errorMessage = jsonData["error"].Value<string>();
-            Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
+            Assert.That(!string.IsNullOrWhiteSpace(errorMessage));
             StringAssert.Contains(errorMessage, exception);
         }
 
-        [TestMethod]
-        [DynamicData(nameof(GetDatatableCallbackTotalData), DynamicDataSourceType.Method)]
+        [Test]
+        [TestCaseSource(nameof(GetDatatableCallbackTotalData))]
         public void DatatableCallbackTotalCorrect(Func<HsFeature, List<RecordData>, string> createString, int addedRecordCount, int total)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -151,20 +151,20 @@ namespace HSPI_HistoricalRecordsTest
             string paramsForRecord = createString(mockHsController.GetFeature(refId), added.Clone());
 
             string data = plugin.Object.PostBackProc("historyrecords", paramsForRecord, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var recordsTotal = jsonData["recordsTotal"].Value<long>();
-            Assert.AreEqual(total, recordsTotal);
+            Assert.That(recordsTotal, Is.EqualTo(total));
 
             var recordsFiltered = jsonData["recordsFiltered"].Value<long>();
-            Assert.AreEqual(total, recordsFiltered);
+            Assert.That(recordsFiltered, Is.EqualTo(total));
         }
 
-        [TestMethod]
-        [DynamicData(nameof(GetDatatableCallbacksData), DynamicDataSourceType.Method)]
+        [Test]
+        [TestCaseSource(nameof(GetDatatableCallbacksData))]
         public void DatatableCallbackDataCorrect(Func<HsFeature, List<RecordData>, string> createString, Func<List<RecordData>, List<RecordData>> filter)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -195,26 +195,26 @@ namespace HSPI_HistoricalRecordsTest
 
             string paramsForRecord = createString(feature, added.Clone());
             var records = TestHelper.GetHistoryRecords(plugin, refId, paramsForRecord);
-            Assert.IsNotNull(records);
+            Assert.That(records, Is.Not.Null);
 
             var filterRecords = filter(added.Clone());
 
-            Assert.AreEqual(records.Count, filterRecords.Count);
+            Assert.That(filterRecords.Count, Is.EqualTo(records.Count));
 
             for (int i = 0; i < records.Count; i++)
             {
                 var record = records[i];
                 var expected = filterRecords[i];
 
-                Assert.AreEqual(record.DeviceRefId, expected.DeviceRefId);
-                Assert.AreEqual(record.UnixTimeSeconds, expected.UnixTimeSeconds);
-                Assert.AreEqual(record.DeviceValue, expected.DeviceValue);
-                Assert.AreEqual(record.DeviceString, expected.DeviceString);
-                Assert.AreEqual(record.DurationSeconds, durations[record.UnixTimeSeconds]);
+                Assert.That(expected.DeviceRefId, Is.EqualTo(record.DeviceRefId));
+                Assert.That(expected.UnixTimeSeconds, Is.EqualTo(record.UnixTimeSeconds));
+                Assert.That(expected.DeviceValue, Is.EqualTo(record.DeviceValue));
+                Assert.That(expected.DeviceString, Is.EqualTo(record.DeviceString));
+                Assert.That(durations[record.UnixTimeSeconds], Is.EqualTo(record.DurationSeconds));
             }
         }
 
-        [TestMethod]
+        [Test]
         public void GetEarliestAndOldestRecordTimeDate()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -231,11 +231,11 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId, 334, "333", nowTime.AddSeconds(-2000), 3);
 
             var records = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(refId);
-            Assert.AreEqual(2000, records[0]);
-            Assert.AreEqual(100, records[1]);
+            Assert.That(records[0], Is.EqualTo(2000));
+            Assert.That(records[1], Is.EqualTo(100));
         }
 
-        [TestMethod]
+        [Test]
         public void HandleUpdateDeviceSettings()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -247,31 +247,31 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1);
 
-            Assert.IsTrue(plugin.Object.IsFeatureTracked(deviceRefId));
+            Assert.That(plugin.Object.IsFeatureTracked(deviceRefId));
 
             mockHsController.SetupIniValue(deviceRefId.ToString(), "RefId", deviceRefId.ToString());
             mockHsController.SetupIniValue(deviceRefId.ToString(), "IsTracked", false.ToString());
             mockHsController.SetupIniValue(deviceRefId.ToString(), "MinValue", string.Empty);
 
             string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"373\",\"tracked\":0, \"minValue\":10, \"maxValue\":20}", string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
-            Assert.IsFalse(jsonData.ContainsKey("error"));
+            Assert.That(!jsonData.ContainsKey("error"));
 
-            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId));
+            Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
 
             var list = plugin.Object.GetDevicePageHeaderStats(deviceRefId);
-            Assert.AreEqual(10D, list[5]);
-            Assert.AreEqual(20D, list[6]);
+            Assert.That(list[5], Is.EqualTo(10D));
+            Assert.That(list[6], Is.EqualTo(20D));
 
             // wait till all invalid records are deleted
             TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 0);
         }
 
-        [TestMethod]
+        [Test]
         public void HandleUpdateDeviceSettingsNoMinMax()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -284,20 +284,20 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1);
 
             string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"refId\":\"373\",\"tracked\":0, \"minValue\":null, \"maxValue\":null}", string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
-            Assert.IsFalse(jsonData.ContainsKey("error"));
+            Assert.That(jsonData, Is.Not.Null);
+            Assert.That(!jsonData.ContainsKey("error"));
 
-            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId));
+            Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
 
             var list = plugin.Object.GetDevicePageHeaderStats(deviceRefId);
-            Assert.AreEqual(null, list[5]);
-            Assert.AreEqual(null, list[6]);
+            Assert.That(list[5], Is.EqualTo(null));
+            Assert.That(list[6], Is.EqualTo(null));
         }
 
-        [TestMethod]
+        [Test]
         public void HandleUpdateDeviceSettingsError()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -308,13 +308,13 @@ namespace HSPI_HistoricalRecordsTest
 
             // send invalid json
             string data = plugin.Object.PostBackProc("updatedevicesettings", "{\"tracked\":1}", string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var errorMessage = jsonData["error"].Value<string>();
-            Assert.IsNotNull(errorMessage);
+            Assert.That(errorMessage, Is.Not.Null);
         }
 
         private class StringValueComparer : IComparer<RecordData>

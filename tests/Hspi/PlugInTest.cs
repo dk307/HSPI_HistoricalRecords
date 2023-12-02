@@ -7,19 +7,20 @@ using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Types;
 using Hspi;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework;
 using Serilog;
 using Serilog.Events;
 using static HomeSeer.PluginSdk.PluginStatus;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class PlugInTest
     {
-        [TestMethod]
+        [Test]
         public void AllDevicesAreUpdatedOnStart()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -34,13 +35,12 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.CheckRecordedValueForFeatureType(plugin, mockHsController.GetFeature(allDeviceRefs[1]), 100, 1);
         }
 
-        [DataTestMethod]
-        [DataRow(LogEventLevel.Information, false)]
-        [DataRow(LogEventLevel.Warning, false)]
-        [DataRow(LogEventLevel.Fatal, false)]
-        [DataRow(LogEventLevel.Information, true)]
-        [DataRow(LogEventLevel.Verbose, false)]
-        [DataRow(LogEventLevel.Debug, true)]
+        [TestCase(LogEventLevel.Information, false)]
+        [TestCase(LogEventLevel.Warning, false)]
+        [TestCase(LogEventLevel.Fatal, false)]
+        [TestCase(LogEventLevel.Information, true)]
+        [TestCase(LogEventLevel.Verbose, false)]
+        [TestCase(LogEventLevel.Debug, true)]
         public void CheckLogLevelSettingChange(LogEventLevel logEventLevel, bool logToFile)
         {
             var settingsFromIni = new Dictionary<string, string>
@@ -59,27 +59,27 @@ namespace HSPI_HistoricalRecordsTest
                 SettingsPages.CreateDefault(logEventLevel, logToFile)
             };
 
-            Assert.IsTrue(plugIn.SaveJuiSettingsPages(settingsCollection.ToJsonString()));
+            Assert.That(plugIn.SaveJuiSettingsPages(settingsCollection.ToJsonString()));
 
-            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Fatal), logEventLevel <= LogEventLevel.Fatal);
-            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Error), logEventLevel <= LogEventLevel.Error);
-            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Warning), logEventLevel <= LogEventLevel.Warning);
-            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Information), logEventLevel <= LogEventLevel.Information);
-            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Debug), logEventLevel <= LogEventLevel.Debug);
-            Assert.AreEqual(Log.Logger.IsEnabled(LogEventLevel.Verbose), logEventLevel <= LogEventLevel.Verbose);
+            Assert.That(logEventLevel <= LogEventLevel.Fatal, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Fatal)));
+            Assert.That(logEventLevel <= LogEventLevel.Error, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Error)));
+            Assert.That(logEventLevel <= LogEventLevel.Warning, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Warning)));
+            Assert.That(logEventLevel <= LogEventLevel.Information, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Information)));
+            Assert.That(logEventLevel <= LogEventLevel.Debug, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Debug)));
+            Assert.That(logEventLevel <= LogEventLevel.Verbose, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Verbose)));
             plugInMock.Verify();
         }
 
-        [TestMethod]
+        [Test]
         public void CheckPlugInStatus()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugInMock, out var _);
             using PlugInLifeCycle plugInLifeCycle = new(plugInMock);
 
-            Assert.AreEqual(plugInMock.Object.OnStatusCheck().Status, PluginStatus.Ok().Status);
+            Assert.That(PluginStatus.Ok().Status, Is.EqualTo(plugInMock.Object.OnStatusCheck().Status));
         }
 
-        [TestMethod]
+        [Test]
         public void CheckPlugInStatusOnFailedSqliteInitAndRecovers()
         {
             // locking file does not work on ubuntu
@@ -101,13 +101,13 @@ namespace HSPI_HistoricalRecordsTest
 
                 var status = plugInMock.Object.OnStatusCheck();
 
-                Assert.AreEqual(EPluginStatus.Critical, status.Status);
-                Assert.AreEqual("unable to open database file", status.StatusText);
+                Assert.That(status.Status, Is.EqualTo(EPluginStatus.Critical));
+                Assert.That(status.StatusText, Is.EqualTo("unable to open database file"));
 
                 //unlock file
                 lockFile.Dispose();
 
-                Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+                Assert.That(TestHelper.TimedWaitTillTrue(() =>
                 {
                     return EPluginStatus.Ok == plugInMock.Object.OnStatusCheck().Status;
                 }));
@@ -116,7 +116,7 @@ namespace HSPI_HistoricalRecordsTest
             }
         }
 
-        [TestMethod]
+        [Test]
         public void CheckSettingsWithIniFilledDuringInitialize()
         {
             var settingsFromIni = new Dictionary<string, string>()
@@ -130,18 +130,18 @@ namespace HSPI_HistoricalRecordsTest
 
             PlugIn plugIn = plugInMock.Object;
 
-            Assert.IsTrue(plugIn.HasSettings);
+            Assert.That(plugIn.HasSettings);
 
             var settingPages = SettingsCollection.FromJsonString(plugIn.GetJuiSettingsPages());
-            Assert.IsNotNull(settingPages);
+            Assert.That(settingPages, Is.Not.Null);
 
             var settings = settingPages[SettingsPages.SettingPageId].ToValueMap();
 
-            Assert.AreEqual(settings[SettingsPages.LoggingLevelId], ((int)LogEventLevel.Information).ToString());
-            Assert.AreEqual(settings[SettingsPages.LogToFileId], true.ToString());
+            Assert.That(((int)LogEventLevel.Information).ToString(), Is.EqualTo(settings[SettingsPages.LoggingLevelId]));
+            Assert.That(true.ToString(), Is.EqualTo(settings[SettingsPages.LogToFileId]));
         }
 
-        [TestMethod]
+        [Test]
         public void GetFeatureUnit()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -152,7 +152,7 @@ namespace HSPI_HistoricalRecordsTest
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var unit1 = plugin.Object.GetFeatureUnit(refId);
-            Assert.AreEqual("F", unit1);
+            Assert.That(unit1, Is.EqualTo("F"));
 
             mockHsController.SetupDevOrFeatureValue(refId, EProperty.DisplayedStatus, "1.1 C");
 
@@ -160,18 +160,17 @@ namespace HSPI_HistoricalRecordsTest
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, refId, 0 });
 
             var unit2 = plugin.Object.GetFeatureUnit(refId);
-            Assert.AreEqual("C", unit2);
+            Assert.That(unit2, Is.EqualTo("C"));
         }
 
-        [DataTestMethod]
-        [DataRow("96%", "%")]
-        [DataRow("96 %", "%")]
-        [DataRow("-96 W", "W")]
-        [DataRow("93dkfe6 W", null)]
-        [DataRow("96 kW hours", "kW hours")]
-        [DataRow("96 F", "F")]
-        [DataRow("96234857", null)]
-        [DataRow("apple", null)]
+        [TestCase("96%", "%")]
+        [TestCase("96 %", "%")]
+        [TestCase("-96 W", "W")]
+        [TestCase("93dkfe6 W", null)]
+        [TestCase("96 kW hours", "kW hours")]
+        [TestCase("96 F", "F")]
+        [TestCase("96234857", null)]
+        [TestCase("apple", null)]
         public void GetFeatureUnitForDifferentTypes(string displayStatus, string unit)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -182,10 +181,10 @@ namespace HSPI_HistoricalRecordsTest
 
             mockHsController.SetupDevOrFeatureValue(100, EProperty.DisplayedStatus, displayStatus);
             var unitFound = plugin.Object.GetFeatureUnit(100);
-            Assert.AreEqual(unit, unitFound);
+            Assert.That(unitFound, Is.EqualTo(unit));
         }
 
-        [TestMethod]
+        [Test]
         public void GetJuiDeviceConfigPageErrored()
         {
             TestHelper.CreateMockPlugInAndMoqHsController(out var plugin, out var mockHsController);
@@ -195,19 +194,18 @@ namespace HSPI_HistoricalRecordsTest
             int deviceRefId = 10;
 
             string errorMessage = "sdfsd dfgdfg erter";
-            mockHsController.Setup(x => x.GetFeatureByRef(deviceRefId)).Throws(new Exception(errorMessage));
+            mockHsController.Setup(x => x.GetPropertyByRef(deviceRefId, It.IsAny<EProperty>())).Throws(new Exception(errorMessage));
 
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(deviceRefId);
 
             var result = (JObject)JsonConvert.DeserializeObject(pageJson);
 
-            Assert.IsNotNull(result);
-            Assert.IsNotNull(result["views"][0]["value"], errorMessage);
+            Assert.That(result, Is.Not.Null);
+            Assert.That((string)result["views"][0]["value"], Is.EqualTo(errorMessage));
         }
 
-        [DataTestMethod]
-        [DataRow(PlugInData.PlugInId, "editdevice")]
-        [DataRow("", "devicehistoricalrecords")]
+        [TestCase(PlugInData.PlugInId, "editdevice")]
+        [TestCase("", "devicehistoricalrecords")]
         public void GetJuiDeviceConfigPageForDevice(string deviceInterface, string page)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -220,24 +218,23 @@ namespace HSPI_HistoricalRecordsTest
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
             var data = (JObject)JsonConvert.DeserializeObject(pageJson);
-            Assert.IsNotNull(data);
-            Assert.AreEqual(5, data["type"].Value<int>());
+            Assert.That(data, Is.Not.Null);
+            Assert.That(data["type"].Value<int>(), Is.EqualTo(5));
 
             string labelHtml = data["views"][0]["name"].Value<string>();
 
             var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
             var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
 
-            Assert.IsNotNull(iFrameElement);
+            Assert.That(iFrameElement, Is.Not.Null);
 
             var iFrameSource = iFrameElement.Attributes["src"].Value;
-            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/{page}.html?ref={devOrFeatRef}&feature={devOrFeatRef}");
+            Assert.That($"/HistoricalRecords/{page}.html?ref={devOrFeatRef}&feature={devOrFeatRef}", Is.EqualTo(iFrameSource));
         }
 
-        [TestMethod]
-        [DataTestMethod]
-        [DataRow(PlugInData.PlugInId, "editdevice")]
-        [DataRow("", "devicehistoricalrecords")]
+        [Test]
+        [TestCase(PlugInData.PlugInId, "editdevice")]
+        [TestCase("", "devicehistoricalrecords")]
         public void GetJuiDeviceConfigPageForFeature(string deviceInterface, string page)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -250,21 +247,21 @@ namespace HSPI_HistoricalRecordsTest
             string pageJson = plugin.Object.GetJuiDeviceConfigPage(devOrFeatRef);
 
             var data = (JObject)JsonConvert.DeserializeObject(pageJson);
-            Assert.IsNotNull(data);
-            Assert.AreEqual(5, data["type"].Value<int>());
+            Assert.That(data, Is.Not.Null);
+            Assert.That(data["type"].Value<int>(), Is.EqualTo(5));
 
             string labelHtml = data["views"][0]["name"].Value<string>();
 
             var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
             var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
 
-            Assert.IsNotNull(iFrameElement);
+            Assert.That(iFrameElement, Is.Not.Null);
 
             var iFrameSource = iFrameElement.Attributes["src"].Value;
-            Assert.AreEqual(iFrameSource, $"/HistoricalRecords/{page}.html?ref={9}&feature={devOrFeatRef}");
+            Assert.That(iFrameSource, Is.EqualTo($"/HistoricalRecords/{page}.html?ref={9}&feature={devOrFeatRef}"));
         }
 
-        [TestMethod]
+        [Test]
         public void GetPrecision()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -275,7 +272,7 @@ namespace HSPI_HistoricalRecordsTest
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var precision1 = plugin.Object.GetFeaturePrecision(refId);
-            Assert.AreEqual(3, precision1);
+            Assert.That(precision1, Is.EqualTo(3));
 
             List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
             mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusGraphics, statusGraphics);
@@ -284,15 +281,15 @@ namespace HSPI_HistoricalRecordsTest
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, refId, 0 });
 
             var precision2 = plugin.Object.GetFeaturePrecision(refId);
-            Assert.AreEqual(1, precision2);
+            Assert.That(precision2, Is.EqualTo(1));
         }
 
-        [TestMethod]
+        [Test]
         public void InitFirstTime()
         {
             TestHelper.CreateMockPlugInAndMoqHsController(out var plugin, out var mockHsController);
 
-            Assert.IsTrue(plugin.Object.InitIO());
+            Assert.That(plugin.Object.InitIO());
             plugin.Object.ShutdownIO();
             plugin.Object.Dispose();
 
@@ -305,10 +302,10 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.Verify(x => x.RegisterDeviceIncPage(PlugInData.PlugInId, "adddevice.html", "Add a statistics device"));
 
             string dbPath = Path.Combine(mockHsController.Object.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
-            Assert.IsTrue(File.Exists(dbPath));
+            Assert.That(File.Exists(dbPath));
         }
 
-        [TestMethod]
+        [Test]
         public void IsFeatureTrackedForTimer()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -319,8 +316,8 @@ namespace HSPI_HistoricalRecordsTest
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var tracked1 = plugin.Object.IsFeatureTracked(refId);
-            Assert.IsTrue(tracked1);
-            Assert.IsTrue(plugin.Object.HasJuiDeviceConfigPage(refId));
+            Assert.That(tracked1);
+            Assert.That(plugin.Object.HasJuiDeviceConfigPage(refId));
 
             var data = new PlugExtraData();
             data.AddNamed("timername", "123");
@@ -331,49 +328,49 @@ namespace HSPI_HistoricalRecordsTest
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, refId, 0 });
 
             var tracked2 = plugin.Object.IsFeatureTracked(refId);
-            Assert.IsFalse(tracked2);
+            Assert.That(!tracked2);
 
-            Assert.IsFalse(plugin.Object.HasJuiDeviceConfigPage(refId));
+            Assert.That(!plugin.Object.HasJuiDeviceConfigPage(refId));
         }
 
-        [TestMethod]
+        [Test]
         public void PostBackProcforNonHandled()
         {
             var plugin = new PlugIn();
-            Assert.AreEqual(plugin.PostBackProc("Random", "data", "user", 0), string.Empty);
+            Assert.That(string.Empty, Is.EqualTo(plugin.PostBackProc("Random", "data", "user", 0)));
         }
 
-        [TestMethod]
+        [Test]
         public void UseWithoutInit()
         {
             var plugin = new PlugIn();
-            Assert.ThrowsException<InvalidOperationException>(() => plugin.PruneDatabase());
-            Assert.ThrowsException<InvalidOperationException>(() => plugin.DeleteAllRecords(10));
-            Assert.ThrowsException<InvalidOperationException>(() => plugin.GetDatabaseStats());
+            Assert.Catch<InvalidOperationException>(() => plugin.PruneDatabase());
+            Assert.Catch<InvalidOperationException>(() => plugin.DeleteAllRecords(10));
+            Assert.Catch<InvalidOperationException>(() => plugin.GetDatabaseStats());
         }
 
-        [TestMethod]
+        [Test]
         public void VerifyAccessLevel()
         {
             var plugin = new PlugIn();
-            Assert.AreEqual((int)EAccessLevel.RequiresLicense, plugin.AccessLevel);
+            Assert.That(plugin.AccessLevel, Is.EqualTo((int)EAccessLevel.RequiresLicense));
         }
 
-        [TestMethod]
+        [Test]
         public void VerifyNameAndId()
         {
             var plugin = new PlugIn();
-            Assert.AreEqual(PlugInData.PlugInId, plugin.Id);
-            Assert.AreEqual(PlugInData.PlugInName, plugin.Name);
+            Assert.That(plugin.Id, Is.EqualTo(PlugInData.PlugInId));
+            Assert.That(plugin.Name, Is.EqualTo(PlugInData.PlugInName));
         }
 
-        [TestMethod]
+        [Test]
         public void VerifySupportsConfigDeviceAll()
         {
             var plugin = new PlugIn();
-            Assert.IsTrue(plugin.SupportsConfigDeviceAll);
-            Assert.IsTrue(plugin.SupportsConfigFeature);
-            Assert.IsTrue(plugin.SupportsConfigDevice);
+            Assert.That(plugin.SupportsConfigDeviceAll);
+            Assert.That(plugin.SupportsConfigFeature);
+            Assert.That(plugin.SupportsConfigDevice);
         }
     }
 }

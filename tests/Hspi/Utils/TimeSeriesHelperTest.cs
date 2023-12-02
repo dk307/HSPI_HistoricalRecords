@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using Hspi.Database;
 using Hspi.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class TimeSeriesHelperTest
     {
-        [TestMethod]
+        [Test]
         public void ConstructorThrowsExceptionWhenMinIsGreaterThanMax()
         {
             // Arrange
@@ -18,13 +18,13 @@ namespace HSPI_HistoricalRecordsTest
             IList<TimeAndValue> list = new List<TimeAndValue>();
 
             // Act & Assert
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.Catch<ArgumentOutOfRangeException>(() =>
             {
                 new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, list);
             });
         }
 
-        [TestMethod]
+        [Test]
         public void ThrowsExceptionWhenIntervalIsZero()
         {
             // Arrange
@@ -32,7 +32,7 @@ namespace HSPI_HistoricalRecordsTest
             long maxUnixTimeSeconds = 100;
             IList<TimeAndValue> list = new List<TimeAndValue>();
 
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() =>
+            Assert.Catch<ArgumentOutOfRangeException>(() =>
             {
                 var ts = new TimeSeriesHelper(minUnixTimeSeconds, maxUnixTimeSeconds, list);
                 ts.ReduceSeriesWithAverage(0, FillStrategy.LOCF);
