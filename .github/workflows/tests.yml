@@ -68,7 +68,7 @@ jobs:
 
       - name: Run tests
         shell: powershell
-        run: ./NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ${{ env.TEST_FILE_UBUNTU }} --framework=net-4.6 --result=junit-results.xml;transform=./tests/nunit3-junit.xslt
+        run: ./NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe ${{ env.TEST_FILE_UBUNTU }} --framework=net-4.6 --result="junit-results.xml;transform=./tests/nunit3-junit.xslt"
 
       - name: Test Report
         uses: dorny/test-reporter@v1
