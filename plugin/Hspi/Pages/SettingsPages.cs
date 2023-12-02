@@ -47,7 +47,7 @@ namespace Hspi
 
         public long MinRecordsToKeep => MinRecordsToKeepDefault;
 
-        public static Page CreateDefault(LogEventLevel logEventLevel = LogEventLevel.Information,
+        public static Page CreateDefault(LogEventLevel logEventLevel = LogEventLevel.Warning,
                                          bool logToFileDefault = false,
                                          TimeSpan? globalDefaultRetention = null)
         {

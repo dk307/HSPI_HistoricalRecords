@@ -15,18 +15,6 @@ namespace Hspi
 {
     internal sealed class SqliteManager : IDisposable
     {
-        static SqliteManager()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Batteries_V2.Init();
-            }
-            else
-            {
-                raw.SetProvider(new SQLite3Provider_sqlite3());
-            }
-        }
-
         public SqliteManager(IHsController hs,
                              RecordDataProducerConsumerQueue queue,
                              IDBSettings settings,

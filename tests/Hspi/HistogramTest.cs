@@ -1,16 +1,16 @@
 ﻿using System;
 using HomeSeer.PluginSdk;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class HistogramTest
     {
-        [TestMethod]
+        [Test]
         public void WithoutHittingMaxCount()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -30,21 +30,21 @@ namespace HSPI_HistoricalRecordsTest
             int maxCount = 10;
             string format = $"{{ refId:{deviceRefId}, min:{time.ToUnixTimeMilliseconds()}, max:{time.AddSeconds(10).ToUnixTimeMilliseconds()}, count:'{maxCount}'}}";
             string data = plugin.Object.PostBackProc("histogramforrecords", format, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var labels = (JArray)jsonData["result"]["labels"];
-            Assert.AreEqual(1, labels.Count);
-            Assert.AreEqual("1.1", labels[0]);
+            Assert.That(labels.Count, Is.EqualTo(1));
+            Assert.That((string)labels[0], Is.EqualTo("1.1"));
 
             var times = (JArray)jsonData["result"]["time"];
-            Assert.AreEqual(1, times.Count);
-            Assert.AreEqual(11000, times[0]);
+            Assert.That(times.Count, Is.EqualTo(1));
+            Assert.That((int)times[0], Is.EqualTo(11000));
         }
 
-        [TestMethod]
+        [Test]
         public void NoData()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -64,19 +64,19 @@ namespace HSPI_HistoricalRecordsTest
             int maxCount = 10;
             string format = $"{{ refId:{deviceRefId}, min:{time.ToUnixTimeMilliseconds()}, max:{time.AddSeconds(10).ToUnixTimeMilliseconds()}, count:'{maxCount}'}}";
             string data = plugin.Object.PostBackProc("histogramforrecords", format, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var labels = (JArray)jsonData["result"]["labels"];
-            Assert.AreEqual(0, labels.Count);
+            Assert.That(labels.Count, Is.EqualTo(0));
 
             var times = (JArray)jsonData["result"]["time"];
-            Assert.AreEqual(0, times.Count);
+            Assert.That(times.Count, Is.EqualTo(0));
         }
 
-        [TestMethod]
+        [Test]
         public void WithHittingMaxCount()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -105,19 +105,19 @@ namespace HSPI_HistoricalRecordsTest
             int maxCount = 10;
             string format = $"{{ refId:{deviceRefId}, min:{time.ToUnixTimeMilliseconds()}, max:{prevTime.AddSeconds(19).ToUnixTimeMilliseconds()}, count:'{maxCount}'}}";
             string data = plugin.Object.PostBackProc("histogramforrecords", format, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var labels = (JArray)jsonData["result"]["labels"];
-            Assert.AreEqual(10, labels.Count);
-            Assert.IsTrue(labels.Select(x => x.Value<string>()).SequenceEqual(
+            Assert.That(labels.Count, Is.EqualTo(10));
+            Assert.That(labels.Select(x => x.Value<string>()).SequenceEqual(
                             new string[] { "29", "28", "27", "26", "25", "24", "23", "22", "21", null }));
 
             var times = (JArray)jsonData["result"]["time"];
-            Assert.AreEqual(10, times.Count);
-            Assert.IsTrue(times.Select(x => x.Value<long>()).SequenceEqual(
+            Assert.That(times.Count, Is.EqualTo(10));
+            Assert.That(times.Select(x => x.Value<long>()).SequenceEqual(
                   new long[] { 20000, 19000, 18000, 17000, 16000, 15000, 14000, 13000, 12000, 11000 + 10000 + 9000 + 8000 + 7000 + 6000 + 5000 + 4000 + 3000 + 2000 + 1000 }));
         }
     }

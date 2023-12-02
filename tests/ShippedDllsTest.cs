@@ -1,19 +1,19 @@
 ﻿using System.IO;
 using System.Linq;
 using System.Reflection;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class ShippedDllsTest
     {
-        [TestMethod]
+        [Test]
         public void InstallFileHasAllDlls()
         {
             string path = GetInstallFilePath();
             var dllFilesPaths = Directory.GetFiles(path, "*.dll");
-            Assert.AreNotEqual(0, dllFilesPaths.Length);
+            Assert.That(dllFilesPaths.Length, Is.Not.EqualTo(0));
 
             var dllFiles = dllFilesPaths.Select(x => Path.GetFileName(x)).ToList();
 

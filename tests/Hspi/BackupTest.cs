@@ -2,17 +2,17 @@
 using System.IO;
 using HomeSeer.PluginSdk;
 using Hspi;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Moq;
 using static HomeSeer.PluginSdk.PluginStatus;
 
 namespace HSPI_HistoricalRecordsTest
 
 {
-    [TestClass]
+    [TestFixture]
     public class BackupTest
     {
-        [TestMethod]
+        [Test]
         public void BackupDatabaseDoesNotLooseChanges()
         {
             SetupPlugin(out var plugin, out var mockHsController);
@@ -29,15 +29,15 @@ namespace HSPI_HistoricalRecordsTest
 
             FireBackupStopEvent(plugin);
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 return EPluginStatus.Ok == plugin.Object.OnStatusCheck().Status;
             }));
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1));
+            Assert.That(TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1));
         }
 
-        [TestMethod]
+        [Test]
         public void BackupEndMultipleTimes()
         {
             SetupPlugin(out var plugin, out var mockHsController);
@@ -47,22 +47,22 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1));
+            Assert.That(TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 1));
 
             FireBackupStartEvent(plugin);
 
             FireBackupStopEvent(plugin);
             FireBackupStopEvent(plugin);
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 return EPluginStatus.Ok == plugin.Object.OnStatusCheck().Status;
             }));
 
-            Assert.AreEqual(1, plugin.Object.GetTotalRecords(deviceRefId));
+            Assert.That(plugin.Object.GetTotalRecords(deviceRefId), Is.EqualTo(1));
         }
 
-        [TestMethod]
+        [Test]
         public void BackupStopsDatabase()
         {
             SetupPlugin(out var plugin, out var mockHsController);
@@ -72,11 +72,11 @@ namespace HSPI_HistoricalRecordsTest
             FireBackupStartEvent(plugin);
 
             // Verify the db operations fail
-            Assert.ThrowsException<InvalidOperationException>(() => plugin.Object.PruneDatabase());
+            Assert.Catch<InvalidOperationException>(() => plugin.Object.PruneDatabase());
 
             FireBackupStopEvent(plugin);
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 return EPluginStatus.Ok == plugin.Object.OnStatusCheck().Status;
             }));
@@ -84,7 +84,7 @@ namespace HSPI_HistoricalRecordsTest
             plugin.Object.PruneDatabase();
         }
 
-        [TestMethod]
+        [Test]
         public void BackupTimesOut()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -98,9 +98,9 @@ namespace HSPI_HistoricalRecordsTest
             FireBackupStartEvent(plugin);
 
             // Verify the db operations fail
-            Assert.ThrowsException<InvalidOperationException>(() => plugin.Object.PruneDatabase());
+            Assert.Catch<InvalidOperationException>(() => plugin.Object.PruneDatabase());
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 return EPluginStatus.Ok == plugin.Object.OnStatusCheck().Status;
             }));
@@ -108,7 +108,7 @@ namespace HSPI_HistoricalRecordsTest
             plugin.Object.PruneDatabase();
         }
 
-        [TestMethod]
+        [Test]
         public void CanAccessDBFileAfterBackupStarts()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -117,7 +117,7 @@ namespace HSPI_HistoricalRecordsTest
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
             FireBackupStartEvent(plugin);
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 try
                 {
@@ -132,7 +132,7 @@ namespace HSPI_HistoricalRecordsTest
             }));
         }
 
-        [TestMethod]
+        [Test]
         public void PluginStatusDuringBackup()
         {
             SetupPlugin(out var plugin, out var mockHsController);
@@ -142,18 +142,18 @@ namespace HSPI_HistoricalRecordsTest
             FireBackupStartEvent(plugin);
 
             var statusBackup = plugin.Object.OnStatusCheck();
-            Assert.AreEqual(EPluginStatus.Warning, statusBackup.Status);
-            Assert.AreEqual("Device records are not being stored", statusBackup.StatusText);
+            Assert.That(statusBackup.Status, Is.EqualTo(EPluginStatus.Warning));
+            Assert.That(statusBackup.StatusText, Is.EqualTo("Device records are not being stored"));
 
             FireBackupStopEvent(plugin);
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 return EPluginStatus.Ok == plugin.Object.OnStatusCheck().Status;
             }));
 
             var status = plugin.Object.OnStatusCheck();
-            Assert.AreEqual(EPluginStatus.Ok, status.Status);
+            Assert.That(status.Status, Is.EqualTo(EPluginStatus.Ok));
         }
 
         private static void FireBackupStartEvent(Mock<PlugIn> plugin)

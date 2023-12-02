@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Moq;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class PruningTest
     {
-        [TestMethod]
+        [Test]
         public void PruningAccountsForPerDevicePruningDuration()
         {
             int refId = 3;
@@ -35,18 +35,18 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            Assert.IsTrue(plugin.Object.IsFeatureTracked(refId));
+            Assert.That(plugin.Object.IsFeatureTracked(refId));
 
             int addedRecordCount = SettingsPages.MinRecordsToKeepDefault + 20;
 
             AddRecordsAndPrune(plugin, mockHsController, refId, aTime, addedRecordCount);
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, 112));
+            Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, 112));
 
-            Assert.AreEqual(10 - 8, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(refId)[0]);
+            Assert.That(plugin.Object.GetEarliestAndOldestRecordTotalSeconds(refId)[0], Is.EqualTo(10 - 8));
         }
 
-        [TestMethod]
+        [Test]
         public void PruningPreservesMinRecords()
         {
             TimeSpan pruningTimePeriod = TimeSpan.FromSeconds(1);
@@ -70,13 +70,13 @@ namespace HSPI_HistoricalRecordsTest
 
             plugin.Object.PruneDatabase();
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, SettingsPages.MinRecordsToKeepDefault));
+            Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, SettingsPages.MinRecordsToKeepDefault));
 
             // first 20 are gone
-            Assert.AreEqual(200 - 20, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(refId)[0]);
+            Assert.That(plugin.Object.GetEarliestAndOldestRecordTotalSeconds(refId)[0], Is.EqualTo(200 - 20));
         }
 
-        [TestMethod]
+        [Test]
         public void PruningRemovesOldestRecords()
         {
             TimeSpan pruningTimePeriod = TimeSpan.FromSeconds(5);
@@ -100,10 +100,10 @@ namespace HSPI_HistoricalRecordsTest
 
             plugin.Object.PruneDatabase();
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, 115));
+            Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, 115));
 
             // first 5 are gone
-            Assert.AreEqual(10 - 5, plugin.Object.GetEarliestAndOldestRecordTotalSeconds(refId)[0]);
+            Assert.That(plugin.Object.GetEarliestAndOldestRecordTotalSeconds(refId)[0], Is.EqualTo(10 - 5));
         }
 
         private static void AddRecordsAndPrune(Mock<PlugIn> plugin, FakeHSController mockHsController, int refId, DateTime aTime, int addedRecordCount)
@@ -117,7 +117,7 @@ namespace HSPI_HistoricalRecordsTest
                                                          i + 1));
             }
 
-            Assert.AreEqual(plugin.Object.GetTotalRecords(refId), addedRecordCount);
+            Assert.That(addedRecordCount, Is.EqualTo(plugin.Object.GetTotalRecords(refId)));
 
             plugin.Object.PruneDatabase();
         }

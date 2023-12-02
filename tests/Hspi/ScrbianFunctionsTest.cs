@@ -6,15 +6,15 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Devices.Controls;
 using Hspi;
 using Hspi.Device;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class ScrbianFunctionsTest
     {
-        [TestMethod]
+        [Test]
         public void GetAllDevicesProperties()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -41,21 +41,21 @@ namespace HSPI_HistoricalRecordsTest
             }
 
             var stats = plugin.Object.GetAllDevicesProperties();
-            Assert.IsNotNull(stats);
-            Assert.AreEqual(15, stats.Count);
+            Assert.That(stats, Is.Not.Null);
+            Assert.That(stats.Count, Is.EqualTo(15));
 
             for (int i = 0; i < 15; i++)
             {
-                Assert.AreEqual(1307 + i, stats[i]["ref"]);
-                Assert.AreEqual((long)i, stats[i]["records"]);
-                Assert.AreEqual(true, stats[i]["monitorableType"]);
-                Assert.AreEqual(true, stats[i]["tracked"]);
-                Assert.AreEqual(null, stats[i]["minValue"]);
-                Assert.AreEqual(null, stats[i]["maxValue"]);
+                Assert.That(stats[i]["ref"], Is.EqualTo(1307 + i));
+                Assert.That(stats[i]["records"], Is.EqualTo((long)i));
+                Assert.That(stats[i]["monitorableType"], Is.EqualTo(true));
+                Assert.That(stats[i]["tracked"], Is.EqualTo(true));
+                Assert.That(stats[i]["minValue"], Is.EqualTo(null));
+                Assert.That(stats[i]["maxValue"], Is.EqualTo(null));
             }
         }
 
-        [TestMethod]
+        [Test]
         public void GetAllDevicesProperties2()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -72,18 +72,18 @@ namespace HSPI_HistoricalRecordsTest
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var stats = plugin.Object.GetAllDevicesProperties();
-            Assert.IsNotNull(stats);
-            Assert.AreEqual(1, stats.Count);
+            Assert.That(stats, Is.Not.Null);
+            Assert.That(stats.Count, Is.EqualTo(1));
 
-            Assert.AreEqual(refId, stats[0]["ref"]);
-            Assert.AreEqual(0L, stats[0]["records"]);
-            Assert.AreEqual(true, stats[0]["monitorableType"]);
-            Assert.AreEqual(false, stats[0]["tracked"]);
-            Assert.AreEqual(10D, stats[0]["minValue"]);
-            Assert.AreEqual(100D, stats[0]["maxValue"]);
+            Assert.That(stats[0]["ref"], Is.EqualTo(refId));
+            Assert.That(stats[0]["records"], Is.EqualTo(0L));
+            Assert.That(stats[0]["monitorableType"], Is.EqualTo(true));
+            Assert.That(stats[0]["tracked"], Is.EqualTo(false));
+            Assert.That(stats[0]["minValue"], Is.EqualTo(10D));
+            Assert.That(stats[0]["maxValue"], Is.EqualTo(100D));
         }
 
-        [TestMethod]
+        [Test]
         public void GetAllowedDisplaysForFeatureWithRange()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -104,7 +104,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(new List<string>() { "table", "chart", "stats", "histogram" }, list);
         }
 
-        [TestMethod]
+        [Test]
         public void GetAllowedDisplaysForNoRangeFeature()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -122,7 +122,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(new List<string>() { "table", "histogram" }, list);
         }
 
-        [TestMethod]
+        [Test]
         public void GetDatabaseStats()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
@@ -130,14 +130,14 @@ namespace HSPI_HistoricalRecordsTest
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var stats = plugin.Object.GetDatabaseStats();
-            Assert.IsNotNull(stats);
-            Assert.IsTrue(stats.ContainsKey("path"));
-            Assert.IsTrue(stats.ContainsKey("version"));
-            Assert.IsTrue(stats.ContainsKey("size"));
-            Assert.IsTrue(stats.ContainsKey("retentionPeriod"));
+            Assert.That(stats, Is.Not.Null);
+            Assert.That(stats.ContainsKey("path"));
+            Assert.That(stats.ContainsKey("version"));
+            Assert.That(stats.ContainsKey("size"));
+            Assert.That(stats.ContainsKey("retentionPeriod"));
         }
 
-        [TestMethod]
+        [Test]
         public void GetDeviceStatsForPage()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -152,7 +152,7 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, 1));
+            Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, 1));
 
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
                                          refId, 11, "11.0 lux", nowTime.AddMinutes(1), 2);
@@ -173,7 +173,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(expected, list);
         }
 
-        [TestMethod]
+        [Test]
         public void GetDeviceStatsForPageReturnsRange()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -192,15 +192,15 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, 1));
+            Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, 1));
 
             var list = plugin.Object.GetDevicePageHeaderStats(refId).ToList();
 
-            Assert.AreEqual(-190D, list[5]);
-            Assert.AreEqual(1090D, list[6]);
+            Assert.That(list[5], Is.EqualTo(-190D));
+            Assert.That(list[6], Is.EqualTo(1090D));
         }
 
-        [TestMethod]
+        [Test]
         public void GetFeatureRefIdsForDevice()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -221,9 +221,8 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(value.ToList(), list);
         }
 
-        [DataTestMethod]
-        [DataRow(true)]
-        [DataRow(false)]
+        [TestCase(true)]
+        [TestCase(false)]
         public void GetStatisticDeviceDataAsJson(bool isDevice)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -245,11 +244,11 @@ namespace HSPI_HistoricalRecordsTest
 
             // get return function value for feature
             string json = plugIn.Object.GetStatisticDeviceDataAsJson(isDevice ? statsDeviceRefId : statsFeatureRefId);
-            Assert.AreEqual(JsonConvert.DeserializeObject<StatisticsDeviceData>(data),
-                            JsonConvert.DeserializeObject<StatisticsDeviceData>(json));
+            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(data),
+                        Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(json)));
         }
 
-        [TestMethod]
+        [Test]
         public void GetTrackedDeviceList()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);

@@ -9,7 +9,7 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Logging;
 using Hspi;
 using Hspi.Device;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using Moq;
 using Moq.Protected;
 using Newtonsoft.Json;
@@ -40,21 +40,21 @@ namespace HSPI_HistoricalRecordsTest
         public static void CheckRecordedValue(Mock<PlugIn> plugin, int refId, RecordData recordData,
                                                int askForRecordCount, int expectedRecordCount)
         {
-            Assert.IsTrue(TimedWaitTillTrue(() =>
+            Assert.That(TimedWaitTillTrue(() =>
             {
                 var records = GetHistoryRecords(plugin, refId, askForRecordCount);
-                Assert.IsNotNull(records);
+                Assert.That(records, Is.Not.Null);
                 if (records.Count == 0)
                 {
                     return false;
                 }
 
-                Assert.AreEqual(records.Count, expectedRecordCount);
-                Assert.IsTrue(records.Count >= 1);
-                Assert.AreEqual(recordData.DeviceRefId, records[0].DeviceRefId);
-                Assert.AreEqual(recordData.DeviceValue, records[0].DeviceValue);
-                Assert.AreEqual(recordData.DeviceString, records[0].DeviceString);
-                Assert.AreEqual(recordData.UnixTimeSeconds, records[0].UnixTimeSeconds);
+                Assert.That(expectedRecordCount, Is.EqualTo(records.Count));
+                Assert.That(records.Count >= 1);
+                Assert.That(records[0].DeviceRefId, Is.EqualTo(recordData.DeviceRefId));
+                Assert.That(records[0].DeviceValue, Is.EqualTo(recordData.DeviceValue));
+                Assert.That(records[0].DeviceString, Is.EqualTo(recordData.DeviceString));
+                Assert.That(records[0].UnixTimeSeconds, Is.EqualTo(recordData.UnixTimeSeconds));
                 return true;
             }));
         }
@@ -134,9 +134,9 @@ namespace HSPI_HistoricalRecordsTest
             if (!string.IsNullOrEmpty(data))
             {
                 var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-                Assert.IsNotNull(jsonData);
+                Assert.That(jsonData, Is.Not.Null);
                 var records = (JArray)jsonData["data"];
-                Assert.IsNotNull(records);
+                Assert.That(records, Is.Not.Null);
 
                 foreach (var record in records)
                 {
@@ -179,7 +179,7 @@ namespace HSPI_HistoricalRecordsTest
             mockHsController.SetupDevOrFeatureValue(refId, EProperty.LastChange, lastChange);
 
             RaiseHSEvent(plugin, eventType, refId);
-            Assert.IsTrue(TestHelper.WaitTillTotalRecords(plugin, refId, expectedCount));
+            Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, expectedCount));
             return new RecordData(refId, value, status, ((DateTimeOffset)lastChange).ToUnixTimeSeconds());
         }
 
@@ -284,20 +284,20 @@ namespace HSPI_HistoricalRecordsTest
         {
             HtmlAgilityPack.HtmlDocument htmlDocument = new();
             htmlDocument.LoadHtml(html);
-            Assert.AreEqual(0, htmlDocument.ParseErrors.Count());
+            Assert.That(htmlDocument.ParseErrors.Count(), Is.EqualTo(0));
             return htmlDocument;
         }
 
         public static void WaitForRecordCountAndDeleteAll(Mock<PlugIn> plugIn, int trackedDeviceRefId, int count)
         {
             TestHelper.WaitTillTotalRecords(plugIn, trackedDeviceRefId, count);
-            Assert.AreEqual(count, plugIn.Object.DeleteAllRecords(trackedDeviceRefId));
+            Assert.That(plugIn.Object.DeleteAllRecords(trackedDeviceRefId), Is.EqualTo(count));
         }
 
         public static void WaitTillExpectedValue(FakeHSController hsControllerMock,
                                                   int statsDeviceRefId, double expectedValue)
         {
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 var value = hsControllerMock.GetFeatureValue(statsDeviceRefId, EProperty.Value);
                 if (value is double doubleValue)
@@ -323,7 +323,7 @@ namespace HSPI_HistoricalRecordsTest
         public PlugInLifeCycle(Mock<Hspi.PlugIn> plugIn)
         {
             this.plugIn = plugIn;
-            Assert.IsTrue(plugIn.Object.InitIO());
+            Assert.That(plugIn.Object.InitIO());
         }
 
         void IDisposable.Dispose()

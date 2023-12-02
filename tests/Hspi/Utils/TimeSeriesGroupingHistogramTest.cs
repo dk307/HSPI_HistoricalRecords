@@ -2,14 +2,14 @@
 using System.Linq;
 using Hspi.Database;
 using Hspi.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class TimeSeriesGroupingHistogramTest
     {
-        [TestMethod]
+        [Test]
         public void EndValuesAreMissing()
         {
             List<TimeAndValue> dbValues = new()
@@ -30,7 +30,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
         }
 
-        [TestMethod]
+        [Test]
         public void EqualDividedValues()
         {
             List<TimeAndValue> dbValues = new()
@@ -53,7 +53,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
         }
 
-        [TestMethod]
+        [Test]
         public void InitialValuesAreMissing()
         {
             List<TimeAndValue> dbValues = new()
@@ -74,7 +74,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
         }
 
-        [TestMethod]
+        [Test]
         public void LargeInitialValuesAreMissing()
         {
             List<TimeAndValue> dbValues = new()
@@ -93,7 +93,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
         }
 
-        [TestMethod]
+        [Test]
         public void MultipleRepeatedValues()
         {
             List<TimeAndValue> dbValues = new()
@@ -118,7 +118,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
         }
 
-        [TestMethod]
+        [Test]
         public void NoValue()
         {
             List<TimeAndValue> dbValues = new();
@@ -130,7 +130,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
         }
 
-        [TestMethod]
+        [Test]
         public void SingleValue()
         {
             List<TimeAndValue> dbValues = new()

@@ -3,18 +3,17 @@ using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using static HomeSeer.PluginSdk.PluginStatus;
 
 namespace HSPI_HistoricalRecordsTest
 
 {
-    [TestClass]
+    [TestFixture]
     public class DeviceChangedinHSTest
     {
-        [DataTestMethod]
-        [DataRow(Constants.HSEvent.VALUE_CHANGE, "abcd", "abcd")]
-        [DataRow(Constants.HSEvent.STRING_CHANGE, "abcd3", "abcd3")]
+        [TestCase(Constants.HSEvent.VALUE_CHANGE, "abcd", "abcd")]
+        [TestCase(Constants.HSEvent.STRING_CHANGE, "abcd3", "abcd3")]
         public void DeviceValueUpdateIsRecorded(Constants.HSEvent eventType, string displayStatus, string expectedString)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -31,12 +30,12 @@ namespace HSPI_HistoricalRecordsTest
             var data = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, eventType, refId,
                                                       100, displayStatus, now, 1);
 
-            Assert.AreEqual(100, data.DeviceValue);
-            Assert.AreEqual(expectedString, data.DeviceString);
-            Assert.AreEqual(((DateTimeOffset)now).ToUnixTimeSeconds(), data.UnixTimeSeconds);
+            Assert.That(data.DeviceValue, Is.EqualTo(100));
+            Assert.That(data.DeviceString, Is.EqualTo(expectedString));
+            Assert.That(data.UnixTimeSeconds, Is.EqualTo(((DateTimeOffset)now).ToUnixTimeSeconds()));
         }
 
-        [TestMethod]
+        [Test]
         public void InvalidLastChangeTimeIsNotRecorded()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -60,11 +59,11 @@ namespace HSPI_HistoricalRecordsTest
             var data = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.STRING_CHANGE, refId,
                                           10, string.Empty, now, 1);
 
-            Assert.AreEqual(10, data.DeviceValue);
-            Assert.AreEqual(1, plugin.Object.GetTotalRecords(refId));
+            Assert.That(data.DeviceValue, Is.EqualTo(10));
+            Assert.That(plugin.Object.GetTotalRecords(refId), Is.EqualTo(1));
         }
 
-        [TestMethod]
+        [Test]
         public void MultipleDeviceValueUpdatesAreRecorded()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -92,25 +91,24 @@ namespace HSPI_HistoricalRecordsTest
             var records = TestHelper.GetHistoryRecords(plugin, refId, 100);
             records.Reverse();
 
-            Assert.AreEqual(expected.Count, records.Count);
+            Assert.That(records.Count, Is.EqualTo(expected.Count));
 
             for (int i = 0; i < records.Count; i++)
             {
                 var record = records[i];
                 var expectedRecord = expected[i];
 
-                Assert.AreEqual(record.DeviceRefId, expectedRecord.DeviceRefId);
-                Assert.AreEqual(record.UnixTimeSeconds, expectedRecord.UnixTimeSeconds);
-                Assert.AreEqual(record.DeviceValue, expectedRecord.DeviceValue);
-                Assert.AreEqual(record.DeviceString, expectedRecord.DeviceString);
+                Assert.That(expectedRecord.DeviceRefId, Is.EqualTo(record.DeviceRefId));
+                Assert.That(expectedRecord.UnixTimeSeconds, Is.EqualTo(record.UnixTimeSeconds));
+                Assert.That(expectedRecord.DeviceValue, Is.EqualTo(record.DeviceValue));
+                Assert.That(expectedRecord.DeviceString, Is.EqualTo(record.DeviceString));
             }
         }
 
-        [DataTestMethod]
-        [DataRow(-10)]
-        [DataRow(104)]
-        [DataRow(double.NaN)]
-        [DataRow(double.PositiveInfinity)]
+        [TestCase(-10)]
+        [TestCase(104)]
+        [TestCase(double.NaN)]
+        [TestCase(double.PositiveInfinity)]
         public void OutOfRangeDeviceValueIsNotRecorded(double value)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -136,11 +134,11 @@ namespace HSPI_HistoricalRecordsTest
             var data = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.STRING_CHANGE, refId,
                                           10, string.Empty, now, 1);
 
-            Assert.AreEqual(10, data.DeviceValue);
-            Assert.AreEqual(1, plugin.Object.GetTotalRecords(refId));
+            Assert.That(data.DeviceValue, Is.EqualTo(10));
+            Assert.That(plugin.Object.GetTotalRecords(refId), Is.EqualTo(1));
         }
 
-        [TestMethod]
+        [Test]
         public void RecordALargeNumberOfEvents()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -165,7 +163,7 @@ namespace HSPI_HistoricalRecordsTest
             }
         }
 
-        [TestMethod]
+        [Test]
         public void SameSecondChangesAreOverwritten()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -185,16 +183,16 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.VALUE_SET, refId);
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 var records = TestHelper.GetHistoryRecords(plugin, refId, 100);
-                Assert.IsNotNull(records);
+                Assert.That(records, Is.Not.Null);
                 if (records.Count == 0)
                 {
                     return false;
                 }
 
-                Assert.AreEqual(1, records.Count);
+                Assert.That(records.Count, Is.EqualTo(1));
 
                 return (refId == records[0].DeviceRefId) &&
                        (2.34 == records[0].DeviceValue) &&
@@ -203,10 +201,8 @@ namespace HSPI_HistoricalRecordsTest
             }));
         }
 
-        [TestMethod]
-        [DataTestMethod]
-        [DataRow("timername")]
-        [DataRow("countername")]
+        [TestCase("timername")]
+        [TestCase("countername")]
         public void TimerOrCounterChangeIsNotRecorded(string plugInExtraKey)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -224,12 +220,12 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.RaiseHSEvent(plugin, Constants.HSEvent.VALUE_CHANGE, refId);
 
             var records = TestHelper.GetHistoryRecords(plugin, refId);
-            Assert.IsTrue(records.Count == 0);
+            Assert.That(records.Count == 0);
 
             // this is not a good test as maynot actually end up waiting for failure
         }
 
-        [TestMethod]
+        [Test]
         public void UnTrackedDeviceIsNotStored()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -249,7 +245,7 @@ namespace HSPI_HistoricalRecordsTest
             // disable tracking
             plugin.Object.PostBackProc("updatedevicesettings", $"{{\"refId\":\"{deviceRefId}\",\"tracked\":0}}", string.Empty, 0);
 
-            Assert.IsFalse(plugin.Object.IsFeatureTracked(deviceRefId));
+            Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
 
             for (var i = 0; i < 100; i++)
             {
@@ -258,10 +254,10 @@ namespace HSPI_HistoricalRecordsTest
 
             // this is not a good test as there is no good event to wait to ensure nothing was recorded
 
-            Assert.AreEqual(0, plugin.Object.GetTotalRecords(deviceRefId));
+            Assert.That(plugin.Object.GetTotalRecords(deviceRefId), Is.EqualTo(0));
         }
 
-        [TestMethod]
+        [Test]
         public void UpdateRecordFails()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -281,14 +277,14 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId,
                                            100, string.Empty, now, 1);
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() =>
+            Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
                 return EPluginStatus.Warning == plugin.Object.OnStatusCheck().Status;
             }));
 
-            Assert.AreEqual("attempt to write a readonly database", plugin.Object.OnStatusCheck().StatusText);
+            Assert.That(plugin.Object.OnStatusCheck().StatusText, Is.EqualTo("attempt to write a readonly database"));
 
-            Assert.AreEqual(1, plugin.Object.GetTotalRecords(refId));
+            Assert.That(plugin.Object.GetTotalRecords(refId), Is.EqualTo(1));
         }
     }
 }

@@ -6,20 +6,19 @@ using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
 using Hspi.Device;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class StatisticsDeviceTest
     {
-        [DataTestMethod]
-        [DataRow(StatisticsFunction.AverageStep)]
-        [DataRow(StatisticsFunction.AverageLinear)]
-        [DataRow(StatisticsFunction.MinValue)]
-        [DataRow(StatisticsFunction.MaxValue)]
+        [TestCase(StatisticsFunction.AverageStep)]
+        [TestCase(StatisticsFunction.AverageLinear)]
+        [TestCase(StatisticsFunction.MinValue)]
+        [TestCase(StatisticsFunction.MaxValue)]
         public void AddDevice(StatisticsFunction function)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -56,78 +55,75 @@ namespace HSPI_HistoricalRecordsTest
 
             // check no error is returned
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
-            Assert.IsNotNull(result2);
-            Assert.IsNull((string)result2["error"]);
+            Assert.That(result2, Is.Not.Null);
+            Assert.That((string)result2["error"], Is.Null);
 
             NewDeviceData newDataForDevice = hsControllerMock.CreatedDevices.First().Value;
             NewFeatureData newFeatureData = hsControllerMock.CreatedFeatures.First().Value;
             var trackedFeature = hsControllerMock.GetFeature(trackedRefId);
 
             // check proper device & feature was added
-            Assert.IsNotNull(newDataForDevice);
+            Assert.That(newDataForDevice, Is.Not.Null);
 
-            Assert.AreEqual(((string)newDataForDevice.Device[EProperty.Name]), deviceName);
-            Assert.AreEqual(PlugInData.PlugInId, newDataForDevice.Device[EProperty.Interface]);
-            Assert.AreEqual(trackedFeature.Location, newDataForDevice.Device[EProperty.Location]);
-            Assert.AreEqual(trackedFeature.Location2, newDataForDevice.Device[EProperty.Location2]);
+            Assert.That(deviceName, Is.EqualTo(((string)newDataForDevice.Device[EProperty.Name])));
+            Assert.That(newDataForDevice.Device[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
+            Assert.That(newDataForDevice.Device[EProperty.Location], Is.EqualTo(trackedFeature.Location));
+            Assert.That(newDataForDevice.Device[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
 
-            Assert.AreEqual(PlugInData.PlugInId, newFeatureData.Feature[EProperty.Interface]);
+            Assert.That(newFeatureData.Feature[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
             CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
-            Assert.AreEqual(trackedFeature.Location, newFeatureData.Feature[EProperty.Location]);
-            Assert.AreEqual(trackedFeature.Location2, newFeatureData.Feature[EProperty.Location2]);
-#pragma warning disable S3265 // Non-flags enums should not be used in bitwise operations
-            Assert.AreEqual((uint)(EMiscFlag.StatusOnly | EMiscFlag.SetDoesNotChangeLastChange | EMiscFlag.ShowValues),
-                            newFeatureData.Feature[EProperty.Misc]);
-#pragma warning restore S3265 // Non-flags enums should not be used in bitwise operations
+            Assert.That(newFeatureData.Feature[EProperty.Location], Is.EqualTo(trackedFeature.Location));
+            Assert.That(newFeatureData.Feature[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
+            Assert.That(newFeatureData.Feature[EProperty.Misc],
+                        Is.EqualTo((uint)(EMiscFlag.StatusOnly | EMiscFlag.SetDoesNotChangeLastChange | EMiscFlag.ShowValues)));
 
             CollectionAssert.AreEqual((new HashSet<int> { hsControllerMock.CreatedDevices.First().Key }).ToImmutableArray(),
                                      ((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray());
 
             var plugExtraData = (PlugExtraData)newFeatureData.Feature[EProperty.PlugExtraData];
 
-            Assert.AreEqual(1, plugExtraData.NamedKeys.Count);
+            Assert.That(plugExtraData.NamedKeys.Count, Is.EqualTo(1));
 
             var data = JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"]);
 
-            Assert.AreEqual(trackedFeature.Ref, data.TrackedRef);
+            Assert.That(data.TrackedRef, Is.EqualTo(trackedFeature.Ref));
 
             switch (function)
             {
                 case StatisticsFunction.AverageStep:
-                    Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Step)"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Step)"));
                     break;
 
                 case StatisticsFunction.AverageLinear:
-                    Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Linear)"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Linear)"));
                     break;
 
                 case StatisticsFunction.MinValue:
-                    Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Minimum Value"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Minimum Value"));
                     break;
 
                 case StatisticsFunction.MaxValue:
-                    Assert.IsTrue(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Maximum Value"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Maximum Value"));
                     break;
             }
 
-            Assert.AreEqual(function, data.StatisticsFunction);
-            Assert.AreEqual((long)new TimeSpan(1, 0, 10, 0).TotalSeconds, data.FunctionDurationSeconds);
-            Assert.AreEqual((long)new TimeSpan(0, 0, 1, 30).TotalSeconds, data.RefreshIntervalSeconds);
+            Assert.That(data.StatisticsFunction, Is.EqualTo(function));
+            Assert.That(data.FunctionDurationSeconds, Is.EqualTo((long)new TimeSpan(1, 0, 10, 0).TotalSeconds));
+            Assert.That(data.RefreshIntervalSeconds, Is.EqualTo((long)new TimeSpan(0, 0, 1, 30).TotalSeconds));
 
             var list1 = trackedFeature.StatusGraphics.Values;
             var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
-            Assert.AreEqual(1, list1.Count);
-            Assert.AreEqual(1, list2.Count);
-            Assert.AreEqual(list1[0].Label, list2[0].Label);
-            Assert.AreEqual(list1[0].IsRange, list2[0].IsRange);
-            Assert.AreEqual(list1[0].ControlUse, list2[0].ControlUse);
-            Assert.AreEqual(list1[0].HasAdditionalData, list2[0].HasAdditionalData);
-            Assert.AreEqual(list1[0].TargetRange, list2[0].TargetRange);
+            Assert.That(list1.Count, Is.EqualTo(1));
+            Assert.That(list2.Count, Is.EqualTo(1));
+            Assert.That(list2[0].Label, Is.EqualTo(list1[0].Label));
+            Assert.That(list2[0].IsRange, Is.EqualTo(list1[0].IsRange));
+            Assert.That(list2[0].ControlUse, Is.EqualTo(list1[0].ControlUse));
+            Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
+            Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
         }
 
-        [DataTestMethod]
-        [DataRow("{\"name\":\"dev name\", \"data\": {\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}}", "Required property 'TrackedRef' not found")]
-        [DataRow("", "data is not correct")]
+        [TestCase("{\"name\":\"dev name\", \"data\": {\"StatisticsFunction\":3,\"FunctionDurationSeconds\":0,\"RefreshIntervalSeconds\":10}}", "Required property 'TrackedRef' not found")]
+        [TestCase("", "data is not correct")]
         public void AddDeviceErrorChecking(string format, string exception)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -138,21 +134,20 @@ namespace HSPI_HistoricalRecordsTest
 
             //add
             string data = plugIn.Object.PostBackProc("devicecreate", format, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var errorMessage = jsonData["error"].Value<string>();
-            Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
-            StringAssert.Contains(errorMessage, exception);
+            Assert.That(!string.IsNullOrWhiteSpace(errorMessage));
+            Assert.That(errorMessage, Does.Contain(exception));
         }
 
-        [DataTestMethod]
-        [DataRow(StatisticsFunction.AverageStep)]
-        [DataRow(StatisticsFunction.AverageLinear)]
-        [DataRow(StatisticsFunction.MinValue)]
-        [DataRow(StatisticsFunction.MaxValue)]
+        [TestCase(StatisticsFunction.AverageStep)]
+        [TestCase(StatisticsFunction.AverageLinear)]
+        [TestCase(StatisticsFunction.MinValue)]
+        [TestCase(StatisticsFunction.MaxValue)]
         public void DeviceIsUpdated(StatisticsFunction statisticsFunction)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -177,7 +172,7 @@ namespace HSPI_HistoricalRecordsTest
                                            Constants.HSEvent.VALUE_CHANGE,
                                            trackedDeviceRefId, 20, "20", aTime.AddMinutes(-5), 2);
 
-            Assert.IsTrue(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
+            Assert.That(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
 
             double ExpectedValue = 0;
             switch (statisticsFunction)
@@ -198,10 +193,10 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, ExpectedValue);
 
-            Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
         }
 
-        [TestMethod]
+        [Test]
         public void DeviceIsUpdatedRounded()
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -232,12 +227,11 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, 11.9D);
 
-            Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
         }
 
-        [DataTestMethod]
-        [DataRow(true)]
-        [DataRow(false)]
+        [TestCase(true)]
+        [TestCase(false)]
         public void DevicePolled(bool device)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -263,16 +257,15 @@ namespace HSPI_HistoricalRecordsTest
                                            Constants.HSEvent.VALUE_CHANGE,
                                            trackedDeviceRefId, 11.85733, "11.2", aTime.AddMinutes(-10), 1);
 
-            Assert.AreEqual(EPollResponse.Ok, plugIn.Object.UpdateStatusNow(device ? statsDeviceRefId : statsFeatureRefId));
+            Assert.That(plugIn.Object.UpdateStatusNow(device ? statsDeviceRefId : statsFeatureRefId), Is.EqualTo(EPollResponse.Ok));
 
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, 11.9D);
 
-            Assert.AreEqual(false, hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
         }
 
-        [DataTestMethod]
-        [DataRow(StatisticsFunction.AverageStep)]
-        [DataRow(StatisticsFunction.AverageLinear)]
+        [TestCase(StatisticsFunction.AverageStep)]
+        [TestCase(StatisticsFunction.AverageLinear)]
         public void EditDevice(StatisticsFunction function)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -305,21 +298,21 @@ namespace HSPI_HistoricalRecordsTest
 
             // no error is returned
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
-            Assert.IsNotNull(result2);
-            Assert.IsNull((string)result2["error"]);
+            Assert.That(result2, Is.Not.Null);
+            Assert.That((string)result2["error"], Is.Null);
 
             // get return function value for feature
             string json = plugIn.Object.GetStatisticDeviceDataAsJson(statsFeatureRefId);
-            Assert.AreEqual(JsonConvert.DeserializeObject<StatisticsDeviceData>(editRequest["data"].ToString()),
-                            JsonConvert.DeserializeObject<StatisticsDeviceData>(json));
+            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(json),
+                        Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(editRequest["data"].ToString())));
 
             var plugExtraData = (PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.PlugExtraData);
-            Assert.AreEqual(1, plugExtraData.NamedKeys.Count);
-            Assert.AreEqual(JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"]),
-                            JsonConvert.DeserializeObject<StatisticsDeviceData>(json));
+            Assert.That(plugExtraData.NamedKeys.Count, Is.EqualTo(1));
+            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(json),
+                        Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"])));
         }
 
-        [TestMethod]
+        [Test]
         public void EditDeviceFailsForInvalidDevice()
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -353,16 +346,15 @@ namespace HSPI_HistoricalRecordsTest
 
             // error is returned
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
-            Assert.IsNotNull(result2);
+            Assert.That(result2, Is.Not.Null);
             StringAssert.Contains((string)result2["error"], $"Device or feature {trackedDeviceRefId} not a plugin feature");
         }
 
-        [TestMethod]
+        [Test]
         public void StatisticsDeviceIsDeleted()
         {
             var plugIn = TestHelper.CreatePlugInMock();
-            var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn);
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
@@ -375,18 +367,18 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() => plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
+            Assert.That(TestHelper.TimedWaitTillTrue(() => plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
 
-            Assert.IsTrue(hsControllerMock.RemoveFeatureOrDevice(statsDeviceRefId));
-            Assert.IsTrue(hsControllerMock.RemoveFeatureOrDevice(statsFeatureRefId));
+            Assert.That(hsControllerMock.RemoveFeatureOrDevice(statsDeviceRefId));
+            Assert.That(hsControllerMock.RemoveFeatureOrDevice(statsFeatureRefId));
             plugIn.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE,
                                   new object[] { null, null, null, statsDeviceRefId, 2 });
 
-            Assert.IsTrue(TestHelper.TimedWaitTillTrue(() => !plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
+            Assert.That(TestHelper.TimedWaitTillTrue(() => !plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
 
             // not more tracking after delete
-            Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
-            Assert.IsFalse(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
+            Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+            Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
         }
     }
 }

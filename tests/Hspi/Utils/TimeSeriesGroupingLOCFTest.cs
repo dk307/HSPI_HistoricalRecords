@@ -2,14 +2,14 @@
 using System.Linq;
 using Hspi.Database;
 using Hspi.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class TimeSeriesGroupingLOCFTest
     {
-        [TestMethod]
+        [Test]
         public void AlreadyCorrectGroupingForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -25,7 +25,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(dbValues, result);
         }
 
-        [TestMethod]
+        [Test]
         public void EndValuesAreMissingForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -47,7 +47,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void HalfSampleForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -73,7 +73,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void InitialValuesAreMissingForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -88,7 +88,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(dbValues, result);
         }
 
-        [TestMethod]
+        [Test]
         public void LargeInitialValuesAreMissingForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -108,7 +108,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void LargeMiddleValuesAreMissingForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -135,7 +135,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void MiddleValuesAreMissingForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -160,7 +160,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void MinStartsAfterLaterInSeriesForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -185,7 +185,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void MinValueAfterStartOfSeriesForLOCF()
         {
             List<TimeAndValue> dbValues = new()
@@ -208,7 +208,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void ReduceSampleMisc1()
         {
             List<TimeAndValue> dbValues = new()
@@ -233,7 +233,7 @@ namespace HSPI_HistoricalRecordsTest
             CollectionAssert.AreEqual(result, expected);
         }
 
-        [TestMethod]
+        [Test]
         public void UpSampleMisc()
         {
             List<TimeAndValue> dbValues = new()

@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using HomeSeer.PluginSdk;
 using Hspi;
 using Hspi.Utils;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
-    [TestClass]
+    [TestFixture]
     public class GraphCallbacksTest
     {
-        [TestMethod]
+        [Test]
         public void GetRecordsWithGroupingAndLOCF()
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -38,29 +38,28 @@ namespace HSPI_HistoricalRecordsTest
 
             string format = $"{{ refId:{deviceRefId}, min:{time.ToUnixTimeMilliseconds()}, max:{mockHsController.GetFeatureLastChange(deviceRefId).AddSeconds(4).ToUnixTimeMilliseconds()}, fill:'0', points:{MaxGraphPoints}}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var result = (JArray)jsonData["result"]["data"];
-            Assert.AreEqual(10, (int)jsonData["result"]["groupedbyseconds"]);
+            Assert.That((int)jsonData["result"]["groupedbyseconds"], Is.EqualTo(10));
 
-            Assert.AreEqual(MaxGraphPoints, result.Count);
+            Assert.That(result.Count, Is.EqualTo(MaxGraphPoints));
 
             for (var i = 0; i < MaxGraphPoints; i++)
             {
                 long ts = ((DateTimeOffset)time.AddSeconds(i * 10)).ToUnixTimeSeconds() * 1000;
-                Assert.AreEqual(ts, (long)result[i]["x"]);
+                Assert.That((long)result[i]["x"], Is.EqualTo(ts));
 
                 var value = (i * 2D + (i * 2) + 1D) / 2D;
-                Assert.AreEqual(value, (double)result[i]["y"]);
+                Assert.That((double)result[i]["y"], Is.EqualTo(value));
             }
         }
 
-        [DataTestMethod]
-        [DataRow(FillStrategy.LOCF)]
-        [DataRow(FillStrategy.Linear)]
+        [TestCase(FillStrategy.LOCF)]
+        [TestCase(FillStrategy.Linear)]
         public void GetRecordsWithUpscaling(FillStrategy fillStrategy)
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -89,56 +88,54 @@ namespace HSPI_HistoricalRecordsTest
             long min = time.ToUnixTimeMilliseconds();
             string format = $"{{ refId:{deviceRefId}, min:{min}, max:{max}, fill:{(int)fillStrategy}, points:{max - min}}}";
             string data = plugin.Object.PostBackProc("graphrecords", format, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var result = (JArray)jsonData["result"]["data"];
-            Assert.AreEqual(1, (int)jsonData["result"]["groupedbyseconds"]);
+            Assert.That((int)jsonData["result"]["groupedbyseconds"], Is.EqualTo(1));
             int expectedCount = (int)(1 + (max - min) / 1000);
-            Assert.AreEqual(expectedCount, result.Count);
+            Assert.That(result.Count, Is.EqualTo(expectedCount));
 
             if (fillStrategy == FillStrategy.LOCF)
             {
                 for (var i = 0; i < expectedCount - 1; i++)
                 {
                     long ts = ((DateTimeOffset)time.AddSeconds(i)).ToUnixTimeSeconds() * 1000;
-                    Assert.AreEqual(ts, (long)result[i]["x"]);
+                    Assert.That((long)result[i]["x"], Is.EqualTo(ts));
                     int expectedRecord = i / 5;
-                    Assert.AreEqual(added[expectedRecord].DeviceValue, (double)result[i]["y"]);
+                    Assert.That((double)result[i]["y"], Is.EqualTo(added[expectedRecord].DeviceValue));
                 }
 
-                Assert.AreEqual(max, (long)result[result.Count - 1]["x"]);
-                Assert.AreEqual(added[^1].DeviceValue, (double)result[result.Count - 1]["y"]);
+                Assert.That((long)result[result.Count - 1]["x"], Is.EqualTo(max));
+                Assert.That((double)result[result.Count - 1]["y"], Is.EqualTo(added[^1].DeviceValue));
             }
             else if (fillStrategy == FillStrategy.Linear)
             {
                 for (var i = 0; i < expectedCount - 1; i++)
                 {
                     long ts = ((DateTimeOffset)time.AddSeconds(i)).ToUnixTimeSeconds() * 1000;
-                    Assert.AreEqual(ts, (long)result[i]["x"]);
+                    Assert.That((long)result[i]["x"], Is.EqualTo(ts));
                     var expectedValue = (double)((long)Math.Round((0.1D + (i * 0.2D)) * 10000D)) / 10000D; // *10000 and /10000 to fix float round issues
-                    Assert.AreEqual(expectedValue, (double)result[i]["y"]);
+                    Assert.That((double)result[i]["y"], Is.EqualTo(expectedValue));
                 }
 
-                Assert.AreEqual(max, (long)result[result.Count - 1]["x"]);
-                Assert.AreEqual(added[^1].DeviceValue, (double)result[result.Count - 1]["y"]);
+                Assert.That((long)result[result.Count - 1]["x"], Is.EqualTo(max));
+                Assert.That((double)result[result.Count - 1]["y"], Is.EqualTo(added[^1].DeviceValue));
             }
         }
 
-        [TestMethod]
-        [DataTestMethod]
-        [DataRow("", "data is not correct")]
-        [DataRow("refId={0}&min=1001&max=99", "Unexpected character encountered")]
-        [DataRow("{{ refId:{0}, min:1001, max:99}}", "max is less than min")]
-        [DataRow("{{ refId:{0}, min:'abc', max:99 }}", "min is not correct")]
-        [DataRow("{{ refId:{0}, min:33, max:'abc' }}", "max is not correct")]
-        [DataRow("{{refId:{0}}}", "min is not correct")]
-        [DataRow("{{refId1:{0}}}", "refId is not correct")]
-        [DataRow("{{ refId:{0}, min:11, max:99}}", "fill is not correct")]
-        [DataRow("{{ refId:{0}, min:11, max:99, fill:'rt'}}", "fill is not correct")]
-        [DataRow("{{ refId:{0}, min:11, max:99, fill:'5'}}", "fill is not correct")]
+        [TestCase("", "data is not correct")]
+        [TestCase("refId={0}&min=1001&max=99", "Unexpected character encountered")]
+        [TestCase("{{ refId:{0}, min:1001, max:99}}", "max is less than min")]
+        [TestCase("{{ refId:{0}, min:'abc', max:99 }}", "min is not correct")]
+        [TestCase("{{ refId:{0}, min:33, max:'abc' }}", "max is not correct")]
+        [TestCase("{{refId:{0}}}", "min is not correct")]
+        [TestCase("{{refId1:{0}}}", "refId is not correct")]
+        [TestCase("{{ refId:{0}, min:11, max:99}}", "fill is not correct")]
+        [TestCase("{{ refId:{0}, min:11, max:99, fill:'rt'}}", "fill is not correct")]
+        [TestCase("{{ refId:{0}, min:11, max:99, fill:'5'}}", "fill is not correct")]
         public void GraphCallbackArgumentChecks(string format, string exception)
         {
             var plugin = TestHelper.CreatePlugInMock();
@@ -150,14 +147,14 @@ namespace HSPI_HistoricalRecordsTest
             string paramsForRecord = String.Format(format, devRefId);
 
             string data = plugin.Object.PostBackProc("graphrecords", paramsForRecord, string.Empty, 0);
-            Assert.IsNotNull(data);
+            Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.IsNotNull(jsonData);
+            Assert.That(jsonData, Is.Not.Null);
 
             var errorMessage = jsonData["error"].Value<string>();
-            Assert.IsFalse(string.IsNullOrWhiteSpace(errorMessage));
-            StringAssert.Contains(errorMessage, exception);
+            Assert.That(!string.IsNullOrWhiteSpace(errorMessage));
+            Assert.That(errorMessage, Does.Contain(exception));
         }
 
         private const int MaxGraphPoints = 256;
