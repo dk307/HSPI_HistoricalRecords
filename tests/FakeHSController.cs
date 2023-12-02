@@ -550,8 +550,7 @@ namespace HSPI_HistoricalRecordsTest
                 return value;
             }
 
-            Assert.Fail();
-            return null;
+            throw new Exception($"Property {property} not set for {devOrFeatRef}");
         }
 
         List<int> IHsController.GetRefsByCategoryId(string id)

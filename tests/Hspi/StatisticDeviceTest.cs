@@ -354,8 +354,7 @@ namespace HSPI_HistoricalRecordsTest
         public void StatisticsDeviceIsDeleted()
         {
             var plugIn = TestHelper.CreatePlugInMock();
-            var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn);
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
 
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
 
