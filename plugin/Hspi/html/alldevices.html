@@ -11,8 +11,7 @@
 
         
         {{includefile 'bootstrap/css/page_common.css'}}          
-        <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
-		<link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />		
+		<link rel="stylesheet" href="/HistoricalRecords/datatables.min.css" />		
 		<link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
 		
 		<title>Historical Records Devices Statistics</title>    
@@ -121,8 +120,10 @@
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
      {{includefile 'bootstrap/js/page_common.js'}}
-<script type="text/javascript" src="/bootstrap/js/addons/datatables.min.js"></script>	 
-<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+
+	<script src="/HistoricalRecords/jquery.dataTables.min.js"></script>
+	<script src="/HistoricalRecords/dataTables.bootstrap4.min.js"></script>
+	<script src="/HistoricalRecords/historicalrecords.common.js"></script>
 <script>
 let dt;
 
@@ -134,9 +135,10 @@ function setUpPersistanceTable() {
 		columnDefs: [
 			{ orderable: false, targets: 3 },		
 		 ],
+		initComplete: function () {
+		   $("div.dataTables_length").addClass("bs-select"); 
+		},
   });
-  
-  $(".dataTables_length").addClass("bs-select"); 
 }
 
 function showDevicePage(e, feature, parent){
