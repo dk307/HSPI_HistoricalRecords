@@ -8,7 +8,7 @@ using HomeSeer.PluginSdk.Devices.Controls;
 
 namespace Hspi
 {
-    internal sealed class HsFeatureData
+    internal readonly struct HsFeatureData
     {
         public HsFeatureData(IHsController homeSeerSystem, int deviceRef)
         {
