@@ -28,9 +28,8 @@
 	</style>
 	
     <link href="/css/hs.css" rel="stylesheet">
-    <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
-    <link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />
-    <link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
+	<link rel="stylesheet" href="/HistoricalRecords/datatables.min.css" />
+	<link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
 </head>
 
 {{
@@ -401,7 +400,8 @@ function roundValue(num) {
 
 
 {{if displaySelect=="table"}}
-<script src="/bootstrap/js/addons/datatables.min.js"></script>
+<script src="/HistoricalRecords/jquery.dataTables.min.js"></script>
+<script src="/HistoricalRecords/dataTables.bootstrap4.min.js"></script>
 <script src="/HistoricalRecords/devicehistoricalrecords.table.js"></script>
 {{else if displaySelect=="chart"}}
 <script src="/HistoricalRecords/chart.min.js"></script>

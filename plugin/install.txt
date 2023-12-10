@@ -1,4 +1,5 @@
-﻿HSPI_HistoricalRecords.exe,.,0
+﻿,[CHECKVERSION],4.2.9.0
+HSPI_HistoricalRecords.exe,.,0
 HSPI_HistoricalRecords.exe.config,.,0
 .,[DELALL],.\bin\HistoricalRecords
 dlls.zip,[UNZIPOVER],.\bin\HistoricalRecords

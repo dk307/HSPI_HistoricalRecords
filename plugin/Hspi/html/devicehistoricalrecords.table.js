@@ -43,10 +43,11 @@ function setUpPersistanceTable() {
 		},
 	],
 	initComplete: function () {
+		   $("div.dataTables_length").addClass("bs-select"); 
 	},
+	dom: '<tr><"row"<"col"l><"col"i><"col"p>>',
   });
   
-  $(".dataTables_length").addClass("bs-select"); 
 }
 
 $(document).ready(function () {

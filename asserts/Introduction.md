@@ -17,15 +17,11 @@ You can select unchecking "Track this device values" in Device Options. The devi
 
 * When my device occasionally reports incorrect values, how can I establish a valid range for it?
 
-The device's range can be set using device options. The values outside the range are ignored. The existing values outside the range are deleted from database.
-
-* When I encounter an error like "Sqlite version is too old" upon starting the plugin on a non-Windows system, what steps should I take to resolve it?
-
-On Windows, the sqlite is bundled with plugin. For other systems, the system provided version is used. The sqlite version needs to be above 3.37+. Please update sqlite or OS Version.
+The device's range can be set using device options. The values outside the range are ignored. The existing values outside the range are deleted from database on setting the range via Device Options.
 
 * How do I go about creating a statistical device associated with a specific device?
 
-This can be done via menu PlugIn->Add a statistic device.The multi step wizard on that page will guide creation of the device.
+This can be done via menu PlugIn->Add a statistic device. The multi step wizard on that page will guide the creation of the device. 
 
 * My database has become too large. What methods can I employ to reduce its size?
 
@@ -35,8 +31,7 @@ Open the Plugin->Device Statistics and check which device is adding a large numb
 The database size is shown in Plugin->Database statistics page.
 
 * What is the duration for which the records are retained?
-It is controlled by the setting in the Plugin setting page. Default is 30 days.
-
+It is controlled by the setting in the Plugin setting page. Default is 30 days. Only increase this if you machine allows for the increased size and compute requirements.
 
 * How do I take backup of the database ?
 The plugin supports the default backups of Homeseer. The sqlite database should get backed up with homeseer backup.
