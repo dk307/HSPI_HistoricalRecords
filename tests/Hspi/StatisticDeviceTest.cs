@@ -302,13 +302,13 @@ namespace HSPI_HistoricalRecordsTest
             Assert.That((string)result2["error"], Is.Null);
 
             // get return function value for feature
-            string json = plugIn.Object.GetStatisticDeviceDataAsJson(statsFeatureRefId);
-            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(json),
+            var jsons = plugIn.Object.GetStatisticDeviceDataAsJson(statsFeatureRefId);
+            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId]),
                         Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(editRequest["data"].ToString())));
 
             var plugExtraData = (PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.PlugExtraData);
             Assert.That(plugExtraData.NamedKeys.Count, Is.EqualTo(1));
-            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(json),
+            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId]),
                         Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"])));
         }
 

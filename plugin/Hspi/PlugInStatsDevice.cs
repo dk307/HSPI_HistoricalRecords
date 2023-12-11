@@ -14,7 +14,7 @@ namespace Hspi
 {
     internal partial class PlugIn : HspiBase
     {
-        public string? GetStatisticDeviceDataAsJson(object refIdString)
+        public IDictionary<int, string>? GetStatisticDeviceDataAsJson(object refIdString)
         {
             var refId = Hspi.Utils.TypeConverter.TryGetFromObject<int>(refIdString)
                 ?? throw new ArgumentException(null, nameof(refIdString));

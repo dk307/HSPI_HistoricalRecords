@@ -35,23 +35,30 @@ namespace Hspi.Device
             }
         }
 
-        public string GetDataFromFeatureAsJson(int devOrFeatRefId)
+        public IDictionary<int, string> GetDataFromFeatureAsJson(int devOrFeatRefId)
         {
+            // check if it is device ref id
             if (deviceAndFeatures.TryGetValue(devOrFeatRefId, out var childDevices))
             {
-                // find child
-                return childDevices.Count == 1
-                    ? childDevices[0].DataFromFeatureAsJson
-                    : throw new HsDeviceInvalidException($"{devOrFeatRefId} has invalid number of features({childDevices.Count})");
+                return GetJsonForDeviceFeatures(childDevices);
             }
 
-            var feature = AllStatisticsFeatures.FirstOrDefault(x => x.FeatureRefId == devOrFeatRefId);
-            return feature != null
-                ? feature.DataFromFeatureAsJson
-                : throw new HsDeviceInvalidException($"{devOrFeatRefId} is not a plugin device or feature)");
+            // check if it any of the feature id
+            foreach (var device in deviceAndFeatures)
+            {
+                if (device.Value.Any(x => x.FeatureRefId == devOrFeatRefId))
+                {
+                    return GetJsonForDeviceFeatures(device.Value);
+                }
+            }
+
+            throw new HsDeviceInvalidException($"{devOrFeatRefId} is not a plugin device or feature)");
+
+            static IDictionary<int, string> GetJsonForDeviceFeatures(ImmutableList<StatisticsDevice> childDevices) =>
+                childDevices.ToDictionary(x => x.FeatureRefId, x => x.DataFromFeatureAsJson);
         }
 
-        public bool HasRefId(int devOrFeatRefId)
+        public bool HasDeviceOrFeatureRefId(int devOrFeatRefId)
         {
             return deviceAndFeatures.ContainsKey(devOrFeatRefId) ||
                    AllStatisticsFeatures.Any(x => x.FeatureRefId == devOrFeatRefId);
