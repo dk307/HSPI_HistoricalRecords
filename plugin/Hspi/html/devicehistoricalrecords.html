@@ -15,19 +15,17 @@
 	
 	<style>
 		canvas {
-			 width: 100% !important;  
-			 object-fit: contain; 
-			 margin: auto;
+			width: 100% !important;  
+			object-fit: contain; 
+			margin: auto;
 		}
 
 		.chart-container {
-		  position: relative;
-		  margin: auto;
-		  height: 60vh;
+		    position: relative;
+		    margin: auto;
+		    height: 60vh;
 		}
 	</style>
-	
-    <link href="/css/hs.css" rel="stylesheet">
 	<link rel="stylesheet" href="/HistoricalRecords/datatables.min.css" />
 	<link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
 </head>
@@ -140,7 +138,7 @@ const featureId = {{featureId}};
 const deviceUnits = '{{deviceUnits}}';
 </script>
 	
-<body class="body homeseer-skin ml-0 mr-0" style="min-height: 3rem" aria-busy="true">	
+<body class="body homeseer-skin mx-0" style="min-height: 3rem" aria-busy="true">
 <!-- refId={{refId}}<BR> -->
 <!-- featureId={{featureId}}<BR> -->
 <!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
@@ -165,8 +163,7 @@ const deviceUnits = '{{deviceUnits}}';
 			<input type="hidden" id="displayMin" name="displayMin" value="{{displayMin}}"> 
 			<input type="hidden" id="displayMax" name="displayMax" value="{{displayMax}}"> 
 			<input type="hidden" id="displayLabel" name="displayLabel" value="{{displayLabel}}"> 
-
-			
+		
 			{{if displaySelect != ""}}
 			<div class="md-form my-0 mr-3" style="width:100%">
 				<select id="feature" class="mdb-select md-form dropdown-primary colorful-select" name="feature" >
@@ -238,7 +235,7 @@ const deviceUnits = '{{deviceUnits}}';
 		}}
 
 		{{if displaySelect=="table"}}
-			<table id="dt-persistence" class="table table-sm mb-0 table-striped"  width="100%">	
+			<table id="dt-persistence" class="table table-sm mx-0 table-striped"  width="100%">	
 				<thead>
 					<tr>
 						<th>Time</th>
@@ -313,7 +310,7 @@ const deviceUnits = '{{deviceUnits}}';
 						</div>
 
 						<div class="form-row mt-3">
-							  <small class="form-text text-muted ml-3">Range for tracking values</small>
+							  <small class="form-text ml-3">Range for tracking values</small>
 						</div>
 					 
 						<div class="form-row mt-0 mb-0">
@@ -420,5 +417,8 @@ $(document).ready(function () {
 	$('#loading').hide();
 });
 {{end}}
+<script>
+iFrameSrcHelper();
+</script>
 </body>
 </html>

@@ -8,8 +8,7 @@
     <!--This liquid tag loads all of the necessary css files for HomeSeer-->
     {{includefile '/bootstrap/css/page_common.css'}}
     <link href="../bootstrap/css/addons-pro/steppers.min.css" rel="stylesheet">
-    <title>Add a statistics virtual device</title>
-	
+    <title>Add a statistics virtual device</title>	
 </head>
 <body class="body homeseer-skin">
     <!--These liquid tags add the HomeSeer header and navbar to the top of the page when appropriate-->
@@ -26,12 +25,11 @@
 				
                 <div class="step-new-content needs-validation" noinvalidate>
 					Select a device to create a statistic device for
-					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}
-					
+					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}					
                     <select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here" required>
 						<option value="" disabled="disabled" selected="selected">Select Device</option>
 						{{ for id in deviceRefIds }}
-						<option value='{{id}}'>{{device_name_full id | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
+						<option value='{{id}}'>{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
 						{{ end }}
 					</select>
                     <div class="step-actions pt-4">                   
@@ -66,27 +64,26 @@
             </li>
 			
 			<li class="step">
-                <div data-step-label="Select the time interval from the current moment for calculating the statistical function" class="step-title waves-effect waves-dark">Step 3</div>
+                <div data-step-label="Select the statistical function time interval" class="step-title waves-effect waves-dark">Step 3</div>
                 <div id="step3" class="step-new-content">
+					Select the time interval from the current moment for calculating the statistical function
                     <div class="input-group">					 
-						<p>   
-							<div class="md-form mr-1">
-								<input type="number" id="daysDuration" name="days" class="form-control" value="0" min="0" required>
-								<label for="daysDuration">Days</label>                                     
-							</div>
-							<div class="md-form mr-1">
-								<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" min="0" required>
-								<label for="hoursDuration">Hours</label>                                     
-							</div>
-							<div class="md-form mr-1">
-								<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="10" min="0" required>
-								<label for="minutesDuration">Minutes</label>                                     
-							</div>
-							<div class="md-form mr-1">
-								<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" min="0" required>
-								<label for="secondsDuration">Seconds</label>                                     
-							</div>
-						</p> 
+						<div class="md-form mr-1">
+							<input type="number" id="daysDuration" name="days" class="form-control" value="0" min="0" required>
+							<label for="daysDuration">Days</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" min="0" required>
+							<label for="hoursDuration">Hours</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="10" min="0" required>
+							<label for="minutesDuration">Minutes</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" min="0" required>
+							<label for="secondsDuration">Seconds</label>                                     
+						</div>
 					</div>
 					<div class="step-actions" style="margin-top: 32px;">
 						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
@@ -96,27 +93,26 @@
 			</li>
                     
 			<li class="step">
-                <div data-step-label="Choose the refresh interval for the statistical function, which determines how frequently the function is calculated" class="step-title waves-effect waves-dark">Step 4</div>
+                <div data-step-label="Select refresh interval" class="step-title waves-effect waves-dark">Step 4</div>
                 <div id="step4" class="step-new-content">
+					Choose the refresh interval for the statistical function, which determines how frequently the function is calculated
                     <div class="input-group">					 
-						<p>   
-							<div class="md-form mr-1">
-								<input type="number" id="daysRefresh" name="days" class="form-control" value="0" min="0" required>
-								<label for="daysRefresh">Days</label>                                     
-							</div>
-							<div class="md-form mr-1">
-								<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" min="0" required>
-								<label for="hoursRefresh">Hours</label>                                     
-							</div>
-							<div class="md-form mr-1">
-								<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" min="0" required>
-								<label for="minutesRefresh">Minutes</label>                                     
-							</div>
-							<div class="md-form mr-1">
-								<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="30" min="0" required>
-								<label for="secondsRefresh">Seconds</label>                                     
-							</div>
-						</p> 
+						<div class="md-form mr-1">
+							<input type="number" id="daysRefresh" name="days" class="form-control" value="0" min="0" required>
+							<label for="daysRefresh">Days</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" min="0" required>
+							<label for="hoursRefresh">Hours</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" min="0" required>
+							<label for="minutesRefresh">Minutes</label>                                     
+						</div>
+						<div class="md-form mr-1">
+							<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="30" min="0" required>
+							<label for="secondsRefresh">Seconds</label>                                     
+						</div>
 					</div>
 					
 					
@@ -127,19 +123,58 @@
 				</div>       
             </li>
 			
+			{{ statDevicesRefIds=plugin_function 'HistoricalRecords' 'GetStatisticsDeviceList' [] }}    
+			{{existingStatDevices=(array.size statDevicesRefIds) > 0 }}    
+			{{# existingStatDevices=false }}    
 			<li class="step">
-                <div data-step-label="Name of the device" class="step-title waves-effect waves-dark">Step 5</div>
+                <div data-step-label="Select {{if !existingStatDevices}}name of{{end}} device" class="step-title waves-effect waves-dark">Step 5</div>
                 <div id="step5" class="step-new-content">                  
-                        What is the name of the new device?                        
-                        <div class="row">
-                            <div class="md-form col-12 ml-auto mt-2">
-                                <input id="deviceName" type="text" class="form-control" required>
-                              
-                            </div>
-                        </div>
-										
-						<div id="error-message-div" class="text-danger">
-						</div>		
+					{{if existingStatDevices}} 
+					Create new device or add to existing device ? 
+					{{end}}
+					<div class="row">
+						{{if existingStatDevices}} 
+						<div class="md-form col">
+							<div class="form-check">
+								<input type="radio" class="form-check-input" id="createNewDeviceId" name="createOrSelectDevice" checked>
+								<label class="form-check-label" for="createNewDeviceId">Create new device</label>
+							</div>							
+						</div>
+						{{end}}
+													
+						<div class="{{if !existingStatDevices}}col-12{{else}}col-9{{end}} ml-1" >
+							<div class="md-form" >
+								{{if !existingStatDevices}} 
+								<input type="radio" class="form-check-input" id="createNewDeviceId" name="createOrSelectDevice" style="display:none" checked>
+								{{end}}
+								<input id="deviceName" type="text" class="form-control">                              
+							</div>
+						</div>
+					</div>
+											
+					{{if existingStatDevices}} 
+					Or
+					<div class="row">
+						<div class="md-form col">
+							<div class="form-check">
+								<input type="radio" class="form-check-input" id="selectExistingDeviceId" name="createOrSelectDevice">
+								<label class="form-check-label" for="selectExistingDeviceId">Select existing device</label>
+							</div>
+						</div>
+						
+						<div class="md-form ml-1 col-9" >
+							<select id="existingDeviceId" class="mdb-select md-form dropdown-primary colorful-select" name="existingDeviceId" >
+								<option value="" disabled="disabled" selected="selected">Select Device</option>
+								{{for id in statDevicesRefIds}}
+									<option value="{{id}}">{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>	
+								{{end}}			
+							</select> 
+						</div>
+					</div>
+					{{end}}
+									
+					<div id="error-message-div" class="text-danger">
+					</div>		
 					
 					<div class="step-actions" style="margin-top: 32px;">
 						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
@@ -221,11 +256,12 @@
 		
 			var formObject = {
 			   name: $('#deviceName').val(),
+			   parentRef: $('#selectExistingDeviceId').prop('checked') == true ? parseInt($('#existingDeviceId').val()) : null,
 			   data: {
 				   TrackedRef: $('#deviceSelect').val(),
 				   StatisticsFunction: $('#function').val(),
 				   FunctionDurationSeconds: duration.asSeconds(),
-				   RefreshIntervalSeconds: refresh.asSeconds(),
+				   RefreshIntervalSeconds: refresh.asSeconds(),				   
 			   }
 		    };
 			

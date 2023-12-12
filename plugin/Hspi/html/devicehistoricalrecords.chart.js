@@ -19,6 +19,7 @@ function getRangeString(min, max) {
 }
 
 function startFetchWithMinMax(chart, min, max) {
+	// $('#loading').show();
 	console.log('Fetching data between ' + min + ' and ' + max);
 	const formObject = {
 	   refId : featureId,
@@ -40,7 +41,10 @@ function startFetchWithMinMax(chart, min, max) {
 			chart.options.scales.x.time.displayFormats.hour = "hA";
 		}
 		
+		// $('#loading').hide();
+		
 		chart.update();	
+		
 	});
 }
 

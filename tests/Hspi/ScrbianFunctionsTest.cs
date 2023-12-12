@@ -243,9 +243,46 @@ namespace HSPI_HistoricalRecordsTest
             var data = ((PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.PlugExtraData)).GetNamed("data");
 
             // get return function value for feature
-            string json = plugIn.Object.GetStatisticDeviceDataAsJson(isDevice ? statsDeviceRefId : statsFeatureRefId);
-            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(data),
-                        Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(json)));
+            var jsons = plugIn.Object.GetStatisticDeviceDataAsJson(isDevice ? statsDeviceRefId : statsFeatureRefId);
+            Assert.That(jsons.Count, Is.EqualTo(1));
+            var statisticsDeviceDatas = JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId]);
+            Assert.That(statisticsDeviceDatas, Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(data)));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void GetStatisticDeviceDataAsJsonForMultipleFeatures(bool isDevice)
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            int statsDeviceRefId = 10300;
+            int statsFeatureRefId1 = 10301;
+            int statsFeatureRefId2 = 10302;
+            int trackedDeviceRefId1 = 100;
+            int trackedDeviceRefId2 = 101;
+
+            hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
+                                             statsDeviceRefId, statsFeatureRefId1, trackedDeviceRefId1);
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                             statsDeviceRefId, statsFeatureRefId2, trackedDeviceRefId2);
+
+            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId1, statsFeatureRefId2 });
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            var data1 = ((PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId1, EProperty.PlugExtraData)).GetNamed("data");
+            var data2 = ((PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId2, EProperty.PlugExtraData)).GetNamed("data");
+
+            // get return function value for feature
+            var jsons = plugIn.Object.GetStatisticDeviceDataAsJson(isDevice ? statsDeviceRefId : statsFeatureRefId2);
+            Assert.That(jsons.Count, Is.EqualTo(2));
+
+            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId1]), Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(data1)));
+            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId2]), Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(data2)));
         }
 
         [Test]

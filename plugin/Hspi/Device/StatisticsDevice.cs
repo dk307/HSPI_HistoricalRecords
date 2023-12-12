@@ -54,18 +54,60 @@ namespace Hspi.Device
             }
         }
 
-        public static int CreateDevice(IHsController hsController, string name, StatisticsDeviceData data)
+        public static int Create(IHsController hsController, int parentRefId, StatisticsDeviceData data)
+        {
+            return CreateImpl(hsController, parentRefId, null, data);
+        }
+
+        public static int Create(IHsController hsController, string deviceName, StatisticsDeviceData data)
+        {
+            return CreateImpl(hsController, null, deviceName, data);
+        }
+
+        public static void EditDevice(IHsController hsController, int featureRefId, StatisticsDeviceData data)
+        {
+            // check same interface and is a feature
+            var deviceInterface = (string)hsController.GetPropertyByRef(featureRefId, EProperty.Interface);
+            var eRelationship = (ERelationship)hsController.GetPropertyByRef(featureRefId, EProperty.Relationship);
+            if (deviceInterface != PlugInData.PlugInId || eRelationship != ERelationship.Feature)
+            {
+                throw new HsDeviceInvalidException(Invariant($"Device or feature {featureRefId} not a plugin feature"));
+            }
+
+            var plugExtraData = new PlugExtraData();
+            plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
+            hsController.UpdatePropertyByRef(featureRefId, EProperty.PlugExtraData, plugExtraData);
+
+            Log.Information("Updated device {refId} with {data}", featureRefId, data);
+        }
+
+        public void Dispose()
+        {
+            timer?.Dispose();
+        }
+
+        public void UpdateNow() => timer.Change(0, RefreshInterval);
+
+        private static int CreateImpl(IHsController hsController, int? parentRefId, string? newDeviceName, StatisticsDeviceData data)
         {
             var feature = hsController.GetFeatureByRef(data.TrackedRef);
 
-            var newDeviceData = DeviceFactory.CreateDevice(PlugInData.PlugInId)
-                                             .WithName(name)
-                                             .WithLocation(feature.Location)
-                                             .WithLocation2(feature.Location2)
-                                             .PrepareForHs();
+            int featureParentRefId;
+            if (!parentRefId.HasValue)
+            {
+                var newDeviceData = DeviceFactory.CreateDevice(PlugInData.PlugInId)
+                                                 .WithName(newDeviceName)
+                                                 .WithLocation(feature.Location)
+                                                 .WithLocation2(feature.Location2)
+                                                 .PrepareForHs();
 
-            var newDevice = hsController.CreateDevice(newDeviceData);
-            Log.Information("Created device {newDeviceName} ({newDevice}) with {function} for {name}", newDevice, data.TrackedRef, data.StatisticsFunction, feature.Name);
+                featureParentRefId = hsController.CreateDevice(newDeviceData);
+                Log.Information("Created device {name}", HsHelper.GetNameForLog(hsController, featureParentRefId));
+            }
+            else
+            {
+                featureParentRefId = parentRefId.Value;
+            }
 
             var plugExtraData = new PlugExtraData();
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
@@ -79,7 +121,7 @@ namespace Hspi.Device
                                                .WithMiscFlags(EMiscFlag.StatusOnly)
                                                .WithMiscFlags(EMiscFlag.SetDoesNotChangeLastChange)
                                                .WithExtraData(plugExtraData)
-                                               .PrepareForHsDevice(newDevice);
+                                               .PrepareForHsDevice(featureParentRefId);
 
             switch (data.StatisticsFunction)
             {
@@ -95,7 +137,13 @@ namespace Hspi.Device
                     break;
             }
 
-            return hsController.CreateFeatureForDevice(newFeatureData);
+            int featureId = hsController.CreateFeatureForDevice(newFeatureData);
+            Log.Information("Created {featureName} for  tracking {trackedName} for {name}",
+                            HsHelper.GetNameForLog(hsController, featureId),
+                            HsHelper.GetNameForLog(hsController, data.TrackedRef),
+                            data.StatisticsFunction.ToString());
+
+            return featureId;
 
             static StatusGraphicCollection CloneGraphics(StatusGraphicCollection collection)
             {
@@ -128,30 +176,6 @@ namespace Hspi.Device
                 };
             }
         }
-
-        public static void EditDevice(IHsController hsController, int featureRefId, StatisticsDeviceData data)
-        {
-            // check same interface and is a feature
-            var deviceInterface = (string)hsController.GetPropertyByRef(featureRefId, EProperty.Interface);
-            var eRelationship = (ERelationship)hsController.GetPropertyByRef(featureRefId, EProperty.Relationship);
-            if (deviceInterface != PlugInData.PlugInId || eRelationship != ERelationship.Feature)
-            {
-                throw new HsDeviceInvalidException(Invariant($"Device or feature {featureRefId} not a plugin feature"));
-            }
-
-            var plugExtraData = new PlugExtraData();
-            plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
-            hsController.UpdatePropertyByRef(featureRefId, EProperty.PlugExtraData, plugExtraData);
-
-            Log.Information("Updated device {refId} with {data}", featureRefId, data);
-        }
-
-        public void Dispose()
-        {
-            timer?.Dispose();
-        }
-
-        public void UpdateNow() => timer.Change(0, RefreshInterval);
 
         private static T GetPlugExtraData<T>(IHsController hsController,
                                              int refId,

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using HomeSeer.PluginSdk;
@@ -74,7 +75,7 @@ namespace Hspi
             combinedToken?.Dispose();
         }
 
-        public string GetStatisticDeviceDataAsJson(int refId)
+        public IDictionary<int, string> GetStatisticDeviceDataAsJson(int refId)
         {
             return statisticsDeviceUpdater?.GetDataFromFeatureAsJson(refId) ??
                         throw new HsDeviceInvalidException($"Not initialized");
@@ -85,7 +86,7 @@ namespace Hspi
             if (statisticsDeviceUpdater != null)
             {
                 // currently these events are only for devices not features
-                if (statisticsDeviceUpdater.HasRefId(refId))
+                if (statisticsDeviceUpdater.HasDeviceOrFeatureRefId(refId))
                 {
                     RestartStatisticsDeviceUpdate();
                 }
