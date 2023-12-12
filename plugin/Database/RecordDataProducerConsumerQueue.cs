@@ -21,10 +21,12 @@ namespace Hspi.Database
 
         public RecordData Take(CancellationToken cancellationToken)
         {
+            WaitHandle[] waitHandles = new[] { addedEvent, cancellationToken.WaitHandle };
+
             RecordData result;
             while (!queue.TryDequeue(out result))
             {
-                WaitHandle.WaitAny(new WaitHandle[] { addedEvent, cancellationToken.WaitHandle }, -1, false);
+                WaitHandle.WaitAny(waitHandles, -1, false);
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
