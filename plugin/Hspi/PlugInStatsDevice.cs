@@ -22,6 +22,12 @@ namespace Hspi
             return sqliteManager?.GetStatisticDeviceDataAsJson(refId);
         }
 
+        // used by scrbian
+        public IList<int> GetStatisticsDeviceList()
+        {
+            return HomeSeerSystem.GetRefsByInterface(PlugInData.PlugInId, true);
+        }
+
         public List<int> GetTrackedDeviceList() => HomeSeerSystem.GetAllRefs().Where(id => IsFeatureTracked(id)).ToList();
 
         internal bool UpdateStatisticsFeature(int featureRefId) => sqliteManager?.TryUpdateStatisticDeviceData(featureRefId) ?? false;
@@ -79,12 +85,21 @@ namespace Hspi
         {
             ExtractDeviceOperationParameters(data, out var jsonData, out var statisticsDeviceData);
 
-            var name = GetJsonValue<string>(jsonData, "name");
-            var refId = StatisticsDevice.CreateDevice(HomeSeerSystem, name, statisticsDeviceData);
+            var parentRefId = GetOptionalJsonValue<int>(jsonData, "parentRef");
+            int newFeatureRefId;
+            if (parentRefId.HasValue)
+            {
+                newFeatureRefId = StatisticsDevice.Create(HomeSeerSystem, parentRefId.Value, statisticsDeviceData);
+            }
+            else
+            {
+                var name = GetJsonValue<string>(jsonData, "name");
+                newFeatureRefId = StatisticsDevice.Create(HomeSeerSystem, name, statisticsDeviceData);
+            }
 
             sqliteManager?.RestartStatisticsDeviceUpdate();
 
-            return SendRefIdResult(refId);
+            return SendRefIdResult(newFeatureRefId);
         }
 
         private string HandleDeviceEdit(string data)

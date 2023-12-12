@@ -34,7 +34,17 @@
 	
 {{if jsonDataStrings}}
 {{
-	selectedId=featureId ?? (array.first jsonDataStrings).key
+	for tab in jsonDataStrings
+		if tab.key==featureId
+			selectedId=featureId
+			break
+		end
+	end
+	
+	if (!selectedId) 
+		selectedId=(array.first jsonDataStrings).key
+	end
+	
 	deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' []
 	show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'			
 }}
@@ -51,8 +61,6 @@
 	<div class="tab-content card" id="editDeviceTabsId">
 		{{ for tab in jsonDataStrings }}		
 		<div class="tab-pane fade show {{if tab.key==selectedId}}active{{else}}{{end}}" id="md-{{tab.key}}" role="tabpanel" aria-labelledby="md-{{tab.key}}">
-			{{tab.key}}
-
 			<div class="row mt-1 mb-1">
 				<div class="md-form col-md alert alert-danger" role="alert" id="error-message-div-{{tab.key}}" style="display: none;">		 
 				</div>

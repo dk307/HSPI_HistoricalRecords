@@ -15,14 +15,24 @@ namespace HSPI_HistoricalRecordsTest
     [TestFixture]
     public class StatisticsDeviceTest
     {
-        [TestCase(StatisticsFunction.AverageStep)]
-        [TestCase(StatisticsFunction.AverageLinear)]
-        [TestCase(StatisticsFunction.MinValue)]
-        [TestCase(StatisticsFunction.MaxValue)]
-        public void AddDevice(StatisticsFunction function)
+        [TestCase(null, StatisticsFunction.AverageStep)]
+        [TestCase(null, StatisticsFunction.AverageLinear)]
+        [TestCase(null, StatisticsFunction.MinValue)]
+        [TestCase(null, StatisticsFunction.MaxValue)]
+        [TestCase(10294234, StatisticsFunction.MaxValue)]
+        [TestCase(33323343, StatisticsFunction.AverageLinear)]
+        [TestCase(90000235, StatisticsFunction.MinValue)]
+        [TestCase(60000235, StatisticsFunction.MaxValue)]
+        public void AddDevice(int? parentRefId, StatisticsFunction function)
         {
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            if (parentRefId != null)
+            {
+                TestHelper.SetupStatisticsFeature(StatisticsFunction.MinValue, plugIn, hsControllerMock,
+                     new DateTime(2000, 3, 4), parentRefId.Value, 999, 9999);
+            }
 
             int trackedRefId = 1039423;
             hsControllerMock.SetupFeature(trackedRefId, 1.132);
@@ -42,6 +52,7 @@ namespace HSPI_HistoricalRecordsTest
             JObject request = new()
             {
                 { "name", new JValue(deviceName) },
+                { "parentRef", new JValue(parentRefId) },
                 { "data", new JObject() {
                     { "TrackedRef", new JValue(trackedRefId) },
                     { "StatisticsFunction", new JValue(function) },
@@ -58,17 +69,28 @@ namespace HSPI_HistoricalRecordsTest
             Assert.That(result2, Is.Not.Null);
             Assert.That((string)result2["error"], Is.Null);
 
-            NewDeviceData newDataForDevice = hsControllerMock.CreatedDevices.First().Value;
-            NewFeatureData newFeatureData = hsControllerMock.CreatedFeatures.First().Value;
             var trackedFeature = hsControllerMock.GetFeature(trackedRefId);
+            NewFeatureData newFeatureData = hsControllerMock.CreatedFeatures.First().Value;
+            if (parentRefId is null)
+            {
+                NewDeviceData newDataForDevice = hsControllerMock.CreatedDevices.First().Value;
 
-            // check proper device & feature was added
-            Assert.That(newDataForDevice, Is.Not.Null);
+                // check proper device & feature was added
+                Assert.That(newDataForDevice, Is.Not.Null);
 
-            Assert.That(deviceName, Is.EqualTo(((string)newDataForDevice.Device[EProperty.Name])));
-            Assert.That(newDataForDevice.Device[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
-            Assert.That(newDataForDevice.Device[EProperty.Location], Is.EqualTo(trackedFeature.Location));
-            Assert.That(newDataForDevice.Device[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
+                Assert.That(deviceName, Is.EqualTo(((string)newDataForDevice.Device[EProperty.Name])));
+                Assert.That(newDataForDevice.Device[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
+                Assert.That(newDataForDevice.Device[EProperty.Location], Is.EqualTo(trackedFeature.Location));
+                Assert.That(newDataForDevice.Device[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
+
+                CollectionAssert.AreEqual((new HashSet<int> { hsControllerMock.CreatedDevices.First().Key }).ToImmutableArray(),
+                                         ((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray());
+            }
+            else
+            {
+                CollectionAssert.AreEqual((new HashSet<int> { parentRefId.Value }).ToImmutableArray(),
+                                         ((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray());
+            }
 
             Assert.That(newFeatureData.Feature[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
             CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
@@ -76,9 +98,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.That(newFeatureData.Feature[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
             Assert.That(newFeatureData.Feature[EProperty.Misc],
                         Is.EqualTo((uint)(EMiscFlag.StatusOnly | EMiscFlag.SetDoesNotChangeLastChange | EMiscFlag.ShowValues)));
-
-            CollectionAssert.AreEqual((new HashSet<int> { hsControllerMock.CreatedDevices.First().Key }).ToImmutableArray(),
-                                     ((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray());
 
             var plugExtraData = (PlugExtraData)newFeatureData.Feature[EProperty.PlugExtraData];
 
@@ -228,6 +247,50 @@ namespace HSPI_HistoricalRecordsTest
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, 11.9D);
 
             Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
+        }
+
+        [Test]
+        public void MultipleFeatureInDeviceAreUpdated()
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock =
+                TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            int statsDeviceRefId = 100;
+            int statsFeatureRefId1 = 1000;
+            int statsFeatureRefId2 = 1001;
+            int trackedDeviceRefId1 = 99;
+            int trackedDeviceRefId2 = 100023;
+
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, statsFeatureRefId1, trackedDeviceRefId1);
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, statsFeatureRefId2, trackedDeviceRefId2);
+
+            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId1, statsFeatureRefId2 });
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId1, 1);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId2, 1);
+
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedDeviceRefId1, 10, "10", aTime.AddMinutes(-10), 1);
+
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedDeviceRefId2, 100, "100", aTime.AddMinutes(-10), 1);
+
+            plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId);
+
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId1, 10);
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId2, 100);
+
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId1, EProperty.InvalidValue), Is.EqualTo(false));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId2, EProperty.InvalidValue), Is.EqualTo(false));
         }
 
         [TestCase(true)]
