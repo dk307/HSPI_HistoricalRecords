@@ -181,6 +181,7 @@ namespace Hspi
                     Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
                     this.collectorInitException = ex;
                 }
+
                 started = false;
             }
 
