@@ -9,21 +9,17 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
-	
     {{includefile '/bootstrap/css/page_common.css'}}
     <title>Edit Device</title>
- 
-    <link href="/css/hs.css" rel="stylesheet">
 </head>
 	{{	
 		refId=queries['ref'] ?? ""
 		featureId=queries['feature']	
 		jsonDataStrings=plugin_function 'HistoricalRecords' 'GetStatisticDeviceDataAsJson' [refId]		
-		}}
+	}}
 	
-<body class="body homeseer-skin ml-0 mr-0" aria-busy="true">
-
-<div class="custom-scrollbar"> 
+<body class="body homeseer-skin mx-0" aria-busy="true">
+<div class="custom-scrollbar homeseer"> 
 	<div class="hs_spinner" id="loading">
 		<div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
 			<div class="spinner-border" role="status">
@@ -48,16 +44,18 @@
 	deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' []
 	show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'			
 }}
-	<ul class="nav nav-tabs hs-tabs" id="editDeviceId" role="tablist">
-	    {{ for tab in jsonDataStrings }}
-		<li class="nav-item">
-			<a class="nav-link {{if tab.key==selectedId}}active{{else}}{{end}}" id="tab-{{tab.key}}" data-toggle="tab" href="#md-{{tab.key}}" role="tab" aria-controls="md-{{tab.key}}" aria-selected="{{if tab.key==selectedId}}true{{else}}false{{end}}">
-				{{device_prop tab.key "name" | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}
-			</a>
-		</li>
-		{{end}}
-	</ul>
-		
+	<header>
+		<ul class="nav nav-tabs hs-tabs" id="editDeviceId" role="tablist">
+			{{ for tab in jsonDataStrings }}
+			<li class="nav-item">
+				<a class="nav-link {{if tab.key==selectedId}}active{{else}}{{end}}" id="tab-{{tab.key}}" data-toggle="tab" data-target="#md-{{tab.key}}" role="tab" aria-controls="md-{{tab.key}}" aria-selected="{{if tab.key==selectedId}}true{{else}}false{{end}}">
+					{{device_prop tab.key "name" | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}
+				</a>
+			</li>
+			{{end}}
+		</ul>
+	</header>		
+	
 	<div class="tab-content card" id="editDeviceTabsId">
 		{{ for tab in jsonDataStrings }}		
 		<div class="tab-pane fade show {{if tab.key==selectedId}}active{{else}}{{end}}" id="md-{{tab.key}}" role="tabpanel" aria-labelledby="md-{{tab.key}}">
@@ -96,8 +94,7 @@
 						{{includefile '/HistoricalRecords/statsfuncdefs.html'}} 
 					</div>	 		
 				</div>
-
-		 
+	 
 				<div class="row mb-1">	 
 					<div class="col">
 						<div class="form-outline">
@@ -160,7 +157,6 @@
 		{{end}}
 	</div>
 	
-
 {{includefile 'bootstrap/js/page_common.js'}}
 <script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
 <script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
@@ -246,5 +242,10 @@ Invalid device
 {{end}}
 
 </div>
+
+<script>
+iFrameSrcHelper();
+</script>
+
 </body>
 </html>

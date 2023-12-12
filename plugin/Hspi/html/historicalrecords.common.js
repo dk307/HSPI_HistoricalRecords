@@ -107,3 +107,13 @@ function humanizeDuration(periodSeconds) {
 
     return parts.join(", ");
 }
+
+function iFrameSrcHelper() {	
+	$(document).ready(function () {
+		window.addEventListener("blur", function(event) 
+		{ 
+			// this closes any open dropdown
+			$("body").trigger("click");
+		}, false);
+	});
+}
