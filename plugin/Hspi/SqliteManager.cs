@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
@@ -8,7 +7,6 @@ using Hspi.Device;
 using Hspi.Utils;
 using Nito.Disposables;
 using Serilog;
-using SQLitePCL;
 
 #nullable enable
 
@@ -175,7 +173,7 @@ namespace Hspi
             }
             catch (Exception ex)
             {
-                if (ex.IsCancelException())
+                if (!ex.IsCancelException())
                 {
                     string errorMessage = ex.GetFullMessage();
                     Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
