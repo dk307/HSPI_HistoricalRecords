@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using Hspi.Database;
@@ -8,7 +7,6 @@ using Hspi.Device;
 using Hspi.Utils;
 using Nito.Disposables;
 using Serilog;
-using SQLitePCL;
 
 #nullable enable
 
@@ -37,7 +35,7 @@ namespace Hspi
             get
             {
                 return Volatile.Read(ref this.collector) ??
-                throw new InvalidOperationException("Sqlite initialize failed Or Backup in progress");
+                       throw new InvalidOperationException("Sqlite initialize failed Or Backup in progress");
             }
         }
 
@@ -173,11 +171,15 @@ namespace Hspi
 
                 startTimer?.Dispose();
             }
-            catch (Exception ex) when (!ex.IsCancelException())
+            catch (Exception ex)
             {
-                string errorMessage = ex.GetFullMessage();
-                Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
-                this.collectorInitException = ex;
+                if (!ex.IsCancelException())
+                {
+                    string errorMessage = ex.GetFullMessage();
+                    Log.Error("Failed to setup Sqlite db with {error}", errorMessage);
+                    this.collectorInitException = ex;
+                }
+
                 started = false;
             }
 
