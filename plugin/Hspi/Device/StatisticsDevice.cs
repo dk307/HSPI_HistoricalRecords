@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
@@ -112,8 +113,7 @@ namespace Hspi.Device
             var plugExtraData = new PlugExtraData();
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
 
-            string featureName = GetStatisticsFunctionForName(data.StatisticsFunction) + " - " +
-                                                              HumanizeTimeSpan(TimeSpan.FromSeconds(data.FunctionDurationSeconds));
+            string featureName = GetStatisticsFunctionForName(data.StatisticsFunction) + " - " + data.Period.Humanize();
             var newFeatureData = FeatureFactory.CreateFeature(PlugInData.PlugInId)
                                                .WithName(featureName)
                                                .WithLocation(feature.Location)
@@ -210,31 +210,6 @@ namespace Hspi.Device
             return stringData;
         }
 
-        private static string HumanizeTimeSpan(TimeSpan timeSpan)
-        {
-            List<string> parts = new();
-
-            AddPart(timeSpan.Days, "day", parts);
-            AddPart(timeSpan.Hours, "hour", parts);
-            AddPart(timeSpan.Minutes, "minute", parts);
-            AddPart(timeSpan.Seconds, "second", parts);
-
-            return string.Join(" ", parts);
-
-            static string Plural(int value)
-            {
-                return value > 1 ? "s" : string.Empty;
-            }
-
-            static void AddPart(int part, string partName, List<string> parts)
-            {
-                if (part > 0)
-                {
-                    parts.Add($"{part} {partName}{Plural(part)}");
-                }
-            }
-        }
-
         private void UpdateDeviceValue(in double? data)
         {
             if (Log.IsEnabled(LogEventLevel.Information))
@@ -267,33 +242,39 @@ namespace Hspi.Device
         {
             try
             {
-                var max = globalTimerAndClock.Now.ToUnixTimeSeconds();
-                var min = max - this.featureData.FunctionDurationSeconds;
+                var minMax = this.featureData.Period.CalculateMinMaxSeconds(globalTimerAndClock);
 
-                if (min < 0)
+                if (minMax.IsValid)
                 {
-                    throw new ArgumentException("Duration too long");
+                    if (minMax.Minimum < 0)
+                    {
+                        throw new ArgumentException("Duration too long");
+                    }
+
+                    var result = this.featureData.StatisticsFunction switch
+                    {
+                        StatisticsFunction.AverageStep or StatisticsFunction.AverageLinear => TimeAndValueQueryHelper.Average(collector,
+                                                                                         featureData.TrackedRef,
+                                                                                         minMax.Minimum,
+                                                                                         minMax.Maximum,
+                                                                                         this.featureData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
+                        StatisticsFunction.MinValue => collector.GetMinValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        StatisticsFunction.MaxValue => collector.GetMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        _ => throw new NotImplementedException(),
+                    };
+
+                    if (result.HasValue)
+                    {
+                        var precision = hsFeatureCachedDataProvider.GetPrecision(featureData.TrackedRef);
+                        result = Math.Round(result.Value, precision);
+                    }
+
+                    UpdateDeviceValue(result);
                 }
-
-                var result = this.featureData.StatisticsFunction switch
+                else
                 {
-                    StatisticsFunction.AverageStep or StatisticsFunction.AverageLinear => TimeAndValueQueryHelper.Average(collector,
-                                                                                     featureData.TrackedRef,
-                                                                                     min,
-                                                                                     max,
-                                                                                     this.featureData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
-                    StatisticsFunction.MinValue => collector.GetMinValue(featureData.TrackedRef, min, max),
-                    StatisticsFunction.MaxValue => collector.GetMaxValue(featureData.TrackedRef, min, max),
-                    _ => throw new NotImplementedException(),
-                };
-
-                if (result.HasValue)
-                {
-                    var precision = hsFeatureCachedDataProvider.GetPrecision(featureData.TrackedRef);
-                    result = Math.Round(result.Value, precision);
+                    Debug.Assert(minMax.Minimum <= minMax.Maximum);
                 }
-
-                UpdateDeviceValue(result);
             }
             catch (Exception ex)
             {

@@ -49,17 +49,10 @@ namespace HSPI_HistoricalRecordsTest
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
             string deviceName = "ssdfsd";
-            JObject request = new()
-            {
-                { "name", new JValue(deviceName) },
-                { "parentRef", new JValue(parentRefId) },
-                { "data", new JObject() {
-                    { "TrackedRef", new JValue(trackedRefId) },
-                    { "StatisticsFunction", new JValue(function) },
-                    { "FunctionDurationSeconds", new JValue((long)new TimeSpan(1, 0, 10, 0).TotalSeconds) },
-                    { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 0, 1, 30).TotalSeconds) } }
-                },
-            };
+            long durationInterval = (long)new TimeSpan(1, 0, 0, 0).TotalSeconds;
+            long refreshInterval = (long)new TimeSpan(0, 0, 1, 30).TotalSeconds;
+            JObject request = CreateJsonForNewDevice(parentRefId, function, trackedRefId,
+                                                  deviceName, durationInterval, refreshInterval);
 
             //add
             string data2 = plugIn.Object.PostBackProc("devicecreate", request.ToString(), string.Empty, 0);
@@ -127,8 +120,12 @@ namespace HSPI_HistoricalRecordsTest
             }
 
             Assert.That(data.StatisticsFunction, Is.EqualTo(function));
-            Assert.That(data.FunctionDurationSeconds, Is.EqualTo((long)new TimeSpan(1, 0, 10, 0).TotalSeconds));
-            Assert.That(data.RefreshIntervalSeconds, Is.EqualTo((long)new TimeSpan(0, 0, 1, 30).TotalSeconds));
+            Assert.That(data.Period.Start, Is.Null);
+            Assert.That(data.Period.End, Is.Not.Null);
+            Assert.That(data.Period.End.Type, Is.EqualTo(InstantType.Now));
+            Assert.That(data.Period.End.Offsets, Is.Null);
+            Assert.That(data.Period.FunctionDurationSeconds, Is.EqualTo(durationInterval));
+            Assert.That(data.RefreshIntervalSeconds, Is.EqualTo(refreshInterval));
 
             var list1 = trackedFeature.StatusGraphics.Values;
             var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
@@ -249,50 +246,6 @@ namespace HSPI_HistoricalRecordsTest
             Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
         }
 
-        [Test]
-        public void MultipleFeatureInDeviceAreUpdated()
-        {
-            var plugIn = TestHelper.CreatePlugInMock();
-            var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn);
-
-            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
-
-            int statsDeviceRefId = 100;
-            int statsFeatureRefId1 = 1000;
-            int statsFeatureRefId2 = 1001;
-            int trackedDeviceRefId1 = 99;
-            int trackedDeviceRefId2 = 100023;
-
-            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
-                                  statsDeviceRefId, statsFeatureRefId1, trackedDeviceRefId1);
-            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
-                                  statsDeviceRefId, statsFeatureRefId2, trackedDeviceRefId2);
-
-            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId1, statsFeatureRefId2 });
-
-            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
-
-            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId1, 1);
-            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId2, 1);
-
-            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
-                                           Constants.HSEvent.VALUE_CHANGE,
-                                           trackedDeviceRefId1, 10, "10", aTime.AddMinutes(-10), 1);
-
-            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
-                                           Constants.HSEvent.VALUE_CHANGE,
-                                           trackedDeviceRefId2, 100, "100", aTime.AddMinutes(-10), 1);
-
-            plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId);
-
-            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId1, 10);
-            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId2, 100);
-
-            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId1, EProperty.InvalidValue), Is.EqualTo(false));
-            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId2, EProperty.InvalidValue), Is.EqualTo(false));
-        }
-
         [TestCase(true)]
         [TestCase(false)]
         public void DevicePolled(bool device)
@@ -345,15 +298,27 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
+            long durationInterval = (long)new TimeSpan(1, 3, 10, 0).TotalSeconds;
+            long refreshInterval = (long)new TimeSpan(3, 8, 1, 30).TotalSeconds;
+
+            var end = new JObject() {
+                { "Type" , new JValue("Now")  }
+            };
+
+            var period = new JObject() {
+                { "End", end },
+                { "FunctionDurationSeconds", new JValue(durationInterval) },
+            };
+
             JObject editRequest = new()
             {
-                { "ref" , new JValue(statsFeatureRefId) },
-                { "data" , new JObject() {
-                    { "TrackedRef", new JValue(trackedDeviceRefId) },
+                { "ref", new JValue(statsFeatureRefId) },
+                { "data", new JObject() {
+                    { "TrackedRef", new JValue(statsDeviceRefId) },
                     { "StatisticsFunction", new JValue(function) },
-                    { "FunctionDurationSeconds", new JValue((long)new TimeSpan(5, 1, 10, 3).TotalSeconds) },
-                    { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 5, 1, 30).TotalSeconds) },
-                }}
+                    { "Period", period },
+                    { "RefreshIntervalSeconds", new JValue(refreshInterval) } }
+                },
             };
 
             // edit
@@ -393,13 +358,25 @@ namespace HSPI_HistoricalRecordsTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
+            long durationInterval = (long)new TimeSpan(1, 3, 10, 0).TotalSeconds;
+            long refreshInterval = (long)new TimeSpan(3, 8, 1, 30).TotalSeconds;
+
+            var end = new JObject() {
+                { "Type" , new JValue("Now")  }
+            };
+
+            var period = new JObject() {
+                { "End", end },
+                { "FunctionDurationSeconds", new JValue(durationInterval) },
+            };
+
             JObject editRequest = new()
             {
                 { "ref" , new JValue(trackedDeviceRefId) }, // wrong ref
                 { "data" , new JObject() {
                     { "TrackedRef", new JValue(statsFeatureRefId) },
                     { "StatisticsFunction", new JValue(StatisticsFunction.AverageLinear) },
-                    { "FunctionDurationSeconds", new JValue((long)new TimeSpan(5, 1, 10, 3).TotalSeconds) },
+                    { "Period", period },
                     { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 5, 1, 30).TotalSeconds) },
                 }}
             };
@@ -411,6 +388,50 @@ namespace HSPI_HistoricalRecordsTest
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
             Assert.That(result2, Is.Not.Null);
             StringAssert.Contains((string)result2["error"], $"Device or feature {trackedDeviceRefId} not a plugin feature");
+        }
+
+        [Test]
+        public void MultipleFeatureInDeviceAreUpdated()
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock =
+                TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+
+            int statsDeviceRefId = 100;
+            int statsFeatureRefId1 = 1000;
+            int statsFeatureRefId2 = 1001;
+            int trackedDeviceRefId1 = 99;
+            int trackedDeviceRefId2 = 100023;
+
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, statsFeatureRefId1, trackedDeviceRefId1);
+            TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageStep, plugIn, hsControllerMock, aTime,
+                                  statsDeviceRefId, statsFeatureRefId2, trackedDeviceRefId2);
+
+            hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId1, statsFeatureRefId2 });
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId1, 1);
+            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId2, 1);
+
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedDeviceRefId1, 10, "10", aTime.AddMinutes(-10), 1);
+
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedDeviceRefId2, 100, "100", aTime.AddMinutes(-10), 1);
+
+            plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId);
+
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId1, 10);
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId2, 100);
+
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId1, EProperty.InvalidValue), Is.EqualTo(false));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId2, EProperty.InvalidValue), Is.EqualTo(false));
         }
 
         [Test]
@@ -442,6 +463,31 @@ namespace HSPI_HistoricalRecordsTest
             // not more tracking after delete
             Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
             Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
+        }
+
+        private static JObject CreateJsonForNewDevice(int? parentRefId, StatisticsFunction function, int trackedRefId, string deviceName, long durationInterval, long refreshInterval)
+        {
+            var end = new JObject() {
+                { "Type" , new JValue("Now")  }
+            };
+
+            var period = new JObject() {
+                { "End", end },
+                { "FunctionDurationSeconds", new JValue(durationInterval) },
+            };
+
+            JObject request = new()
+            {
+                { "name", new JValue(deviceName) },
+                { "parentRef", new JValue(parentRefId) },
+                { "data", new JObject() {
+                    { "TrackedRef", new JValue(trackedRefId) },
+                    { "StatisticsFunction", new JValue(function) },
+                    { "Period", period },
+                    { "RefreshIntervalSeconds", new JValue(refreshInterval) } }
+                },
+            };
+            return request;
         }
     }
 }

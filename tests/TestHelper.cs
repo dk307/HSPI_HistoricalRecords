@@ -107,6 +107,8 @@ namespace HSPI_HistoricalRecordsTest
         {
             var mockClock = new Mock<IGlobalTimerAndClock>(MockBehavior.Strict);
             plugIn.Protected().Setup<IGlobalTimerAndClock>("CreateClock").Returns(mockClock.Object);
+            mockClock.Setup(x => x.FirstDayOfWeek).Returns(DayOfWeek.Monday);
+            mockClock.Setup(x => x.TimeZone).Returns(TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time"));
             mockClock.Setup(x => x.IntervalToRetrySqliteCollection).Returns(TimeSpan.FromSeconds(600));
             mockClock.Setup(x => x.TimeoutForBackup).Returns(TimeSpan.FromSeconds(600));
             mockClock.Setup(x => x.MaintenanceInterval).Returns(TimeSpan.FromSeconds(600));
@@ -223,7 +225,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var mockClock = CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime nowTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
-            mockClock.Setup(x => x.Now).Returns(nowTime);
+            mockClock.Setup(x => x.UtcNow).Returns(nowTime);
             return nowTime;
         }
 
@@ -247,7 +249,7 @@ namespace HSPI_HistoricalRecordsTest
                                                   int trackedFeatureRefId)
         {
             Mock<IGlobalTimerAndClock> mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugIn);
-            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
+            mockClock.Setup(x => x.UtcNow).Returns(aTime.AddSeconds(-1));
 
             hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
 
@@ -258,7 +260,8 @@ namespace HSPI_HistoricalRecordsTest
             hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId });
 
             PlugExtraData plugExtraData = new();
-            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeatureRefId},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDurationSeconds\":600,\"RefreshIntervalSeconds\":30}}");
+            string json = $"{{\"TrackedRef\":{trackedFeatureRefId},\"StatisticsFunction\":{(int)statisticsFunction},\"Period\": {{ \"End\":{{ \"Type\":\"Now\"}}, \"FunctionDurationSeconds\":600 }},\"RefreshIntervalSeconds\":30}}";
+            plugExtraData.AddNamed("data", json);
             hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.PlugExtraData, plugExtraData);
         }
 

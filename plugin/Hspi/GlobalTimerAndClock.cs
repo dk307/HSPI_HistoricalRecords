@@ -1,13 +1,22 @@
 ﻿using System;
+using System.Globalization;
 
 #nullable enable
 
 namespace Hspi
-{
-    internal interface IGlobalTimerAndClock
-    {
-        DateTimeOffset Now { get; }
 
+{
+    internal interface IGlobalClock
+    {
+        DateTime UtcNow { get; }
+
+        TimeZoneInfo TimeZone { get; }
+
+        DayOfWeek FirstDayOfWeek { get; }
+    };
+
+    internal interface IGlobalTimerAndClock : IGlobalClock
+    {
         TimeSpan IntervalToRetrySqliteCollection { get; }
 
         TimeSpan TimeoutForBackup { get; }
@@ -15,9 +24,13 @@ namespace Hspi
         TimeSpan MaintenanceInterval { get; }
     };
 
-    internal class GlobalTimerAndClock : IGlobalTimerAndClock
+    internal class GlobalTimerAndClock : IGlobalTimerAndClock, IGlobalClock
     {
-        public DateTimeOffset Now => DateTimeOffset.UtcNow;
+        public DateTime UtcNow => DateTime.UtcNow;
+
+        public TimeZoneInfo TimeZone => TimeZoneInfo.Local;
+
+        public DayOfWeek FirstDayOfWeek => CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
 
         public TimeSpan IntervalToRetrySqliteCollection => TimeSpan.FromSeconds(15);
 

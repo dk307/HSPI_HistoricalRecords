@@ -1,12 +1,39 @@
 ﻿#nullable enable
 
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json;
+
 namespace Hspi.Device
 {
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum StatisticsFunction
     {
         AverageStep = 0,
         AverageLinear = 1,
         MinValue = 2,
         MaxValue = 3,
+    };
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum PeriodUnits
+    {
+        Years = 0,
+        Months,
+        Weeks,
+        Days,
+        Hours,
+        Minutes,
+        Seconds,
+    }
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum InstantType
+    {
+        Now = 0,
+        StartOfHour,
+        StartOfDay,
+        StartOfWeek,
+        StartOfMonth,
+        StartOfYear,
     };
 }

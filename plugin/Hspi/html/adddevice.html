@@ -260,7 +260,7 @@
 			   data: {
 				   TrackedRef: $('#deviceSelect').val(),
 				   StatisticsFunction: $('#function').val(),
-				   FunctionDurationSeconds: duration.asSeconds(),
+				   Period: { End: { Type: 'Now'}, FunctionDurationSeconds : duration.asSeconds()},
 				   RefreshIntervalSeconds: refresh.asSeconds(),				   
 			   }
 		    };

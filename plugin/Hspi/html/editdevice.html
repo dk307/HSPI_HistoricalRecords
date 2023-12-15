@@ -173,7 +173,7 @@ $(document).ready(function () {
 		$('#deviceSelect-{{tab.key}}').val(jsonData{{tab.key}}.TrackedRef); 
 		$('#function-{{tab.key}}').val(jsonData{{tab.key}}.StatisticsFunction);
 		
-		const duration = moment.duration(jsonData{{tab.key}}.FunctionDurationSeconds, 'seconds');
+		const duration = moment.duration(jsonData{{tab.key}}.Period.FunctionDurationSeconds, 'seconds');
 		
 		$('#daysDuration-{{tab.key}}').val(Math.floor(duration.asDays())); 	
 		$('#hoursDuration-{{tab.key}}').val(duration.hours()); 	
@@ -210,7 +210,7 @@ $(document).ready(function () {
 			data: {		
 			   TrackedRef: $('#deviceSelect-{{tab.key}}').val(),
 			   StatisticsFunction: $('#function-{{tab.key}}').val(),
-			   FunctionDurationSeconds: duration.asSeconds(),
+			   Period: { End: { Type: 'Now'}, FunctionDurationSeconds : duration.asSeconds()},
 			   RefreshIntervalSeconds: refresh.asSeconds(),
 		   }
 		};

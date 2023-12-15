@@ -95,6 +95,10 @@
     <Compile Include="Database\SqliteInvalidException.cs" />
     <Compile Include="Database\TimeAndValue.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="Hspi\Device\Instant.cs" />
+    <Compile Include="Hspi\Device\Period.cs" />
+    <Compile Include="Hspi\Device\PeriodHumanizer.cs" />
+    <Compile Include="Hspi\Device\PeriodTimeCalculator.cs" />
     <Compile Include="Hspi\Device\StatisticsDeviceData.cs" />
     <Compile Include="Hspi\Device\StatisticsDeviceUpdater.cs" />
     <Compile Include="Hspi\HsFeatureCachedProperty.cs" />
