@@ -9,11 +9,11 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Logging;
 using Hspi;
 using Hspi.Device;
-using NUnit.Framework;
 using Moq;
 using Moq.Protected;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -66,8 +66,37 @@ namespace HSPI_HistoricalRecordsTest
             CheckRecordedValue(plugin, feature.Ref, recordData, askForRecordCount, expectedRecordCount);
         }
 
+        public static JObject CreateJsonForPastDuationDevice(StatisticsFunction function,
+                                                             int trackedRefId,
+                                                             long durationInterval,
+                                                             long refreshInterval)
+        {
+            var end = new JObject() {
+                { "Type" , new JValue("Now")  }
+            };
+
+            var period = new JObject() {
+                { "End", end },
+                { "FunctionDurationSeconds", new JValue(durationInterval) },
+            };
+
+            var duration = new JObject() {
+                { "CustomPeriod", period },
+            };
+
+            JObject data = new()
+            {
+                { "TrackedRef", new JValue(trackedRefId) },
+                { "StatisticsFunction", new JValue(function) },
+                { "StatisticsFunctionDuration", duration },
+                { "RefreshIntervalSeconds", new JValue(refreshInterval) }
+            };
+
+            return data;
+        }
+
         public static (Mock<PlugIn> mockPlugin, Mock<IHsController> mockHsController)
-                         CreateMockPluginAndHsController(Dictionary<string, string> settingsFromIni)
+                                 CreateMockPluginAndHsController(Dictionary<string, string> settingsFromIni)
         {
             var mockPlugin = new Mock<PlugIn>(MockBehavior.Loose)
             {
@@ -260,7 +289,7 @@ namespace HSPI_HistoricalRecordsTest
             hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId });
 
             PlugExtraData plugExtraData = new();
-            string json = $"{{\"TrackedRef\":{trackedFeatureRefId},\"StatisticsFunction\":{(int)statisticsFunction},\"Period\": {{ \"End\":{{ \"Type\":\"Now\"}}, \"FunctionDurationSeconds\":600 }},\"RefreshIntervalSeconds\":30}}";
+            string json = CreateJsonForPastDuationDevice(statisticsFunction, trackedFeatureRefId, 600, 60).ToString();
             plugExtraData.AddNamed("data", json);
             hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.PlugExtraData, plugExtraData);
         }

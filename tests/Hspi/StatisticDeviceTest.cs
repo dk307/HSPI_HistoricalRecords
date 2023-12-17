@@ -17,12 +17,12 @@ namespace HSPI_HistoricalRecordsTest
     {
         [TestCase(null, StatisticsFunction.AverageStep)]
         [TestCase(null, StatisticsFunction.AverageLinear)]
-        [TestCase(null, StatisticsFunction.MinValue)]
-        [TestCase(null, StatisticsFunction.MaxValue)]
-        [TestCase(10294234, StatisticsFunction.MaxValue)]
+        [TestCase(null, StatisticsFunction.MinimumValue)]
+        [TestCase(null, StatisticsFunction.MaximumValue)]
+        [TestCase(10294234, StatisticsFunction.MaximumValue)]
         [TestCase(33323343, StatisticsFunction.AverageLinear)]
-        [TestCase(90000235, StatisticsFunction.MinValue)]
-        [TestCase(60000235, StatisticsFunction.MaxValue)]
+        [TestCase(90000235, StatisticsFunction.MinimumValue)]
+        [TestCase(60000235, StatisticsFunction.MaximumValue)]
         public void AddDevice(int? parentRefId, StatisticsFunction function)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -30,7 +30,7 @@ namespace HSPI_HistoricalRecordsTest
 
             if (parentRefId != null)
             {
-                TestHelper.SetupStatisticsFeature(StatisticsFunction.MinValue, plugIn, hsControllerMock,
+                TestHelper.SetupStatisticsFeature(StatisticsFunction.MinimumValue, plugIn, hsControllerMock,
                      new DateTime(2000, 3, 4), parentRefId.Value, 999, 9999);
             }
 
@@ -110,21 +110,22 @@ namespace HSPI_HistoricalRecordsTest
                     Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Linear)"));
                     break;
 
-                case StatisticsFunction.MinValue:
+                case StatisticsFunction.MinimumValue:
                     Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Minimum Value"));
                     break;
 
-                case StatisticsFunction.MaxValue:
+                case StatisticsFunction.MaximumValue:
                     Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Maximum Value"));
                     break;
             }
 
             Assert.That(data.StatisticsFunction, Is.EqualTo(function));
-            Assert.That(data.Period.Start, Is.Null);
-            Assert.That(data.Period.End, Is.Not.Null);
-            Assert.That(data.Period.End.Type, Is.EqualTo(InstantType.Now));
-            Assert.That(data.Period.End.Offsets, Is.Null);
-            Assert.That(data.Period.FunctionDurationSeconds, Is.EqualTo(durationInterval));
+            Assert.That(data.StatisticsFunctionDuration.PreDefinedPeriod, Is.Null);
+            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.Start, Is.Null);
+            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End, Is.Not.Null);
+            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End.Type, Is.EqualTo(InstantType.Now));
+            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End.Offsets, Is.Null);
+            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.FunctionDurationSeconds, Is.EqualTo(durationInterval));
             Assert.That(data.RefreshIntervalSeconds, Is.EqualTo(refreshInterval));
 
             var list1 = trackedFeature.StatusGraphics.Values;
@@ -162,8 +163,8 @@ namespace HSPI_HistoricalRecordsTest
 
         [TestCase(StatisticsFunction.AverageStep)]
         [TestCase(StatisticsFunction.AverageLinear)]
-        [TestCase(StatisticsFunction.MinValue)]
-        [TestCase(StatisticsFunction.MaxValue)]
+        [TestCase(StatisticsFunction.MinimumValue)]
+        [TestCase(StatisticsFunction.MaximumValue)]
         public void DeviceIsUpdated(StatisticsFunction statisticsFunction)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -197,9 +198,9 @@ namespace HSPI_HistoricalRecordsTest
                     ExpectedValue = ((10D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
                 case StatisticsFunction.AverageLinear:
                     ExpectedValue = ((15D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
-                case StatisticsFunction.MinValue:
+                case StatisticsFunction.MinimumValue:
                     ExpectedValue = 10D; break;
-                case StatisticsFunction.MaxValue:
+                case StatisticsFunction.MaximumValue:
                     ExpectedValue = 20D; break;
 
                 default:
@@ -301,24 +302,10 @@ namespace HSPI_HistoricalRecordsTest
             long durationInterval = (long)new TimeSpan(1, 3, 10, 0).TotalSeconds;
             long refreshInterval = (long)new TimeSpan(3, 8, 1, 30).TotalSeconds;
 
-            var end = new JObject() {
-                { "Type" , new JValue("Now")  }
-            };
-
-            var period = new JObject() {
-                { "End", end },
-                { "FunctionDurationSeconds", new JValue(durationInterval) },
-            };
-
             JObject editRequest = new()
             {
                 { "ref", new JValue(statsFeatureRefId) },
-                { "data", new JObject() {
-                    { "TrackedRef", new JValue(statsDeviceRefId) },
-                    { "StatisticsFunction", new JValue(function) },
-                    { "Period", period },
-                    { "RefreshIntervalSeconds", new JValue(refreshInterval) } }
-                },
+                { "data",TestHelper.CreateJsonForPastDuationDevice(function, trackedDeviceRefId, durationInterval, refreshInterval) },
             };
 
             // edit
@@ -326,13 +313,16 @@ namespace HSPI_HistoricalRecordsTest
 
             // no error is returned
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
+
             Assert.That(result2, Is.Not.Null);
             Assert.That((string)result2["error"], Is.Null);
 
             // get return function value for feature
             var jsons = plugIn.Object.GetStatisticDeviceDataAsJson(statsFeatureRefId);
+
             Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId]),
-                        Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(editRequest["data"].ToString())));
+
+                            Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(editRequest["data"].ToString())));
 
             var plugExtraData = (PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.PlugExtraData);
             Assert.That(plugExtraData.NamedKeys.Count, Is.EqualTo(1));
@@ -361,24 +351,10 @@ namespace HSPI_HistoricalRecordsTest
             long durationInterval = (long)new TimeSpan(1, 3, 10, 0).TotalSeconds;
             long refreshInterval = (long)new TimeSpan(3, 8, 1, 30).TotalSeconds;
 
-            var end = new JObject() {
-                { "Type" , new JValue("Now")  }
-            };
-
-            var period = new JObject() {
-                { "End", end },
-                { "FunctionDurationSeconds", new JValue(durationInterval) },
-            };
-
             JObject editRequest = new()
             {
                 { "ref" , new JValue(trackedDeviceRefId) }, // wrong ref
-                { "data" , new JObject() {
-                    { "TrackedRef", new JValue(statsFeatureRefId) },
-                    { "StatisticsFunction", new JValue(StatisticsFunction.AverageLinear) },
-                    { "Period", period },
-                    { "RefreshIntervalSeconds", new JValue((long)new TimeSpan(0, 5, 1, 30).TotalSeconds) },
-                }}
+                { "data" , TestHelper.CreateJsonForPastDuationDevice(StatisticsFunction.MaximumValue, trackedDeviceRefId, durationInterval, refreshInterval)}
             };
 
             // edit
@@ -465,27 +441,15 @@ namespace HSPI_HistoricalRecordsTest
             Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
         }
 
-        private static JObject CreateJsonForNewDevice(int? parentRefId, StatisticsFunction function, int trackedRefId, string deviceName, long durationInterval, long refreshInterval)
+        private static JObject CreateJsonForNewDevice(int? parentRefId, StatisticsFunction function,
+                                                      int trackedRefId, string deviceName,
+                                                      long durationInterval, long refreshInterval)
         {
-            var end = new JObject() {
-                { "Type" , new JValue("Now")  }
-            };
-
-            var period = new JObject() {
-                { "End", end },
-                { "FunctionDurationSeconds", new JValue(durationInterval) },
-            };
-
             JObject request = new()
             {
                 { "name", new JValue(deviceName) },
                 { "parentRef", new JValue(parentRefId) },
-                { "data", new JObject() {
-                    { "TrackedRef", new JValue(trackedRefId) },
-                    { "StatisticsFunction", new JValue(function) },
-                    { "Period", period },
-                    { "RefreshIntervalSeconds", new JValue(refreshInterval) } }
-                },
+                { "data", TestHelper.CreateJsonForPastDuationDevice(function, trackedRefId, durationInterval, refreshInterval) },
             };
             return request;
         }

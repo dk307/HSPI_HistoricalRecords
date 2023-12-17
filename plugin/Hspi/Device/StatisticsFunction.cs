@@ -10,8 +10,8 @@ namespace Hspi.Device
     {
         AverageStep = 0,
         AverageLinear = 1,
-        MinValue = 2,
-        MaxValue = 3,
+        MinimumValue = 2,
+        MaximumValue = 3,
     };
 
     [JsonConverter(typeof(StringEnumConverter))]

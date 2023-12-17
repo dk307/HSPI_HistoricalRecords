@@ -9,3 +9,4 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Major Code Smell", "S112:General exceptions should never be thrown", Justification = "<Pending>", Scope = "member", Target = "~P:Hspi.Utils.TimeAndValueIterator.Current")]
 [assembly: SuppressMessage("Major Code Smell", "S112:General exceptions should never be thrown", Justification = "<Pending>", Scope = "member", Target = "~P:Hspi.Utils.TimeAndValueIterator.Next")]
 [assembly: SuppressMessage("Minor Code Smell", "S3963:\"static\" fields should be initialized inline", Justification = "<Pending>", Scope = "member", Target = "~M:Hspi.Database.SqliteDatabaseCollector.#cctor")]
+[assembly: SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>", Scope = "member", Target = "~M:Hspi.PlugIn.HtmlForFunctionInterval(System.Object)~System.String")]

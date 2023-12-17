@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using Newtonsoft.Json;
 
 #nullable enable
@@ -28,6 +30,7 @@ namespace Hspi.Device
         public ImmutableSortedDictionary<PeriodUnits, int>? Offsets { get; init; }
 
         [JsonIgnore]
+        [MemberNotNullWhen(true, nameof(Offsets))]
         public bool HasOffset => Offsets != null && Offsets.Count > 0;
     }
 }
