@@ -66,10 +66,10 @@ namespace HSPI_HistoricalRecordsTest
             CheckRecordedValue(plugin, feature.Ref, recordData, askForRecordCount, expectedRecordCount);
         }
 
-        public static JObject CreateJsonForPastDuationDevice(StatisticsFunction function,
-                                                             int trackedRefId,
-                                                             long durationInterval,
-                                                             long refreshInterval)
+        public static JObject CreateJsonForDevice(StatisticsFunction function,
+                                                  int trackedRefId,
+                                                  long durationInterval,
+                                                  long refreshInterval)
         {
             var end = new JObject() {
                 { "Type" , new JValue("Now")  }
@@ -82,6 +82,26 @@ namespace HSPI_HistoricalRecordsTest
 
             var duration = new JObject() {
                 { "CustomPeriod", period },
+            };
+
+            JObject data = new()
+            {
+                { "TrackedRef", new JValue(trackedRefId) },
+                { "StatisticsFunction", new JValue(function) },
+                { "StatisticsFunctionDuration", duration },
+                { "RefreshIntervalSeconds", new JValue(refreshInterval) }
+            };
+
+            return data;
+        }
+
+        public static JObject CreateJsonForDevice(StatisticsFunction function,
+                                                  int trackedRefId,
+                                                  PreDefinedPeriod preDefinedPeriod,
+                                                  long refreshInterval)
+        {
+            var duration = new JObject() {
+                { "PreDefinedPeriod", new JValue(preDefinedPeriod) },
             };
 
             JObject data = new()
@@ -289,7 +309,7 @@ namespace HSPI_HistoricalRecordsTest
             hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId });
 
             PlugExtraData plugExtraData = new();
-            string json = CreateJsonForPastDuationDevice(statisticsFunction, trackedFeatureRefId, 600, 60).ToString();
+            string json = CreateJsonForDevice(statisticsFunction, trackedFeatureRefId, 600, 60).ToString();
             plugExtraData.AddNamed("data", json);
             hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.PlugExtraData, plugExtraData);
         }

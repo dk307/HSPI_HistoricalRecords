@@ -106,7 +106,6 @@ namespace HSPI_HistoricalRecordsTest
             int refId = newRefId++;
             createdDevices[refId] = deviceData;
             deviceOrFeatureData[refId] = new ConcurrentDictionary<EProperty, object>(deviceData.Device);
-            SetupDevOrFeatureValue(refId, EProperty.Relationship, ERelationship.Feature);
             return refId;
         }
 
@@ -120,8 +119,30 @@ namespace HSPI_HistoricalRecordsTest
             int refId = newRefId++;
             createdFeatures[refId] = featureData;
             deviceOrFeatureData[refId] = new ConcurrentDictionary<EProperty, object>(featureData.Feature);
-            SetupDevOrFeatureValue(refId, EProperty.Relationship, ERelationship.Feature);
+
+            AddParentAssociation(featureData, refId);
+
             return refId;
+
+            void AddParentAssociation(NewFeatureData featureData, int refId)
+            {
+                var parentRefId = ((HashSet<int>)featureData.Feature[EProperty.AssociatedDevices]).First();
+
+                HashSet<int> parentAssociation;
+
+                if (deviceOrFeatureData[parentRefId].TryGetValue(EProperty.AssociatedDevices, out var parentAssociationTemp))
+                {
+                    parentAssociation = (HashSet<int>)parentAssociationTemp;
+                }
+                else
+                {
+                    parentAssociation = new HashSet<int>();
+                }
+
+                parentAssociation.Add(refId);
+
+                SetupDevOrFeatureValue(parentRefId, EProperty.AssociatedDevices, parentAssociation);
+            }
         }
 
         string IHsController.CreateVar(string name)
