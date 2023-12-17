@@ -55,5 +55,10 @@ namespace Hspi.Device
                 _ => throw new NotImplementedException(),
             };
         }
+
+        public static Period CreatePastInterval(ulong seconds)
+        {
+            return new Period(null, new Instant(InstantType.Now), seconds);
+        }
     }
 }
