@@ -9,11 +9,11 @@ using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Logging;
 using Hspi;
 using Hspi.Device;
-using NUnit.Framework;
 using Moq;
 using Moq.Protected;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework;
 
 namespace HSPI_HistoricalRecordsTest
 {
@@ -66,8 +66,57 @@ namespace HSPI_HistoricalRecordsTest
             CheckRecordedValue(plugin, feature.Ref, recordData, askForRecordCount, expectedRecordCount);
         }
 
+        public static JObject CreateJsonForDevice(StatisticsFunction function,
+                                                  int trackedRefId,
+                                                  long durationInterval,
+                                                  long refreshInterval)
+        {
+            var end = new JObject() {
+                { "Type" , new JValue("Now")  }
+            };
+
+            var period = new JObject() {
+                { "End", end },
+                { "FunctionDurationSeconds", new JValue(durationInterval) },
+            };
+
+            var duration = new JObject() {
+                { "CustomPeriod", period },
+            };
+
+            JObject data = new()
+            {
+                { "TrackedRef", new JValue(trackedRefId) },
+                { "StatisticsFunction", new JValue(function) },
+                { "StatisticsFunctionDuration", duration },
+                { "RefreshIntervalSeconds", new JValue(refreshInterval) }
+            };
+
+            return data;
+        }
+
+        public static JObject CreateJsonForDevice(StatisticsFunction function,
+                                                  int trackedRefId,
+                                                  PreDefinedPeriod preDefinedPeriod,
+                                                  long refreshInterval)
+        {
+            var duration = new JObject() {
+                { "PreDefinedPeriod", new JValue(preDefinedPeriod) },
+            };
+
+            JObject data = new()
+            {
+                { "TrackedRef", new JValue(trackedRefId) },
+                { "StatisticsFunction", new JValue(function) },
+                { "StatisticsFunctionDuration", duration },
+                { "RefreshIntervalSeconds", new JValue(refreshInterval) }
+            };
+
+            return data;
+        }
+
         public static (Mock<PlugIn> mockPlugin, Mock<IHsController> mockHsController)
-                         CreateMockPluginAndHsController(Dictionary<string, string> settingsFromIni)
+                                 CreateMockPluginAndHsController(Dictionary<string, string> settingsFromIni)
         {
             var mockPlugin = new Mock<PlugIn>(MockBehavior.Loose)
             {
@@ -107,6 +156,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var mockClock = new Mock<IGlobalTimerAndClock>(MockBehavior.Strict);
             plugIn.Protected().Setup<IGlobalTimerAndClock>("CreateClock").Returns(mockClock.Object);
+            mockClock.Setup(x => x.FirstDayOfWeek).Returns(DayOfWeek.Monday);
             mockClock.Setup(x => x.IntervalToRetrySqliteCollection).Returns(TimeSpan.FromSeconds(600));
             mockClock.Setup(x => x.TimeoutForBackup).Returns(TimeSpan.FromSeconds(600));
             mockClock.Setup(x => x.MaintenanceInterval).Returns(TimeSpan.FromSeconds(600));
@@ -180,7 +230,7 @@ namespace HSPI_HistoricalRecordsTest
 
             RaiseHSEvent(plugin, eventType, refId);
             Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, expectedCount));
-            return new RecordData(refId, value, status, ((DateTimeOffset)lastChange).ToUnixTimeSeconds());
+            return new RecordData(refId, value, status, lastChange.ToUnixTimeSeconds());
         }
 
         public static Mock<IHsController> SetupHsControllerAndSettings(Mock<PlugIn> mockPlugin,
@@ -223,7 +273,7 @@ namespace HSPI_HistoricalRecordsTest
         {
             var mockClock = CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime nowTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
-            mockClock.Setup(x => x.Now).Returns(nowTime);
+            mockClock.Setup(x => x.UtcNow).Returns(nowTime);
             return nowTime;
         }
 
@@ -241,13 +291,13 @@ namespace HSPI_HistoricalRecordsTest
         public static void SetupStatisticsFeature(StatisticsFunction statisticsFunction,
                                                   Mock<PlugIn> plugIn,
                                                   FakeHSController hsControllerMock,
-                                                  DateTime aTime,
+                                                  DateTimeOffset aTime,
                                                   int statsDeviceRefId,
                                                   int statsFeatureRefId,
                                                   int trackedFeatureRefId)
         {
             Mock<IGlobalTimerAndClock> mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugIn);
-            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(-1));
+            mockClock.Setup(x => x.LocalNow).Returns(aTime.AddSeconds(-1));
 
             hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
 
@@ -258,7 +308,8 @@ namespace HSPI_HistoricalRecordsTest
             hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId });
 
             PlugExtraData plugExtraData = new();
-            plugExtraData.AddNamed("data", $"{{\"TrackedRef\":{trackedFeatureRefId},\"StatisticsFunction\":{(int)statisticsFunction},\"FunctionDurationSeconds\":600,\"RefreshIntervalSeconds\":30}}");
+            string json = CreateJsonForDevice(statisticsFunction, trackedFeatureRefId, 600, 60).ToString();
+            plugExtraData.AddNamed("data", json);
             hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.PlugExtraData, plugExtraData);
         }
 

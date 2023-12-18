@@ -134,7 +134,7 @@ namespace Hspi
         {
             var data = Collector.GetEarliestAndOldestRecordTimeDate(refId);
 
-            var now = CreateClock().Now;
+            var now = CreateClock().UtcNow;
 
             return new List<long>() {
                 (long)Math.Round((now - data.Item1).TotalSeconds),

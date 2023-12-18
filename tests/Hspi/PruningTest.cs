@@ -23,7 +23,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
-            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(10));
+            mockClock.Setup(x => x.UtcNow).Returns(aTime.AddSeconds(10));
 
             mockHsController.SetupFeature(refId, 0D, "", aTime);
 
@@ -57,7 +57,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
-            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(200));
+            mockClock.Setup(x => x.UtcNow).Returns(aTime.AddSeconds(200));
 
             int refId = 3;
             mockHsController.SetupFeature(refId, 0D, "", aTime);
@@ -87,7 +87,7 @@ namespace HSPI_HistoricalRecordsTest
 
             var mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugin);
             DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
-            mockClock.Setup(x => x.Now).Returns(aTime.AddSeconds(10));
+            mockClock.Setup(x => x.UtcNow).Returns(aTime.AddSeconds(10));
 
             int refId = 3;
             mockHsController.SetupFeature(refId, 0D, "", aTime);

@@ -83,43 +83,58 @@
 						 <div class="form-outline">
 							<span class="font-weight-bold">Select statistical function</span>
 							<select id="function-{{tab.key}}" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
-								<option value="1">Average Linear</option>	
-								<option value="0">Average Step</option>	
-								<option value="2">Minimum Value</option>	
-								<option value="3">Maximum Value</option>	
+								{{includefile '/HistoricalRecords/includes/statisticalfunctionoptions.html'}} 	
 							</select> 		
 						</div>
 					</div>
 					<div class="col-7">		
-						{{includefile '/HistoricalRecords/statsfuncdefs.html'}} 
+						{{includefile '/HistoricalRecords/includes/statsfuncdefs.html'}} 
 					</div>	 		
 				</div>
 	 
 				<div class="row mb-1">	 
 					<div class="col">
 						<div class="form-outline">
-						<span class="font-weight-bold">Time interval from the current moment for calculating the statistical function</span>
-							<div class="input-group">					 
-								<div class="md-form mr-1">
-									<input type="number" id="daysDuration-{{tab.key}}" name="days" class="form-control" value="0" min="0" required>
-									<label for="daysDuration-{{tab.key}}">Days</label>                                     
-								</div>
-								<div class="md-form mr-1">
-									<input type="number" id="hoursDuration-{{tab.key}}" name="hours" class="form-control" value="0" min="0" required>
-									<label for="hoursDuration-{{tab.key}}">Hours</label>                                     
-								</div>
-								<div class="md-form mr-1">
-									<input type="number" id="minutesDuration-{{tab.key}}"   name="minutes" class="form-control" value="0" min="0" required>
-									<label for="minutesDuration-{{tab.key}}">Minutes</label>                                     
-								</div>
-								<div class="md-form mr-1">
-									<input type="number" id="secondsDuration-{{tab.key}}"   name="seconds" class="form-control" value="0" min="0" required>
-									<label for="secondsDuration-{{tab.key}}">Seconds</label>                                     
+						<span class="font-weight-bold">Time duration for the statistical function</span>							
+							 <div class="row">
+								<div class="col" >
+									<div class="md-form" >
+										<div class="md-form col" >
+											<select id="startDurationId{{tab.key}}" class="mdb-select md-form dropdown-primary colorful-select" required>
+												{{includefile '/HistoricalRecords/includes/statisticalfunctionduration.html'}} 	
+											</select>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
 					</div>
 				</div>
+						
+				<div class="row" id='customFunctionDurationRowId{{tab.key}}' style="display:none">
+					<div class="col" >
+						<div class="md-form" >
+							<div class="input-group">
+								<div class="md-form">
+									<input type="number" id="daysDuration{{tab.key}}"  class="form-control timespan-input" value="0" min="0" required>
+									<label for="daysDuration">Days</label>
+								</div>
+								<div class="md-form ml-1">
+									<input type="number" id="hoursDuration{{tab.key}}" class="form-control timespan-input" value="0" min="0" required>
+									<label for="hoursDuration">Hours</label>
+								</div>
+								<div class="md-form ml-1">
+									<input type="number" id="minutesDuration{{tab.key}}" class="form-control timespan-input" value="10" min="0" required>
+									<label for="minutesDuration">Minutes</label>
+								</div>
+								<div class="md-form ml-1">
+									<input type="number" id="secondsDuration{{tab.key}}" class="form-control timespan-input" value="0" min="0" required>
+									<label for="secondsDuration">Seconds</label>
+								</div>
+							</div>
+						</div>
+					</div>
+                </div>
 
 				<div class="row mb-1">	 
 					<div class="col md-flex">
@@ -166,6 +181,67 @@
 <script>
 const jsonData{{tab.key}} = {{tab.value}};
 
+function setupFunctionInterval{{tab.key}}() {
+	$(document).ready(function() {
+	  $('#startDurationId{{tab.key}}').change(function() {
+		if ($('#startDurationId{{tab.key}}').val() == 'now') {
+			$('#customFunctionDurationRowId{{tab.key}}').show();
+		}
+		else {
+			$('#customFunctionDurationRowId{{tab.key}}').hide();
+		}
+	  });
+	});
+}
+
+function updateFunctionDuration{{tab.key}}(duration) {
+	if (duration.CustomPeriod) {
+		const period = duration.CustomPeriod;
+		if (!period.Start && period.End.Type === "Now" && period.FunctionDurationSeconds) {
+			const duration = moment.duration(period.FunctionDurationSeconds, 'seconds');
+
+			$('#daysDuration{{tab.key}}').val(Math.floor(duration.asDays()));
+			$('#hoursDuration{{tab.key}}').val(duration.hours());
+			$('#minutesDuration{{tab.key}}').val(duration.minutes());
+			$('#secondsDuration{{tab.key}}').val(duration.seconds());
+
+			$('#startDurationId{{tab.key}}').val("now");
+			$('#customFunctionDurationRowId{{tab.key}}').show();		 
+		}
+	} else {
+		$('#startDurationId{{tab.key}}').val(duration.PreDefinedPeriod);
+	}
+}
+
+function getFunctionDuration{{tab.key}}() {
+	const durationType = $('#startDurationId{{tab.key}}').val();
+	switch($('#startDurationId{{tab.key}}').val()){
+		case "now":
+		{
+			const duration = moment.duration({
+				seconds: $('#secondsDuration{{tab.key}}').val(),
+				minutes: $('#minutesDuration{{tab.key}}').val(),
+				hours: $('#hoursDuration{{tab.key}}').val() ,
+				days: $('#daysDuration{{tab.key}}').val(),
+			});
+
+			if (duration.isValid()) {
+				return  { CustomPeriod: { 
+								End:  { 
+									Type: 'Now'
+								}, 
+								FunctionDurationSeconds : duration.asSeconds()
+							}
+						};
+			}
+
+			return null;
+		}
+		default:
+			return { PreDefinedPeriod:  durationType };
+	};
+}
+
 $(document).ready(function () {
 	if (jsonData{{tab.key}} === null) {
 		Console.log("Invalid device data");
@@ -173,13 +249,8 @@ $(document).ready(function () {
 		$('#deviceSelect-{{tab.key}}').val(jsonData{{tab.key}}.TrackedRef); 
 		$('#function-{{tab.key}}').val(jsonData{{tab.key}}.StatisticsFunction);
 		
-		const duration = moment.duration(jsonData{{tab.key}}.FunctionDurationSeconds, 'seconds');
+		updateFunctionDuration{{tab.key}}(jsonData{{tab.key}}.StatisticsFunctionDuration);
 		
-		$('#daysDuration-{{tab.key}}').val(Math.floor(duration.asDays())); 	
-		$('#hoursDuration-{{tab.key}}').val(duration.hours()); 	
-		$('#minutesDuration-{{tab.key}}').val(duration.minutes()); 	
-		$('#secondsDuration-{{tab.key}}').val(duration.seconds()); 	
-
 		const refresh = moment.duration(jsonData{{tab.key}}.RefreshIntervalSeconds, 'seconds');
 		$('#daysRefresh-{{tab.key}}').val(Math.floor(refresh.asDays())); 	
 		$('#hoursRefresh-{{tab.key}}').val(refresh.hours()); 	
@@ -189,13 +260,9 @@ $(document).ready(function () {
 	
 	
 	$("#mainform-{{tab.key}}").submit(function(e) {	
-		 e.preventDefault();
-		const duration = moment.duration({
-			seconds: $('#secondsDuration-{{tab.key}}').val(),
-			minutes: $('#minutesDuration-{{tab.key}}').val(),
-			hours: $('#hoursDuration-{{tab.key}}').val() ,
-			days: $('#daysDuration-{{tab.key}}').val(),
-		});
+		e.preventDefault();
+
+		const duration = getFunctionDuration{{tab.key}}();
 
 		const refresh = moment.duration({
 			seconds: $('#secondsRefresh-{{tab.key}}').val(),
@@ -210,7 +277,7 @@ $(document).ready(function () {
 			data: {		
 			   TrackedRef: $('#deviceSelect-{{tab.key}}').val(),
 			   StatisticsFunction: $('#function-{{tab.key}}').val(),
-			   FunctionDurationSeconds: duration.asSeconds(),
+			   StatisticsFunctionDuration: duration,
 			   RefreshIntervalSeconds: refresh.asSeconds(),
 		   }
 		};
@@ -226,7 +293,9 @@ $(document).ready(function () {
 				$('#error-message-div-{{tab.key}}').html(errorMessage);
 			}
 		);
-	});		
+	});	
+
+	setupFunctionInterval{{tab.key}}();
 });
 </script>
 {{end}}

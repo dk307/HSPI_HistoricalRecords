@@ -8,6 +8,7 @@
     <!--This liquid tag loads all of the necessary css files for HomeSeer-->
     {{includefile '/bootstrap/css/page_common.css'}}
     <link href="../bootstrap/css/addons-pro/steppers.min.css" rel="stylesheet">
+    <link href="/historicalrecords/historicalrecords.css" rel="stylesheet">
     <title>Add a statistics virtual device</title>	
 </head>
 <body class="body homeseer-skin">
@@ -23,7 +24,7 @@
             <li class="step active locked">
                 <div data-step-label="Select device" class="step-title waves-effect waves-dark">Step 1</div>
 				
-                <div class="step-new-content needs-validation" noinvalidate>
+                <div class="step-new-content">
 					Select a device to create a statistic device for
 					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}					
                     <select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here" required>
@@ -45,14 +46,10 @@
 					<div class="row">	
 						<div class="col-5">	
 							<select id="function" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
-								<option value="1" selected >Average Linear</option>	
-								<option value="0">Average Step</option>	
-								<option value="2">Minimum Value</option>	
-								<option value="3">Maximum Value</option>	
-							</select> 										 
+							{{includefile '/HistoricalRecords/includes/statisticalfunctionoptions.html'}} 																			</select> 										 
 						</div>
 						<div class="col-7">								 
-							{{includefile '/HistoricalRecords/statsfuncdefs.html'}} 												
+							{{includefile '/HistoricalRecords/includes/statsfuncdefs.html'}} 												
 						</div>
 					</div>
 					
@@ -64,30 +61,50 @@
             </li>
 			
 			<li class="step">
-                <div data-step-label="Select the statistical function time interval" class="step-title waves-effect waves-dark">Step 3</div>
-                <div id="step3" class="step-new-content">
-					Select the time interval from the current moment for calculating the statistical function
-                    <div class="input-group">					 
-						<div class="md-form mr-1">
-							<input type="number" id="daysDuration" name="days" class="form-control" value="0" min="0" required>
-							<label for="daysDuration">Days</label>                                     
-						</div>
-						<div class="md-form mr-1">
-							<input type="number" id="hoursDuration" name="hours" class="form-control" value="0" min="0" required>
-							<label for="hoursDuration">Hours</label>                                     
-						</div>
-						<div class="md-form mr-1">
-							<input type="number" id="minutesDuration"   name="minutes" class="form-control" value="10" min="0" required>
-							<label for="minutesDuration">Minutes</label>                                     
-						</div>
-						<div class="md-form mr-1">
-							<input type="number" id="secondsDuration"   name="seconds" class="form-control" value="0" min="0" required>
-							<label for="secondsDuration">Seconds</label>                                     
+                <div data-step-label="Select the statistical function time duration" class="step-title waves-effect waves-dark">Step 3</div>
+                <div id="step3" class="step-new-content">													
+					
+					<div class="row">
+						<div class="col" >
+							<div class="md-form" >
+								<div class="md-form ml-1 col" >
+									<select id="startDurationId" class="mdb-select md-form dropdown-primary colorful-select" required>
+										<option value="" disabled="disabled" selected="selected">Select duration</option>
+										{{includefile '/HistoricalRecords/includes/statisticalfunctionduration.html'}} 	
+									</select>
+								</div>
+							</div>
 						</div>
 					</div>
+
+					<div class="row" id='customFunctionDurationRowId' style="display:none">
+						<div class="col" >
+							<div class="md-form" >
+								<div class="input-group">
+									<div class="md-form ml-3">
+										<input type="number" id="daysDuration"  class="form-control timespan-input" value="0" min="0" required>
+										<label for="daysDuration">Days</label>
+									</div>
+									<div class="md-form ml-1">
+										<input type="number" id="hoursDuration" class="form-control timespan-input" value="0" min="0" required>
+										<label for="hoursDuration">Hours</label>
+									</div>
+									<div class="md-form ml-1">
+										<input type="number" id="minutesDuration" class="form-control timespan-input" value="10" min="0" required>
+										<label for="minutesDuration">Minutes</label>
+									</div>
+									<div class="md-form ml-1">
+										<input type="number" id="secondsDuration" class="form-control timespan-input" value="0" min="0" required>
+										<label for="secondsDuration">Seconds</label>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					
 					<div class="step-actions" style="margin-top: 32px;">
 						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
-						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step" >NEXT</button>
+						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step">NEXT</button>
 					</div>
 				</div>       
 			</li>
@@ -98,24 +115,23 @@
 					Choose the refresh interval for the statistical function, which determines how frequently the function is calculated
                     <div class="input-group">					 
 						<div class="md-form mr-1">
-							<input type="number" id="daysRefresh" name="days" class="form-control" value="0" min="0" required>
+							<input type="number" id="daysRefresh" class="form-control timespan-input" value="0" min="0" required>
 							<label for="daysRefresh">Days</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="hoursRefresh" name="hours" class="form-control" value="0" min="0" required>
+							<input type="number" id="hoursRefresh" class="form-control timespan-input" value="0" min="0" required>
 							<label for="hoursRefresh">Hours</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="minutesRefresh"   name="minutes" class="form-control" value="0" min="0" required>
+							<input type="number" id="minutesRefresh" class="form-control timespan-input" value="0" min="0" required>
 							<label for="minutesRefresh">Minutes</label>                                     
 						</div>
 						<div class="md-form mr-1">
-							<input type="number" id="secondsRefresh"   name="seconds" class="form-control" value="30" min="0" required>
+							<input type="number" id="secondsRefresh" class="form-control timespan-input" value="30" min="0" required>
 							<label for="secondsRefresh">Seconds</label>                                     
 						</div>
 					</div>
-					
-					
+										
 					<div class="step-actions" style="margin-top: 32px;">
 						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
 						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step" data-feedback="prefillName">NEXT</button>
@@ -138,7 +154,7 @@
 							<div class="form-check">
 								<input type="radio" class="form-check-input" id="createNewDeviceId" name="createOrSelectDevice" checked>
 								<label class="form-check-label" for="createNewDeviceId">Create new device</label>
-							</div>							
+							</div>	
 						</div>
 						{{end}}
 													
@@ -162,8 +178,8 @@
 							</div>
 						</div>
 						
-						<div class="md-form ml-1 col-9" >
-							<select id="existingDeviceId" class="mdb-select md-form dropdown-primary colorful-select" name="existingDeviceId" >
+						<div class="md-form ml-1 col-9" id="existingDeviceColId" style="display:none">
+							<select id="existingDeviceId" class="mdb-select md-form dropdown-primary colorful-select" name="existingDeviceId"  required>
 								<option value="" disabled="disabled" selected="selected">Select Device</option>
 								{{for id in statDevicesRefIds}}
 									<option value="{{id}}">{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>	
@@ -204,12 +220,29 @@
     <script type="text/javascript" src="../bootstrap/js/addons-pro/steppers.min.js"></script>
 	<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
 	<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
-    <script type="text/JavaScript">
-		var refId = null;
+    <script type="text/javaScript">
+		let refId = null;
         $(document).ready(function () {
-            $('.stepper').mdbStepper();
+            setupFunctionDurationControls();
+            deviceSelectSetup();
+			$('.stepper').mdbStepper();
         })
 		
+		function updateDeviceSelectElements() {	
+			if ($('#selectExistingDeviceId').prop('checked') == true) {		
+				$('#existingDeviceColId').show();
+				$('#deviceName').hide();
+			} else {
+				$('#existingDeviceColId').hide();		
+				$('#deviceName').show();		
+			}	
+		}
+		
+		function deviceSelectSetup() {	
+			$('#createNewDeviceId').change(updateDeviceSelectElements);	
+			$('#selectExistingDeviceId').change(updateDeviceSelectElements);		
+		}
+				
 		function prefillName() {	
 			if (!$('#deviceName').val()) {
 				const str = $('#deviceSelect option:selected').text();	
@@ -237,35 +270,29 @@
 			}
 			$('#process-stepper').nextStep();
 		}
-
-        function createDevice() {	
-			let duration = moment.duration({
-				seconds: $('#secondsDuration').val(),
-				minutes: $('#minutesDuration').val(),
-				hours: $('#hoursDuration').val() ,
-				days: $('#daysDuration').val(),
-			});
-
-			let refresh = moment.duration({
+		
+        function createDevice() {		
+			const duration = getFunctionDuration();
+			
+			const refresh = moment.duration({
 				seconds: $('#secondsRefresh').val(),
 				minutes: $('#minutesRefresh').val(),
 				hours: $('#hoursRefresh').val() ,
 				days: $('#daysRefresh').val(),
 			});
-
-		
-			var formObject = {
+						
+			const formObject = {
 			   name: $('#deviceName').val(),
 			   parentRef: $('#selectExistingDeviceId').prop('checked') == true ? parseInt($('#existingDeviceId').val()) : null,
 			   data: {
 				   TrackedRef: $('#deviceSelect').val(),
 				   StatisticsFunction: $('#function').val(),
-				   FunctionDurationSeconds: duration.asSeconds(),
+				   StatisticsFunctionDuration: duration,
 				   RefreshIntervalSeconds: refresh.asSeconds(),				   
 			   }
 		    };
 			
-			var data = JSON.stringify(formObject);
+			const data = JSON.stringify(formObject);
 			
 			$('#error-message-div').html('');
 			
@@ -281,9 +308,51 @@
         }
 
         function finish() {
-            var devicesPage = window.location.origin + "/Devices.html?ref=" + refId + "&subpage=devprop&tab=settings";
+            const devicesPage = window.location.origin + "/Devices.html?ref=" + refId + "&subpage=devprop&tab=settings";
             window.location.assign(devicesPage);
         }
+				 
+		function setupFunctionDurationControls() {
+			$(document).ready(function() {
+			  $('#startDurationId').change(function() {
+				if ($('#startDurationId').val() == 'now') {
+					$('#customFunctionDurationRowId').show();
+				}
+				else {
+					$('#customFunctionDurationRowId').hide();
+				}
+			  });
+			});
+		}
+
+		function getFunctionDuration() {
+			const durationType = $('#startDurationId').val();
+			switch($('#startDurationId').val()){
+				case "now":
+				{
+					let duration = moment.duration({
+						seconds: $('#secondsDuration').val(),
+						minutes: $('#minutesDuration').val(),
+						hours: $('#hoursDuration').val() ,
+						days: $('#daysDuration').val(),
+					});
+
+					if (duration.isValid()) {
+						return  { CustomPeriod: { 
+										End:  { 
+											Type: 'Now'
+										}, 
+										FunctionDurationSeconds : duration.asSeconds()
+									}
+								};
+					}
+
+					return null;
+				}
+				default:
+					return { PreDefinedPeriod:  durationType };
+			};
+		}
     </script>
 </body>
 </html>

@@ -46,6 +46,8 @@
   <ItemGroup>
     <Compile Include="FakeHSController.cs" />
     <Compile Include="Hspi\BackupTest.cs" />
+    <Compile Include="Hspi\PeriodHumanizerTest.cs" />
+    <Compile Include="Hspi\PeriodTimeCalculatorTest.cs" />
     <Compile Include="Hspi\Utils\ExceptionHelperTest.cs" />
     <Compile Include="Hspi\HistogramTest.cs" />
     <Compile Include="Hspi\ExecSqlTest.cs" />

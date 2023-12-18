@@ -435,7 +435,7 @@ namespace Hspi.Database
                 allRefOldestRecordsCommand.reset();
 
                 long deletedCount = 0;
-                DateTimeOffset now = globalTimerAndClock.Now;
+                DateTimeOffset now = globalTimerAndClock.UtcNow;
                 while ((ugly.step(allRefOldestRecordsCommand) != SQLITE_DONE) &&
                        !shutdownToken.IsCancellationRequested)
                 {

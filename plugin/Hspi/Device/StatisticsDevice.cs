@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
@@ -31,6 +32,7 @@ namespace Hspi.Device
             this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
 
             this.featureData = GetPlugExtraData<StatisticsDeviceData>(hs, featureRefId, DataKey);
+            this.period = featureData.StatisticsFunctionDuration.DerviedPeriod;
             timer = new Timer(UpdateDeviceValueFromDatabase, null, 0, RefreshInterval);
 
             cancellationToken.Register(() =>
@@ -112,8 +114,9 @@ namespace Hspi.Device
             var plugExtraData = new PlugExtraData();
             plugExtraData.AddNamed(DataKey, JsonConvert.SerializeObject(data));
 
-            string featureName = GetStatisticsFunctionForName(data.StatisticsFunction) + " - " +
-                                                              HumanizeTimeSpan(TimeSpan.FromSeconds(data.FunctionDurationSeconds));
+            string? suffix = data.StatisticsFunctionDuration.Humanize();
+            string featureName = GetStatisticsFunctionForName(data.StatisticsFunction) +
+                                    (string.IsNullOrWhiteSpace(suffix) ? string.Empty : (" - " + suffix));
             var newFeatureData = FeatureFactory.CreateFeature(PlugInData.PlugInId)
                                                .WithName(featureName)
                                                .WithLocation(feature.Location)
@@ -127,8 +130,8 @@ namespace Hspi.Device
             {
                 case StatisticsFunction.AverageStep:
                 case StatisticsFunction.AverageLinear:
-                case StatisticsFunction.MinValue:
-                case StatisticsFunction.MaxValue:
+                case StatisticsFunction.MinimumValue:
+                case StatisticsFunction.MaximumValue:
                     newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string>(feature.AdditionalStatusData);
                     newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(feature.StatusGraphics);
                     break;
@@ -170,8 +173,8 @@ namespace Hspi.Device
                 {
                     StatisticsFunction.AverageLinear => "Average(Linear)",
                     StatisticsFunction.AverageStep => "Average(Step)",
-                    StatisticsFunction.MinValue => "Minimum Value",
-                    StatisticsFunction.MaxValue => "Maximum Value",
+                    StatisticsFunction.MinimumValue => "Minimum Value",
+                    StatisticsFunction.MaximumValue => "Maximum Value",
                     _ => throw new NotImplementedException(),
                 };
             }
@@ -210,31 +213,6 @@ namespace Hspi.Device
             return stringData;
         }
 
-        private static string HumanizeTimeSpan(TimeSpan timeSpan)
-        {
-            List<string> parts = new();
-
-            AddPart(timeSpan.Days, "day", parts);
-            AddPart(timeSpan.Hours, "hour", parts);
-            AddPart(timeSpan.Minutes, "minute", parts);
-            AddPart(timeSpan.Seconds, "second", parts);
-
-            return string.Join(" ", parts);
-
-            static string Plural(int value)
-            {
-                return value > 1 ? "s" : string.Empty;
-            }
-
-            static void AddPart(int part, string partName, List<string> parts)
-            {
-                if (part > 0)
-                {
-                    parts.Add($"{part} {partName}{Plural(part)}");
-                }
-            }
-        }
-
         private void UpdateDeviceValue(in double? data)
         {
             if (Log.IsEnabled(LogEventLevel.Information))
@@ -267,33 +245,39 @@ namespace Hspi.Device
         {
             try
             {
-                var max = globalTimerAndClock.Now.ToUnixTimeSeconds();
-                var min = max - this.featureData.FunctionDurationSeconds;
+                var minMax = this.period.CalculateMinMaxSeconds(globalTimerAndClock);
 
-                if (min < 0)
+                if (minMax.IsValid)
                 {
-                    throw new ArgumentException("Duration too long");
+                    if (minMax.Minimum < 0)
+                    {
+                        throw new ArgumentException("Duration too long");
+                    }
+
+                    var result = this.featureData.StatisticsFunction switch
+                    {
+                        StatisticsFunction.AverageStep or StatisticsFunction.AverageLinear => TimeAndValueQueryHelper.Average(collector,
+                                                                                         featureData.TrackedRef,
+                                                                                         minMax.Minimum,
+                                                                                         minMax.Maximum,
+                                                                                         this.featureData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
+                        StatisticsFunction.MinimumValue => collector.GetMinValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        StatisticsFunction.MaximumValue => collector.GetMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        _ => throw new NotImplementedException(),
+                    };
+
+                    if (result.HasValue)
+                    {
+                        var precision = hsFeatureCachedDataProvider.GetPrecision(featureData.TrackedRef);
+                        result = Math.Round(result.Value, precision);
+                    }
+
+                    UpdateDeviceValue(result);
                 }
-
-                var result = this.featureData.StatisticsFunction switch
+                else
                 {
-                    StatisticsFunction.AverageStep or StatisticsFunction.AverageLinear => TimeAndValueQueryHelper.Average(collector,
-                                                                                     featureData.TrackedRef,
-                                                                                     min,
-                                                                                     max,
-                                                                                     this.featureData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
-                    StatisticsFunction.MinValue => collector.GetMinValue(featureData.TrackedRef, min, max),
-                    StatisticsFunction.MaxValue => collector.GetMaxValue(featureData.TrackedRef, min, max),
-                    _ => throw new NotImplementedException(),
-                };
-
-                if (result.HasValue)
-                {
-                    var precision = hsFeatureCachedDataProvider.GetPrecision(featureData.TrackedRef);
-                    result = Math.Round(result.Value, precision);
+                    Debug.Assert(minMax.Minimum <= minMax.Maximum);
                 }
-
-                UpdateDeviceValue(result);
             }
             catch (Exception ex)
             {
@@ -307,6 +291,7 @@ namespace Hspi.Device
         private const string DataKey = "data";
         private readonly SqliteDatabaseCollector collector;
         private readonly StatisticsDeviceData featureData;
+        private readonly Period period;
         private readonly IGlobalTimerAndClock globalTimerAndClock;
         private readonly IHsController HS;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;

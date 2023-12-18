@@ -5,12 +5,12 @@ using Destructurama.Attributed;
 
 namespace Hspi.Database
 {
-    internal sealed record TimeAndValue(long UnixTimeSeconds, in double DeviceValue)
+    internal record struct TimeAndValue(long UnixTimeSeconds, in double DeviceValue)
     {
         [NotLogged]
-        public long UnixTimeMilliSeconds => UnixTimeSeconds * 1000;
+        public readonly long UnixTimeMilliSeconds => UnixTimeSeconds * 1000;
 
         [NotLogged]
-        public DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);
+        public readonly DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);
     }
 }
