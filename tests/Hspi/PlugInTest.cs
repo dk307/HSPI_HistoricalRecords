@@ -224,7 +224,7 @@ namespace HSPI_HistoryTest
             string labelHtml = data["views"][0]["name"].Value<string>();
 
             var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
-            var iFrameElement = htmlDoc.GetElementbyId("Historyiframeid");
+            var iFrameElement = htmlDoc.GetElementbyId("pluginhistoryiframeid");
 
             Assert.That(iFrameElement, Is.Not.Null);
 
@@ -253,7 +253,7 @@ namespace HSPI_HistoryTest
             string labelHtml = data["views"][0]["name"].Value<string>();
 
             var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
-            var iFrameElement = htmlDoc.GetElementbyId("Historyiframeid");
+            var iFrameElement = htmlDoc.GetElementbyId("pluginhistoryiframeid");
 
             Assert.That(iFrameElement, Is.Not.Null);
 
