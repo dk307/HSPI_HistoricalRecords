@@ -4,7 +4,7 @@ using Hspi;
 using Hspi.Device;
 using NUnit.Framework;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [TestFixture]
     public class PeriodTimeCalculatorTest

@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [TestFixture]
     public class HistogramTest

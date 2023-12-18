@@ -6,14 +6,14 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Historical Records Plugin for Homeseer 4")]
-[assembly: AssemblyDescription("Historical Records Plugin for Homeseer 4")]
+[assembly: AssemblyTitle("History Plugin for Homeseer 4")]
+[assembly: AssemblyDescription("History Plugin for Homeseer 4")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyCopyright("Copyright ©  2023")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-[assembly: InternalsVisibleTo("HSPI_HistoricalRecordsTest")]
+[assembly: InternalsVisibleTo("HSPI_HistoryTest")]
 [assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
 
 // Setting ComVisible to false makes the types in this assembly not visible

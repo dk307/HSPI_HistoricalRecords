@@ -2,11 +2,11 @@ using System.Reflection;
 using System.Resources;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("HSPI_HistoricalRecordsTest")]
+[assembly: AssemblyTitle("HSPI_HistoryTest")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("HSPI_HistoricalRecordsTest")]
+[assembly: AssemblyProduct("HSPI_HistoryTest")]
 [assembly: AssemblyCopyright("Copyright ©  2023")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

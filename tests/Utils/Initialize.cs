@@ -2,7 +2,7 @@
 using NUnit.Framework;
 using Serilog;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [SetUpFixture]
     public class Initialize

@@ -7,9 +7,9 @@ on:
     branches: [ master ]
 
 env:
-    SLN_FILE: "HSPI_HistoricalRecords.sln"
-    TEST_FILE_WIN: "tests\\bin\\Debug\\HSPI_HistoricalRecordsTest.dll"
-    TEST_FILE_UBUNTU: "./tests/bin/Debug/HSPI_HistoricalRecordsTest.dll"
+    SLN_FILE: "HSPI_History.sln"
+    TEST_FILE_WIN: "tests\\bin\\Debug\\HSPI_HistoryTest.dll"
+    TEST_FILE_UBUNTU: "./tests/bin/Debug/HSPI_HistoryTest.dll"
 
 jobs:
   build-cache-test-win:

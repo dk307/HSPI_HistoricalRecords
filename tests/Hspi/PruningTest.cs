@@ -6,7 +6,7 @@ using Hspi;
 using NUnit.Framework;
 using Moq;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [TestFixture]
     public class PruningTest

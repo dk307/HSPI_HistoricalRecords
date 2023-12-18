@@ -9,7 +9,7 @@ using Hspi.Device;
 using Newtonsoft.Json;
 using NUnit.Framework;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [TestFixture]
     public class ScrbianFunctionsTest

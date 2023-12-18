@@ -2,7 +2,7 @@ using System;
 using Hspi.Database;
 using NUnit.Framework;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [TestFixture]
     public class SqliteInvalidExceptionTests

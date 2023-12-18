@@ -260,7 +260,7 @@ namespace Hspi
             // iframeSizer.min.js
             stb.Append($"<script src=\"{CreatePlugInUrl("iframeResizer.min.js")}\"></script>");
             stb.Append(@"<style>iframe{width: 1px;min-width: 100%;min-height: 40rem; border: 0px;}</style>");
-            string id = "historicalrecordsiframeid";
+            string id = "Historyiframeid";
             stb.Append(Invariant($"<iframe id=\"{id}\" src=\"{iFrameUrl}\"></iframe>"));
             stb.Append(Invariant($"<script>iFrameResize({{log: true, inPageLinks: true }}, '#{id}');</script>"));
 

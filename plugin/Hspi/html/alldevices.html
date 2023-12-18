@@ -1,244 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-		<meta charset="utf-8">
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
-		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-		<!--Don't cache anything-->
-		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-		<meta http-equiv="Pragma" content="no-cache" />
-		<meta http-equiv="Expires" content="0" />
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!--Don't cache anything-->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
 
-        
-        {{includefile 'bootstrap/css/page_common.css'}}          
-		<link rel="stylesheet" href="/HistoricalRecords/datatables.min.css" />		
-		<link rel="stylesheet" href="/HistoricalRecords/dataTables.bootstrap4.min.css" />
-		
-		<title>Historical Records Devices Statistics</title>    
-		
-		
-    </head>
-  <body class="body homeseer-skin">  
+    {{includefile 'bootstrap/css/page_common.css'}}
+    <link rel="stylesheet" href="/History/datatables.min.css" />
+    <link rel="stylesheet" href="/History/dataTables.bootstrap4.min.css" />
+
+    <title>Historical Records Devices Statistics</title>
+</head>
+<body class="body homeseer-skin">
     {{includefile 'header.html'}}
-    {{includefile 'navbar.html'}} 
-	{{
-		deviceRecords=plugin_function 'HistoricalRecords' 'GetAllDevicesProperties' []
-		show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
-		
-	}}
- 
-	<div class="hs_spinner" id="loading">
-		<div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
-			<div class="spinner-border" role="status">
-				<span class="sr-only">Loading...</span>
-			</div>
-		</div>
-	</div>	
-	
-	<div class="container">
-		<table id="dt-persistence" class="table table-sm mb-0 table-striped"cellspacing="0" width="100%">	
-			<thead>
-				<tr>
-					<th>Device</th> 
-					<th>Records Count</th> 
-					<th>Tracked</th> 
-					<th></th> 
-				</tr>
-			</thead> 
-			<tbody>
-			
-			{{for item in deviceRecords}}
-			 
-            <tr class="devicerow" data-refId="{{item["ref"]}}" data-min-value="{{item["minValue"]}}" data-max-value="{{item["maxValue"]}}" data-tracked="{{item["tracked"]}}"  data-monitorable-type="{{item["monitorableType"]}}">	
-				{{relationship=device_prop item["ref"] "Relationship"}}
-				{{assoc_count=device_prop item["ref"] "AssociatedDevices_Count"}}	 
-				{{if relationship==4 && assoc_count==1}}
-					{{deviceRefId=device_prop item["ref"] "AssociatedDevices_List"}}
-				{{end}}
-				
-                <td><a onclick="javascript:showDevicePage(this, {{item["ref"]}}, {{deviceRefId ?? -1}})">{{device_name_full item["ref"] true | html.escape}}{{if show_refId}}&nbsp;({{item["ref"]}}){{end}}</a></td> 
-                <td>{{item["records"]}}</td> 
-                <td>{{if item["tracked"] && item["monitorableType"]}}Yes{{else}}No{{end}}</td> 
-                <td>{{if item["monitorableType"]}}
-					<a class="fas fa-lg fa-point fa-sliders-h" data-mdb-toggle="tooltip" title="Change tracking options for the device" onclick="javascript:showDeviceOptions(this)">				  
-					</a>
-					<a  class="far fa-lg fa-point fa-trash-alt" data-mdb-toggle="tooltip" title="Delete all records for the device" onclick="javascript:deleteRecords(this)">					  
-					</a>
-					{{end}}
-				</td> 
-            </tr>
-			{{end}}
-			</tbody>
-		</table>
-	</div>
-	
-	<div class="modal fade" id="modalEdit" tabindex="-1" role="dialog" aria-labelledby="lblModalEdit" aria-hidden="true">
-		<div class="modal-dialog" role="document">
-			<div class="modal-content">
-				<div class="modal-header">
-					<h6 class="modal-title" id="lblModalEdit">Device Options</h6>
-				</div>
-				<form id="idDeviceOptions">	
-					<div class="modal-body">
-							<input type="hidden" id="deviceOptionsRef" value="{{featureId}}"/>
-							<div class="form-row no-gutters">
-								<div class="form-check form-switch form-sm">
-									<div class="form-check form-check-inline">
-										<input type="checkbox" class="form-check-input" id="idTrackedFeature" name="idTrackedFeature" >
-										<label class="form-check-label" for="idTrackedFeature">Track this device values</label>
-									</div>            
-								</div>
-							</div>
+    {{includefile 'navbar.html'}}
+    {{
+        deviceRecords=plugin_function 'History' 'GetAllDevicesProperties' []
+        show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
+    }}
 
-							<div class="form-row mt-3">
-								  <small class="form-text ml-3">Range for tracking values</small>
-							</div>
-						 
-							<div class="form-row mt-0 mb-0">
-								<div class="md-form  form-sm ml-3">
-									<input type="text" id="idMinValue" name="minValue" class="form-control-sm" pattern="(\d+(?:\.\d+){0,1})$">
-									<label for="idMinValue">Minimum Value</label>                                     
-								</div>
-																  
-								<div class="md-form form-sm ml-3">
-									<input type="text" id="idMaxValue" name="maxValue" class="form-control-sm" pattern="(\d+(?:\.\d+){0,1})$">
-									<label for="idMaxValue">Maximum Value</label>                                     
-								</div>
-							</div>			
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-						<button type="submit" class="btn btn-primary">Save</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
-    
+    <div class="hs_spinner" id="loading">
+        <div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <table id="dt-persistence" class="table table-sm mb-0 table-striped" cellspacing="0" width="100%">
+            <thead>
+                <tr>
+                    <th>Device</th>
+                    <th>Records Count</th>
+                    <th>Tracked</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+
+                {{for item in deviceRecords}}
+
+                <tr class="devicerow" data-refId="{{item["ref"]}}" data-min-value="{{item["minValue"]}}" data-max-value="{{item["maxValue"]}}" data-tracked="{{item["tracked"]}}" data-monitorable-type="{{item["monitorableType"]}}">
+                    {{relationship=device_prop item["ref"] "Relationship"}}
+                    {{assoc_count=device_prop item["ref"] "AssociatedDevices_Count"}}
+                    {{if relationship==4 && assoc_count==1}}
+                    {{deviceRefId=device_prop item["ref"] "AssociatedDevices_List"}}
+                    {{end}}
+
+                    <td><a onclick="javascript:showDevicePage(this, {{item["ref"]}}, {{deviceRefId ?? -1}})">{{device_name_full item["ref"] true | html.escape}}{{if show_refId}}&nbsp;({{item["ref"]}}){{end}}</a></td>
+                    <td>{{item["records"]}}</td>
+                    <td>{{if item["tracked"] && item["monitorableType"]}}Yes{{else}}No{{end}}</td>
+                    <td>
+                        {{if item["monitorableType"]}}
+                        <a class="fas fa-lg fa-point fa-sliders-h" data-mdb-toggle="tooltip" title="Change tracking options for the device" onclick="javascript:showDeviceOptions(this)">
+                        </a>
+                        <a class="far fa-lg fa-point fa-trash-alt" data-mdb-toggle="tooltip" title="Delete all records for the device" onclick="javascript:deleteRecords(this)">
+                        </a>
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal fade" id="modalEdit" tabindex="-1" role="dialog" aria-labelledby="lblModalEdit" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title" id="lblModalEdit">Device Options</h6>
+                </div>
+                <form id="idDeviceOptions">
+                    <div class="modal-body">
+                        <input type="hidden" id="deviceOptionsRef" value="{{featureId}}" />
+                        <div class="form-row no-gutters">
+                            <div class="form-check form-switch form-sm">
+                                <div class="form-check form-check-inline">
+                                    <input type="checkbox" class="form-check-input" id="idTrackedFeature" name="idTrackedFeature">
+                                    <label class="form-check-label" for="idTrackedFeature">Track this device values</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row mt-3">
+                            <small class="form-text ml-3">Range for tracking values</small>
+                        </div>
+
+                        <div class="form-row mt-0 mb-0">
+                            <div class="md-form  form-sm ml-3">
+                                <input type="text" id="idMinValue" name="minValue" class="form-control-sm" pattern="(\d+(?:\.\d+){0,1})$">
+                                <label for="idMinValue">Minimum Value</label>
+                            </div>
+
+                            <div class="md-form form-sm ml-3">
+                                <input type="text" id="idMaxValue" name="maxValue" class="form-control-sm" pattern="(\d+(?:\.\d+){0,1})$">
+                                <label for="idMaxValue">Maximum Value</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-     {{includefile 'bootstrap/js/page_common.js'}}
+    {{includefile 'bootstrap/js/page_common.js'}}
 
-	<script src="/HistoricalRecords/jquery.dataTables.min.js"></script>
-	<script src="/HistoricalRecords/dataTables.bootstrap4.min.js"></script>
-	<script src="/HistoricalRecords/historicalrecords.common.js"></script>
-<script>
-let dt;
+    <script src="/History/jquery.dataTables.min.js"></script>
+    <script src="/History/dataTables.bootstrap4.min.js"></script>
+    <script src="/History/history.common.js"></script>
+    <script>
+        let dt;
 
-function setUpPersistanceTable() {
-  dt = $('#dt-persistence').DataTable({
-		stateSave: false,
-		responsive: true,
-		order: [[ 1, 'desc' ]],
-		columnDefs: [
-			{ orderable: false, targets: 3 },		
-		 ],
-		initComplete: function () {
-		   $("div.dataTables_length").addClass("bs-select"); 
-		},
-  });
-}
+        function setUpPersistanceTable() {
+            dt = $('#dt-persistence').DataTable({
+                stateSave: false,
+                responsive: true,
+                order: [[1, 'desc']],
+                columnDefs: [
+                    { orderable: false, targets: 3 },
+                ],
+                initComplete: function () {
+                    $("div.dataTables_length").addClass("bs-select");
+                },
+            });
+        }
 
-function showDevicePage(e, feature, parent){
-	const row = $('.devicerow[data-refId='+feature+']');	
-	const tracked = row.attr('data-tracked') == 'true';	
-	const monitorableType = row.attr('data-monitorable-type') == 'true';	
-	
-	let devicesPageUrl= window.location.origin + '/Devices.html?';	
-	
-	//ref
-	devicesPageUrl += ('ref=' + (parent != -1 ? parent : feature));
-	
-	// tab
-	devicesPageUrl += '&subpage=devprop'
-	devicesPageUrl += (tracked && monitorableType ? '&tab=HistoricalRecords' : '&tab=features');
-	
-	//feature
-	if (parent!=-1) {
-		devicesPageUrl += ('&feature=' + feature);
-	}
-	
-    window.open(devicesPageUrl, "_blank");
-};
+        function showDevicePage(e, feature, parent) {
+            const row = $('.devicerow[data-refId=' + feature + ']');
+            const tracked = row.attr('data-tracked') == 'true';
+            const monitorableType = row.attr('data-monitorable-type') == 'true';
 
-function showDeviceOptions(e){
-	const row = $(e).parent().parent();
-	const refId =row.attr('data-refId');
-	const tracked = row.attr('data-tracked');
-	const minValue = row.attr('data-min-value');
-	const maxValue = row.attr('data-max-value');
-	
-	// set the values from a link to modal
-	$('#deviceOptionsRef').val(refId);
-	$("#idTrackedFeature").prop('checked', tracked == "true");
-	$("#idMinValue").val(minValue);
-	$("#idMaxValue").val(maxValue);
-	$('#modalEdit').modal('show');
-};
+            let devicesPageUrl = window.location.origin + '/Devices.html?';
 
-function deleteRecords(e){
-	const row = $(e).parent().parent();
-	const refId =row.attr('data-refId');
-		
-	swal.fire({
-			title: 'Confirmation',
-			text: 'Do you want to delete all records for the device ?',
-			position: 'top',
-			focusConfirm: false,
-			reverseButtons: false,
-			showCancelButton: true,
-			cancelButtonText: 'No',
-			confirmButtonText: 'Yes',
-    }).then((result) => {
-        if (result.isConfirmed) {	
-			const data = {
-				ref: refId,
-			};
-			
-			ajaxPostPlugIn("deletedevicerecords", data, function(result, context) {
-				//update the table column
-				const col1 = $('.devicerow[data-refId='+refId +'] td:nth-child(2)');		
-				col1.text(0);	
-				dt.cell(col1).invalidate().draw();
-			}, null, data);
-		}
-    }); 
-};
+            //ref
+            devicesPageUrl += ('ref=' + (parent != -1 ? parent : feature));
 
+            // tab
+            devicesPageUrl += '&subpage=devprop'
+            devicesPageUrl += (tracked && monitorableType ? '&tab=History' : '&tab=features');
 
-$(document).ready(function () {
-	setUpPersistanceTable();
-	$('#loading').hide();
+            //feature
+            if (parent != -1) {
+                devicesPageUrl += ('&feature=' + feature);
+            }
 
-	$( "#idDeviceOptions" ).on("submit",async function (e) {
-		e.preventDefault();
-		$('#modalEdit').modal('hide');
-		const ref = $('#deviceOptionsRef').val();
-		 
-		const data = {
-			refId: ref,
-			tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
-			minValue: $('#idMinValue').val() ? $('#idMinValue').val() : null,
-			maxValue: $('#idMaxValue').val() ? $('#idMaxValue').val() : null,
-		};
-		await ajaxPostPlugIn("updatedevicesettings", data, function(result, context) {
-		
-			//update the table column
-			const col3 = $('.devicerow[data-refId='+context.refId +'] td:nth-child(3)');		
-			col3.text(context.tracked ? "Yes" : "No");
-			dt.cell(col3).invalidate().draw();
-			
-			// update the custom attributes also
-			const link = $('.devicerow[data-refId='+context.refId +']');	
-			link.attr('data-tracked', context.tracked ? 'true' : 'false');	
-			link.attr('data-min-value',  context.minValue);	
-			link.attr('data-max-value',  context.maxValue);	
-		}, null, data);
-	});	 
-});	
+            window.open(devicesPageUrl, "_blank");
+        };
 
-</script>    
-  </body>
+        function showDeviceOptions(e) {
+            const row = $(e).parent().parent();
+            const refId = row.attr('data-refId');
+            const tracked = row.attr('data-tracked');
+            const minValue = row.attr('data-min-value');
+            const maxValue = row.attr('data-max-value');
+
+            // set the values from a link to modal
+            $('#deviceOptionsRef').val(refId);
+            $("#idTrackedFeature").prop('checked', tracked == "true");
+            $("#idMinValue").val(minValue);
+            $("#idMaxValue").val(maxValue);
+            $('#modalEdit').modal('show');
+        };
+
+        function deleteRecords(e) {
+            const row = $(e).parent().parent();
+            const refId = row.attr('data-refId');
+
+            swal.fire({
+                title: 'Confirmation',
+                text: 'Do you want to delete all records for the device ?',
+                position: 'top',
+                focusConfirm: false,
+                reverseButtons: false,
+                showCancelButton: true,
+                cancelButtonText: 'No',
+                confirmButtonText: 'Yes',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const data = {
+                        ref: refId,
+                    };
+
+                    ajaxPostPlugIn("deletedevicerecords", data, function (result, context) {
+                        //update the table column
+                        const col1 = $('.devicerow[data-refId=' + refId + '] td:nth-child(2)');
+                        col1.text(0);
+                        dt.cell(col1).invalidate().draw();
+                    }, null, data);
+                }
+            });
+        };
+
+        $(document).ready(function () {
+            setUpPersistanceTable();
+            $('#loading').hide();
+
+            $("#idDeviceOptions").on("submit", async function (e) {
+                e.preventDefault();
+                $('#modalEdit').modal('hide');
+                const ref = $('#deviceOptionsRef').val();
+
+                const data = {
+                    refId: ref,
+                    tracked: (($('#idTrackedFeature').is(':checked')) ? 1 : 0),
+                    minValue: $('#idMinValue').val() ? $('#idMinValue').val() : null,
+                    maxValue: $('#idMaxValue').val() ? $('#idMaxValue').val() : null,
+                };
+                await ajaxPostPlugIn("updatedevicesettings", data, function (result, context) {
+
+                    //update the table column
+                    const col3 = $('.devicerow[data-refId=' + context.refId + '] td:nth-child(3)');
+                    col3.text(context.tracked ? "Yes" : "No");
+                    dt.cell(col3).invalidate().draw();
+
+                    // update the custom attributes also
+                    const link = $('.devicerow[data-refId=' + context.refId + ']');
+                    link.attr('data-tracked', context.tracked ? 'true' : 'false');
+                    link.attr('data-min-value', context.minValue);
+                    link.attr('data-max-value', context.maxValue);
+                }, null, data);
+            });
+        });
+    </script>
+</body>
 </html>

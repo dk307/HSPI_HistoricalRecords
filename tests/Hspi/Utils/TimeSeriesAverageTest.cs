@@ -3,7 +3,7 @@ using Hspi.Database;
 using Hspi.Utils;
 using NUnit.Framework;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [TestFixture]
     public class TimeSeriesAverageTest
