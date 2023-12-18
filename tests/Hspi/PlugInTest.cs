@@ -205,7 +205,7 @@ namespace HSPI_HistoryTest
         }
 
         [TestCase(PlugInData.PlugInId, "editdevice")]
-        [TestCase("", "deviceHistory")]
+        [TestCase("", "history")]
         public void GetJuiDeviceConfigPageForDevice(string deviceInterface, string page)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -234,7 +234,7 @@ namespace HSPI_HistoryTest
 
         [Test]
         [TestCase(PlugInData.PlugInId, "editdevice")]
-        [TestCase("", "deviceHistory")]
+        [TestCase("", "history")]
         public void GetJuiDeviceConfigPageForFeature(string deviceInterface, string page)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
