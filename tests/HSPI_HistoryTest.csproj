@@ -7,8 +7,8 @@
     <ProjectGuid>{3189DB00-014C-48F2-BD3E-81615E268641}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>HSPI_HistoricalRecordsTest</RootNamespace>
-    <AssemblyName>HSPI_HistoricalRecordsTest</AssemblyName>
+    <RootNamespace>HSPI_HistoryTest</RootNamespace>
+    <AssemblyName>HSPI_HistoryTest</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -100,9 +100,9 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\plugin\HSPI_HistoricalRecords.csproj">
+    <ProjectReference Include="..\plugin\HSPI_History.csproj">
       <Project>{6afed710-7bb6-40e3-b4cd-4642da950411}</Project>
-      <Name>HSPI_HistoricalRecords</Name>
+      <Name>HSPI_History</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

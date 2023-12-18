@@ -114,7 +114,7 @@ namespace Hspi
         {
             try
             {
-                string iFrameName = IsThisPlugInFeature(devOrFeatRef) ? "editdevice.html" : "devicehistoricalrecords.html";
+                string iFrameName = IsThisPlugInFeature(devOrFeatRef) ? "editdevice.html" : "history.html";
                 return CreateTrackedDeviceConfigPage(devOrFeatRef, iFrameName);
             }
             catch (Exception ex)

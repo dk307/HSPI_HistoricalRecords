@@ -15,7 +15,7 @@ using Serilog;
 using Serilog.Events;
 using static HomeSeer.PluginSdk.PluginStatus;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [TestFixture]
     public class PlugInTest
@@ -205,7 +205,7 @@ namespace HSPI_HistoricalRecordsTest
         }
 
         [TestCase(PlugInData.PlugInId, "editdevice")]
-        [TestCase("", "devicehistoricalrecords")]
+        [TestCase("", "history")]
         public void GetJuiDeviceConfigPageForDevice(string deviceInterface, string page)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -224,17 +224,17 @@ namespace HSPI_HistoricalRecordsTest
             string labelHtml = data["views"][0]["name"].Value<string>();
 
             var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
-            var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
+            var iFrameElement = htmlDoc.GetElementbyId("pluginhistoryiframeid");
 
             Assert.That(iFrameElement, Is.Not.Null);
 
             var iFrameSource = iFrameElement.Attributes["src"].Value;
-            Assert.That($"/HistoricalRecords/{page}.html?ref={devOrFeatRef}&feature={devOrFeatRef}", Is.EqualTo(iFrameSource));
+            Assert.That($"/History/{page}.html?ref={devOrFeatRef}&feature={devOrFeatRef}", Is.EqualTo(iFrameSource));
         }
 
         [Test]
         [TestCase(PlugInData.PlugInId, "editdevice")]
-        [TestCase("", "devicehistoricalrecords")]
+        [TestCase("", "history")]
         public void GetJuiDeviceConfigPageForFeature(string deviceInterface, string page)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
@@ -253,12 +253,12 @@ namespace HSPI_HistoricalRecordsTest
             string labelHtml = data["views"][0]["name"].Value<string>();
 
             var htmlDoc = TestHelper.VerifyHtmlValid(labelHtml);
-            var iFrameElement = htmlDoc.GetElementbyId("historicalrecordsiframeid");
+            var iFrameElement = htmlDoc.GetElementbyId("pluginhistoryiframeid");
 
             Assert.That(iFrameElement, Is.Not.Null);
 
             var iFrameSource = iFrameElement.Attributes["src"].Value;
-            Assert.That(iFrameSource, Is.EqualTo($"/HistoricalRecords/{page}.html?ref={9}&feature={devOrFeatRef}"));
+            Assert.That(iFrameSource, Is.EqualTo($"/History/{page}.html?ref={9}&feature={devOrFeatRef}"));
         }
 
         [Test]

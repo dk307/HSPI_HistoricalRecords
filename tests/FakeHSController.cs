@@ -16,7 +16,7 @@ using Hspi;
 using NUnit.Framework;
 using Serilog.Events;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     internal class FakeHSController : IHsController
     {

@@ -1,4 +1,4 @@
-﻿namespace HSPI_HistoricalRecords
+﻿namespace HSPI_History
 {
     /// <summary>
     /// This enables HomeSeer to load the plugin directly.

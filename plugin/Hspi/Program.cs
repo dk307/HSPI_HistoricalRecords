@@ -18,7 +18,7 @@ namespace Hspi
 
             try
             {
-                using var plugin = new HSPI_HistoricalRecords.HSPI();
+                using var plugin = new HSPI_History.HSPI();
                 Console.CancelKeyPress += (sender, e) =>
                 {
                     e.Cancel = true;

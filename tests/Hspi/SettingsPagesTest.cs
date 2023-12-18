@@ -10,7 +10,7 @@ using NUnit.Framework;
 using Moq;
 using Serilog.Events;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 {
     [TestFixture]
     public class SettingsPagesTest

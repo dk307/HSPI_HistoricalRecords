@@ -3,318 +3,313 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <!--Don't cache anything-->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
     {{includefile '/bootstrap/css/page_common.css'}}
+    <link href="/History/history.css" rel="stylesheet">
     <title>Edit Device</title>
 </head>
-	{{	
-		refId=queries['ref'] ?? ""
-		featureId=queries['feature']	
-		jsonDataStrings=plugin_function 'HistoricalRecords' 'GetStatisticDeviceDataAsJson' [refId]		
-	}}
-	
-<body class="body homeseer-skin mx-0" aria-busy="true">
-<div class="custom-scrollbar homeseer"> 
-	<div class="hs_spinner" id="loading">
-		<div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
-			<div class="spinner-border" role="status">
-				<span class="sr-only">Loading...</span>
-			</div>
-		</div>
-	</div>	
-	
-{{if jsonDataStrings}}
 {{
-	for tab in jsonDataStrings
-		if tab.key==featureId
-			selectedId=featureId
-			break
-		end
-	end
-	
-	if (!selectedId) 
-		selectedId=(array.first jsonDataStrings).key
-	end
-	
-	deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' []
-	show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'			
+        refId=queries['ref'] ?? ""
+        featureId=queries['feature']
+        jsonDataStrings=plugin_function 'History' 'GetStatisticDeviceDataAsJson' [refId]
 }}
-	<header>
-		<ul class="nav nav-tabs hs-tabs" id="editDeviceId" role="tablist">
-			{{ for tab in jsonDataStrings }}
-			<li class="nav-item">
-				<a class="nav-link {{if tab.key==selectedId}}active{{else}}{{end}}" id="tab-{{tab.key}}" data-toggle="tab" data-target="#md-{{tab.key}}" role="tab" aria-controls="md-{{tab.key}}" aria-selected="{{if tab.key==selectedId}}true{{else}}false{{end}}">
-					{{device_prop tab.key "name" | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}
-				</a>
-			</li>
-			{{end}}
-		</ul>
-	</header>		
-	
-	<div class="tab-content card" id="editDeviceTabsId">
-		{{ for tab in jsonDataStrings }}		
-		<div class="tab-pane fade show {{if tab.key==selectedId}}active{{else}}{{end}}" id="md-{{tab.key}}" role="tabpanel" aria-labelledby="md-{{tab.key}}">
-			<div class="row mt-1 mb-1">
-				<div class="md-form col-md alert alert-danger" role="alert" id="error-message-div-{{tab.key}}" style="display: none;">		 
-				</div>
-			</div>
 
-			<form class="needs-validation" id="mainform-{{tab.key}}"> 
-				<div class="row mb-1">
-					<div class="col">
-					  <div class="form-outline">
-							<span class="font-weight-bold">Select a device for this statistic device is for</span>							
-							<select class='mdb-select md-form colorful-select' id='deviceSelect-{{tab.key}}' searchable="Search for a device here" required>
-								{{ for id in deviceRefIds }}
-								<option value='{{id}}' >{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
-								{{ end }}
-							</select>
-					  </div>
-					</div>	 
-				</div>
-		 
-				<div class="row mb-1">	 
-					<div class="col-5">	
-						 <div class="form-outline">
-							<span class="font-weight-bold">Select statistical function</span>
-							<select id="function-{{tab.key}}" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
-								{{includefile '/HistoricalRecords/includes/statisticalfunctionoptions.html'}} 	
-							</select> 		
-						</div>
-					</div>
-					<div class="col-7">		
-						{{includefile '/HistoricalRecords/includes/statsfuncdefs.html'}} 
-					</div>	 		
-				</div>
-	 
-				<div class="row mb-1">	 
-					<div class="col">
-						<div class="form-outline">
-						<span class="font-weight-bold">Time duration for the statistical function</span>							
-							 <div class="row">
-								<div class="col" >
-									<div class="md-form" >
-										<div class="md-form col" >
-											<select id="startDurationId{{tab.key}}" class="mdb-select md-form dropdown-primary colorful-select" required>
-												{{includefile '/HistoricalRecords/includes/statisticalfunctionduration.html'}} 	
-											</select>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-						
-				<div class="row" id='customFunctionDurationRowId{{tab.key}}' style="display:none">
-					<div class="col" >
-						<div class="md-form" >
-							<div class="input-group">
-								<div class="md-form">
-									<input type="number" id="daysDuration{{tab.key}}"  class="form-control timespan-input" value="0" min="0" required>
-									<label for="daysDuration">Days</label>
-								</div>
-								<div class="md-form ml-1">
-									<input type="number" id="hoursDuration{{tab.key}}" class="form-control timespan-input" value="0" min="0" required>
-									<label for="hoursDuration">Hours</label>
-								</div>
-								<div class="md-form ml-1">
-									<input type="number" id="minutesDuration{{tab.key}}" class="form-control timespan-input" value="10" min="0" required>
-									<label for="minutesDuration">Minutes</label>
-								</div>
-								<div class="md-form ml-1">
-									<input type="number" id="secondsDuration{{tab.key}}" class="form-control timespan-input" value="0" min="0" required>
-									<label for="secondsDuration">Seconds</label>
-								</div>
-							</div>
-						</div>
-					</div>
+<body class="body homeseer-skin mx-0" aria-busy="true">
+    <div class="custom-scrollbar homeseer">
+        <div class="hs_spinner" id="loading">
+            <div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
+                <div class="spinner-border" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        {{if jsonDataStrings}}
+        {{
+    for tab in jsonDataStrings
+        if tab.key==featureId
+            selectedId=featureId
+            break
+        end
+    end
+    if (!selectedId)
+        selectedId=(array.first jsonDataStrings).key
+    end
+    deviceRefIds=plugin_function 'History' 'GetTrackedDeviceList' []
+    show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
+        }}
+        <header>
+            <ul class="nav nav-tabs hs-tabs" id="editDeviceId" role="tablist">
+                {{ for tab in jsonDataStrings }}
+                <li class="nav-item">
+                    <a class="nav-link {{if tab.key==selectedId}}active{{else}}{{end}}" id="tab-{{tab.key}}" data-toggle="tab" data-target="#md-{{tab.key}}" role="tab" aria-controls="md-{{tab.key}}" aria-selected="{{if tab.key==selectedId}}true{{else}}false{{end}}">
+                        {{device_prop tab.key "name" | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}
+                    </a>
+                </li>
+                {{end}}
+            </ul>
+        </header>
+
+        <div class="tab-content card" id="editDeviceTabsId">
+            {{ for tab in jsonDataStrings }}
+            <div class="tab-pane fade show {{if tab.key==selectedId}}active{{else}}{{end}}" id="md-{{tab.key}}" role="tabpanel" aria-labelledby="md-{{tab.key}}">
+                <div class="row mt-1 mb-1">
+                    <div class="md-form col-md alert alert-danger" role="alert" id="error-message-div-{{tab.key}}" style="display: none;">
+                    </div>
                 </div>
 
-				<div class="row mb-1">	 
-					<div class="col md-flex">
-						<div class="form-outline">
-						<span class="font-weight-bold">Refresh interval for the statistical function, which determines how frequently the function is calculated</span>
-							<div class="input-group">					 
-								<div class="md-form mr-1">
-									<input type="number" id="daysRefresh-{{tab.key}}" name="days" class="form-control" value="0" min="0" required>
-									<label for="daysRefresh-{{tab.key}}">Days</label>                                     
-								</div>
-								<div class="md-form mr-1">
-									<input type="number" id="hoursRefresh-{{tab.key}}" name="hours" class="form-control" value="0" min="0" required>
-									<label for="hoursRefresh-{{tab.key}}">Hours</label>                                     
-								</div>
-								<div class="md-form mr-1">
-									<input type="number" id="minutesRefresh-{{tab.key}}"   name="minutes" class="form-control" value="0" min="0" required>
-									<label for="minutesRefresh-{{tab.key}}">Minutes</label>                                     
-								</div>
-								<div class="md-form mr-1">
-									<input type="number" id="secondsRefresh-{{tab.key}}"   name="seconds" class="form-control" value="0" min="0" required>
-									<label for="secondsRefresh-{{tab.key}}">Seconds</label>                                     
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+                <form class="needs-validation" id="mainform-{{tab.key}}">
+                    <div class="row mb-1">
+                        <div class="col">
+                            <div class="form-outline">
+                                <span class="font-weight-bold">Select a device for this statistic device is for</span>
+                                <select class='mdb-select md-form colorful-select' id='deviceSelect-{{tab.key}}' searchable="Search for a device here" required>
+                                    {{ for id in deviceRefIds }}
+                                    <option value='{{id}}'>{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
+                                    {{ end }}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
 
-				<div class="row mt-1 mb-1">
-					<div class="col-md d-flex justify-content-end">
-						<button class="btn btn-default waves-effect waves-light" name="save" type="submit">Save</button>
-					</div>
-				</div>		
-			</form>
-		</div>
-		{{end}}
-	</div>
-	
-{{includefile 'bootstrap/js/page_common.js'}}
-<script type="text/javascript" src="/HistoricalRecords/iframeResizer.contentWindow.min.js"></script>
-<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
-<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+                    <div class="row mb-1">
+                        <div class="col-5">
+                            <div class="form-outline">
+                                <span class="font-weight-bold">Select statistical function</span>
+                                <select id="function-{{tab.key}}" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
+                                    {{includefile '/History/includes/statisticalfunctionoptions.html'}}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-7">
+                            {{includefile '/History/includes/statsfuncdefs.html'}}
+                        </div>
+                    </div>
 
-{{ for tab in jsonDataStrings }}
-<script>
+                    <div class="row mb-1">
+                        <div class="col">
+                            <div class="form-outline">
+                                <span class="font-weight-bold">Time duration for the statistical function</span>
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="md-form">
+                                            <div class="md-form col">
+                                                <select id="startDurationId{{tab.key}}" class="mdb-select md-form dropdown-primary colorful-select" required>
+                                                    {{includefile '/History/includes/statisticalfunctionduration.html'}}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id='customFunctionDurationRowId{{tab.key}}' style="display:none">
+                        <div class="col">
+                            <div class="md-form">
+                                <div class="input-group">
+                                    <div class="md-form">
+                                        <input type="number" id="daysDuration{{tab.key}}" class="form-control timespan-input" value="0" min="0" required>
+                                        <label for="daysDuration">Days</label>
+                                    </div>
+                                    <div class="md-form ml-1">
+                                        <input type="number" id="hoursDuration{{tab.key}}" class="form-control timespan-input" value="0" min="0" required>
+                                        <label for="hoursDuration">Hours</label>
+                                    </div>
+                                    <div class="md-form ml-1">
+                                        <input type="number" id="minutesDuration{{tab.key}}" class="form-control timespan-input" value="10" min="0" required>
+                                        <label for="minutesDuration">Minutes</label>
+                                    </div>
+                                    <div class="md-form ml-1">
+                                        <input type="number" id="secondsDuration{{tab.key}}" class="form-control timespan-input" value="0" min="0" required>
+                                        <label for="secondsDuration">Seconds</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-1">
+                        <div class="col md-flex">
+                            <div class="form-outline">
+                                <span class="font-weight-bold">Refresh interval for the statistical function, which determines how frequently the function is calculated</span>
+                                <div class="input-group">
+                                    <div class="md-form mr-1">
+                                        <input type="number" id="daysRefresh-{{tab.key}}" name="days" class="form-control" value="0" min="0" required>
+                                        <label for="daysRefresh-{{tab.key}}">Days</label>
+                                    </div>
+                                    <div class="md-form mr-1">
+                                        <input type="number" id="hoursRefresh-{{tab.key}}" name="hours" class="form-control" value="0" min="0" required>
+                                        <label for="hoursRefresh-{{tab.key}}">Hours</label>
+                                    </div>
+                                    <div class="md-form mr-1">
+                                        <input type="number" id="minutesRefresh-{{tab.key}}" name="minutes" class="form-control" value="0" min="0" required>
+                                        <label for="minutesRefresh-{{tab.key}}">Minutes</label>
+                                    </div>
+                                    <div class="md-form mr-1">
+                                        <input type="number" id="secondsRefresh-{{tab.key}}" name="seconds" class="form-control" value="0" min="0" required>
+                                        <label for="secondsRefresh-{{tab.key}}">Seconds</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-1 mb-1">
+                        <div class="col-md d-flex justify-content-end">
+                            <button class="btn btn-default waves-effect waves-light" name="save" type="submit">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {{end}}
+        </div>
+
+        {{includefile 'bootstrap/js/page_common.js'}}
+        <script type="text/javascript" src="/History/iframeResizer.contentWindow.min.js"></script>
+        <script type="text/javascript" src="/History/moment.min.js"></script>
+        <script type="text/javascript" src="/History/history.common.js"></script>
+
+        {{ for tab in jsonDataStrings }}
+        <script>
 const jsonData{{tab.key}} = {{tab.value}};
 
 function setupFunctionInterval{{tab.key}}() {
-	$(document).ready(function() {
-	  $('#startDurationId{{tab.key}}').change(function() {
-		if ($('#startDurationId{{tab.key}}').val() == 'now') {
-			$('#customFunctionDurationRowId{{tab.key}}').show();
-		}
-		else {
-			$('#customFunctionDurationRowId{{tab.key}}').hide();
-		}
-	  });
-	});
+    $(document).ready(function() {
+      $('#startDurationId{{tab.key}}').change(function() {
+        if ($('#startDurationId{{tab.key}}').val() == 'now') {
+            $('#customFunctionDurationRowId{{tab.key}}').show();
+        }
+        else {
+            $('#customFunctionDurationRowId{{tab.key}}').hide();
+        }
+      });
+    });
 }
 
 function updateFunctionDuration{{tab.key}}(duration) {
-	if (duration.CustomPeriod) {
-		const period = duration.CustomPeriod;
-		if (!period.Start && period.End.Type === "Now" && period.FunctionDurationSeconds) {
-			const duration = moment.duration(period.FunctionDurationSeconds, 'seconds');
+    if (duration.CustomPeriod) {
+        const period = duration.CustomPeriod;
+        if (!period.Start && period.End.Type === "Now" && period.FunctionDurationSeconds) {
+            const duration = moment.duration(period.FunctionDurationSeconds, 'seconds');
 
-			$('#daysDuration{{tab.key}}').val(Math.floor(duration.asDays()));
-			$('#hoursDuration{{tab.key}}').val(duration.hours());
-			$('#minutesDuration{{tab.key}}').val(duration.minutes());
-			$('#secondsDuration{{tab.key}}').val(duration.seconds());
+            $('#daysDuration{{tab.key}}').val(Math.floor(duration.asDays()));
+            $('#hoursDuration{{tab.key}}').val(duration.hours());
+            $('#minutesDuration{{tab.key}}').val(duration.minutes());
+            $('#secondsDuration{{tab.key}}').val(duration.seconds());
 
-			$('#startDurationId{{tab.key}}').val("now");
-			$('#customFunctionDurationRowId{{tab.key}}').show();		 
-		}
-	} else {
-		$('#startDurationId{{tab.key}}').val(duration.PreDefinedPeriod);
-	}
+            $('#startDurationId{{tab.key}}').val("now");
+            $('#customFunctionDurationRowId{{tab.key}}').show();
+        }
+    } else {
+        $('#startDurationId{{tab.key}}').val(duration.PreDefinedPeriod);
+    }
 }
 
 function getFunctionDuration{{tab.key}}() {
-	const durationType = $('#startDurationId{{tab.key}}').val();
-	switch($('#startDurationId{{tab.key}}').val()){
-		case "now":
-		{
-			const duration = moment.duration({
-				seconds: $('#secondsDuration{{tab.key}}').val(),
-				minutes: $('#minutesDuration{{tab.key}}').val(),
-				hours: $('#hoursDuration{{tab.key}}').val() ,
-				days: $('#daysDuration{{tab.key}}').val(),
-			});
+    const durationType = $('#startDurationId{{tab.key}}').val();
+    switch($('#startDurationId{{tab.key}}').val()){
+        case "now":
+        {
+            const duration = moment.duration({
+                seconds: $('#secondsDuration{{tab.key}}').val(),
+                minutes: $('#minutesDuration{{tab.key}}').val(),
+                hours: $('#hoursDuration{{tab.key}}').val() ,
+                days: $('#daysDuration{{tab.key}}').val(),
+            });
 
-			if (duration.isValid()) {
-				return  { CustomPeriod: { 
-								End:  { 
-									Type: 'Now'
-								}, 
-								FunctionDurationSeconds : duration.asSeconds()
-							}
-						};
-			}
+            if (duration.isValid()) {
+                return  { CustomPeriod: {
+                                End:  {
+                                    Type: 'Now'
+                                },
+                                FunctionDurationSeconds : duration.asSeconds()
+                            }
+                        };
+            }
 
-			return null;
-		}
-		default:
-			return { PreDefinedPeriod:  durationType };
-	};
+            return null;
+        }
+        default:
+            return { PreDefinedPeriod:  durationType };
+    };
 }
 
 $(document).ready(function () {
-	if (jsonData{{tab.key}} === null) {
-		Console.log("Invalid device data");
-	} else {	
-		$('#deviceSelect-{{tab.key}}').val(jsonData{{tab.key}}.TrackedRef); 
-		$('#function-{{tab.key}}').val(jsonData{{tab.key}}.StatisticsFunction);
-		
-		updateFunctionDuration{{tab.key}}(jsonData{{tab.key}}.StatisticsFunctionDuration);
-		
-		const refresh = moment.duration(jsonData{{tab.key}}.RefreshIntervalSeconds, 'seconds');
-		$('#daysRefresh-{{tab.key}}').val(Math.floor(refresh.asDays())); 	
-		$('#hoursRefresh-{{tab.key}}').val(refresh.hours()); 	
-		$('#minutesRefresh-{{tab.key}}').val(refresh.minutes()); 	
-		$('#secondsRefresh-{{tab.key}}').val(refresh.seconds()); 	
-	}
-	
-	
-	$("#mainform-{{tab.key}}").submit(function(e) {	
-		e.preventDefault();
+    if (jsonData{{tab.key}} === null) {
+        Console.log("Invalid device data");
+    } else {
+        $('#deviceSelect-{{tab.key}}').val(jsonData{{tab.key}}.TrackedRef);
+        $('#function-{{tab.key}}').val(jsonData{{tab.key}}.StatisticsFunction);
 
-		const duration = getFunctionDuration{{tab.key}}();
+        updateFunctionDuration{{tab.key}}(jsonData{{tab.key}}.StatisticsFunctionDuration);
 
-		const refresh = moment.duration({
-			seconds: $('#secondsRefresh-{{tab.key}}').val(),
-			minutes: $('#minutesRefresh-{{tab.key}}').val(),
-			hours: $('#hoursRefresh-{{tab.key}}').val() ,
-			days: $('#daysRefresh-{{tab.key}}').val(),
-		});
+        const refresh = moment.duration(jsonData{{tab.key}}.RefreshIntervalSeconds, 'seconds');
+        $('#daysRefresh-{{tab.key}}').val(Math.floor(refresh.asDays()));
+        $('#hoursRefresh-{{tab.key}}').val(refresh.hours());
+        $('#minutesRefresh-{{tab.key}}').val(refresh.minutes());
+        $('#secondsRefresh-{{tab.key}}').val(refresh.seconds());
+    }
 
+    $("#mainform-{{tab.key}}").submit(function(e) {
+        e.preventDefault();
 
-		const formObject = {
-			ref : {{tab.key}},
-			data: {		
-			   TrackedRef: $('#deviceSelect-{{tab.key}}').val(),
-			   StatisticsFunction: $('#function-{{tab.key}}').val(),
-			   StatisticsFunctionDuration: duration,
-			   RefreshIntervalSeconds: refresh.asSeconds(),
-		   }
-		};
-		
-		const data = JSON.stringify(formObject);
-		
-		$('#error-message-div-{{tab.key}}').hide(); 		
-		$('#error-message-div-{{tab.key}}').html(''); 		
-		
-		ajaxPostPlugIn("deviceedit", formObject, null, 
-			function (errorMessage) {	
-				$('#error-message-div-{{tab.key}}').show(); 
-				$('#error-message-div-{{tab.key}}').html(errorMessage);
-			}
-		);
-	});	
+        const duration = getFunctionDuration{{tab.key}}();
 
-	setupFunctionInterval{{tab.key}}();
+        const refresh = moment.duration({
+            seconds: $('#secondsRefresh-{{tab.key}}').val(),
+            minutes: $('#minutesRefresh-{{tab.key}}').val(),
+            hours: $('#hoursRefresh-{{tab.key}}').val() ,
+            days: $('#daysRefresh-{{tab.key}}').val(),
+        });
+
+        const formObject = {
+            ref : {{tab.key}},
+            data: {
+               TrackedRef: $('#deviceSelect-{{tab.key}}').val(),
+               StatisticsFunction: $('#function-{{tab.key}}').val(),
+               StatisticsFunctionDuration: duration,
+               RefreshIntervalSeconds: refresh.asSeconds(),
+           }
+        };
+
+        const data = JSON.stringify(formObject);
+
+        $('#error-message-div-{{tab.key}}').hide();
+        $('#error-message-div-{{tab.key}}').html('');
+
+        ajaxPostPlugIn("deviceedit", formObject, null,
+            function (errorMessage) {
+                $('#error-message-div-{{tab.key}}').show();
+                $('#error-message-div-{{tab.key}}').html(errorMessage);
+            }
+        );
+    });
+
+    setupFunctionInterval{{tab.key}}();
 });
-</script>
-{{end}}
+        </script>
+        {{end}}
 
-<script>
-$(document).ready(function () {
-	$('#loading').hide();
-});
-</script>
+        <script>
+            $(document).ready(function () {
+                $('#loading').hide();
+            });
+        </script>
 
-{{else}}
-Invalid device
-{{end}}
+        {{else}}
+        Invalid device
+        {{end}}
+    </div>
 
-</div>
-
-<script>
-iFrameSrcHelper();
-</script>
-
+    <script>
+        iFrameSrcHelper();
+    </script>
 </body>
 </html>

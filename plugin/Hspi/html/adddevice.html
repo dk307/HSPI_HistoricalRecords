@@ -8,14 +8,14 @@
     <!--This liquid tag loads all of the necessary css files for HomeSeer-->
     {{includefile '/bootstrap/css/page_common.css'}}
     <link href="../bootstrap/css/addons-pro/steppers.min.css" rel="stylesheet">
-    <link href="/historicalrecords/historicalrecords.css" rel="stylesheet">
-    <title>Add a statistics virtual device</title>	
+    <link href="/History/history.css" rel="stylesheet">
+    <title>Add a statistics virtual device</title>
 </head>
 <body class="body homeseer-skin">
     <!--These liquid tags add the HomeSeer header and navbar to the top of the page when appropriate-->
     {{includefile 'header.html'}}
     {{includefile 'navbar.html'}}
-	{{show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'}}
+    {{show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'}}
     <!--Primary container for the page content
         The .container class ensures the page content is fit and centered to the screen-->
     <div class="container">
@@ -23,17 +23,17 @@
         <ul id="process-stepper" class="stepper linear">
             <li class="step active locked">
                 <div data-step-label="Select device" class="step-title waves-effect waves-dark">Step 1</div>
-				
+
                 <div class="step-new-content">
-					Select a device to create a statistic device for
-					{{ deviceRefIds=plugin_function 'HistoricalRecords' 'GetTrackedDeviceList' [] }}					
+                    Select a device to create a statistic device for
+                    {{ deviceRefIds=plugin_function 'History' 'GetTrackedDeviceList' [] }}
                     <select class='mdb-select md-form colorful-select' id='deviceSelect' searchable="Search for a device here" required>
-						<option value="" disabled="disabled" selected="selected">Select Device</option>
-						{{ for id in deviceRefIds }}
-						<option value='{{id}}'>{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
-						{{ end }}
-					</select>
-                    <div class="step-actions pt-4">                   
+                        <option value="" disabled="disabled" selected="selected">Select Device</option>
+                        {{ for id in deviceRefIds }}
+                        <option value='{{id}}'>{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
+                        {{ end }}
+                    </select>
+                    <div class="step-actions pt-4">
                         <button class="waves-effect waves-dark btn btn-sm btn-primary next-step">SELECT</button>
                     </div>
                 </div>
@@ -42,162 +42,162 @@
             <li class="step">
                 <div data-step-label="Select statistical function" class="step-title waves-effect waves-dark">Step 2</div>
                 <div id="step2" class="step-new-content">
-                     				
-					<div class="row">	
-						<div class="col-5">	
-							<select id="function" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
-							{{includefile '/HistoricalRecords/includes/statisticalfunctionoptions.html'}} 																			</select> 										 
-						</div>
-						<div class="col-7">								 
-							{{includefile '/HistoricalRecords/includes/statsfuncdefs.html'}} 												
-						</div>
-					</div>
-					
+
+                    <div class="row">
+                        <div class="col-5">
+                            <select id="function" class="mdb-select md-form dropdown-primary colorful-select" name="function" required>
+                                {{includefile '/History/includes/statisticalfunctionoptions.html'}}
+                            </select>
+                        </div>
+                        <div class="col-7">
+                            {{includefile '/History/includes/statsfuncdefs.html'}}
+                        </div>
+                    </div>
+
                     <div class="step-actions" style="margin-top: 32px;">
                         <button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
                         <button class="waves-effect waves-dark btn btn-sm btn-primary next-step">SELECT</button>
                     </div>
                 </div>
             </li>
-			
-			<li class="step">
-                <div data-step-label="Select the statistical function time duration" class="step-title waves-effect waves-dark">Step 3</div>
-                <div id="step3" class="step-new-content">													
-					
-					<div class="row">
-						<div class="col" >
-							<div class="md-form" >
-								<div class="md-form ml-1 col" >
-									<select id="startDurationId" class="mdb-select md-form dropdown-primary colorful-select" required>
-										<option value="" disabled="disabled" selected="selected">Select duration</option>
-										{{includefile '/HistoricalRecords/includes/statisticalfunctionduration.html'}} 	
-									</select>
-								</div>
-							</div>
-						</div>
-					</div>
 
-					<div class="row" id='customFunctionDurationRowId' style="display:none">
-						<div class="col" >
-							<div class="md-form" >
-								<div class="input-group">
-									<div class="md-form ml-3">
-										<input type="number" id="daysDuration"  class="form-control timespan-input" value="0" min="0" required>
-										<label for="daysDuration">Days</label>
-									</div>
-									<div class="md-form ml-1">
-										<input type="number" id="hoursDuration" class="form-control timespan-input" value="0" min="0" required>
-										<label for="hoursDuration">Hours</label>
-									</div>
-									<div class="md-form ml-1">
-										<input type="number" id="minutesDuration" class="form-control timespan-input" value="10" min="0" required>
-										<label for="minutesDuration">Minutes</label>
-									</div>
-									<div class="md-form ml-1">
-										<input type="number" id="secondsDuration" class="form-control timespan-input" value="0" min="0" required>
-										<label for="secondsDuration">Seconds</label>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-					
-					<div class="step-actions" style="margin-top: 32px;">
-						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
-						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step">NEXT</button>
-					</div>
-				</div>       
-			</li>
-                    
-			<li class="step">
+            <li class="step">
+                <div data-step-label="Select the statistical function time duration" class="step-title waves-effect waves-dark">Step 3</div>
+                <div id="step3" class="step-new-content">
+
+                    <div class="row">
+                        <div class="col">
+                            <div class="md-form">
+                                <div class="md-form ml-1 col">
+                                    <select id="startDurationId" class="mdb-select md-form dropdown-primary colorful-select" required>
+                                        <option value="" disabled="disabled" selected="selected">Select duration</option>
+                                        {{includefile '/History/includes/statisticalfunctionduration.html'}}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row" id='customFunctionDurationRowId' style="display:none">
+                        <div class="col">
+                            <div class="md-form">
+                                <div class="input-group">
+                                    <div class="md-form ml-3">
+                                        <input type="number" id="daysDuration" class="form-control timespan-input" value="0" min="0" required>
+                                        <label for="daysDuration">Days</label>
+                                    </div>
+                                    <div class="md-form ml-1">
+                                        <input type="number" id="hoursDuration" class="form-control timespan-input" value="0" min="0" required>
+                                        <label for="hoursDuration">Hours</label>
+                                    </div>
+                                    <div class="md-form ml-1">
+                                        <input type="number" id="minutesDuration" class="form-control timespan-input" value="10" min="0" required>
+                                        <label for="minutesDuration">Minutes</label>
+                                    </div>
+                                    <div class="md-form ml-1">
+                                        <input type="number" id="secondsDuration" class="form-control timespan-input" value="0" min="0" required>
+                                        <label for="secondsDuration">Seconds</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-actions" style="margin-top: 32px;">
+                        <button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
+                        <button class="waves-effect waves-dark btn btn-sm btn-primary next-step">NEXT</button>
+                    </div>
+                </div>
+            </li>
+
+            <li class="step">
                 <div data-step-label="Select refresh interval" class="step-title waves-effect waves-dark">Step 4</div>
                 <div id="step4" class="step-new-content">
-					Choose the refresh interval for the statistical function, which determines how frequently the function is calculated
-                    <div class="input-group">					 
-						<div class="md-form mr-1">
-							<input type="number" id="daysRefresh" class="form-control timespan-input" value="0" min="0" required>
-							<label for="daysRefresh">Days</label>                                     
-						</div>
-						<div class="md-form mr-1">
-							<input type="number" id="hoursRefresh" class="form-control timespan-input" value="0" min="0" required>
-							<label for="hoursRefresh">Hours</label>                                     
-						</div>
-						<div class="md-form mr-1">
-							<input type="number" id="minutesRefresh" class="form-control timespan-input" value="0" min="0" required>
-							<label for="minutesRefresh">Minutes</label>                                     
-						</div>
-						<div class="md-form mr-1">
-							<input type="number" id="secondsRefresh" class="form-control timespan-input" value="30" min="0" required>
-							<label for="secondsRefresh">Seconds</label>                                     
-						</div>
-					</div>
-										
-					<div class="step-actions" style="margin-top: 32px;">
-						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
-						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step" data-feedback="prefillName">NEXT</button>
-					</div>            	
-				</div>       
+                    Choose the refresh interval for the statistical function, which determines how frequently the function is calculated
+                    <div class="input-group">
+                        <div class="md-form mr-1">
+                            <input type="number" id="daysRefresh" class="form-control timespan-input" value="0" min="0" required>
+                            <label for="daysRefresh">Days</label>
+                        </div>
+                        <div class="md-form mr-1">
+                            <input type="number" id="hoursRefresh" class="form-control timespan-input" value="0" min="0" required>
+                            <label for="hoursRefresh">Hours</label>
+                        </div>
+                        <div class="md-form mr-1">
+                            <input type="number" id="minutesRefresh" class="form-control timespan-input" value="0" min="0" required>
+                            <label for="minutesRefresh">Minutes</label>
+                        </div>
+                        <div class="md-form mr-1">
+                            <input type="number" id="secondsRefresh" class="form-control timespan-input" value="30" min="0" required>
+                            <label for="secondsRefresh">Seconds</label>
+                        </div>
+                    </div>
+
+                    <div class="step-actions" style="margin-top: 32px;">
+                        <button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
+                        <button class="waves-effect waves-dark btn btn-sm btn-primary next-step" data-feedback="prefillName">NEXT</button>
+                    </div>
+                </div>
             </li>
-			
-			{{ statDevicesRefIds=plugin_function 'HistoricalRecords' 'GetStatisticsDeviceList' [] }}    
-			{{existingStatDevices=(array.size statDevicesRefIds) > 0 }}    
-			{{# existingStatDevices=false }}    
-			<li class="step">
+
+            {{ statDevicesRefIds=plugin_function 'History' 'GetStatisticsDeviceList' [] }}
+            {{existingStatDevices=(array.size statDevicesRefIds) > 0 }}
+            {{# existingStatDevices=false }}
+            <li class="step">
                 <div data-step-label="Select {{if !existingStatDevices}}name of{{end}} device" class="step-title waves-effect waves-dark">Step 5</div>
-                <div id="step5" class="step-new-content">                  
-					{{if existingStatDevices}} 
-					Create new device or add to existing device ? 
-					{{end}}
-					<div class="row">
-						{{if existingStatDevices}} 
-						<div class="md-form col">
-							<div class="form-check">
-								<input type="radio" class="form-check-input" id="createNewDeviceId" name="createOrSelectDevice" checked>
-								<label class="form-check-label" for="createNewDeviceId">Create new device</label>
-							</div>	
-						</div>
-						{{end}}
-													
-						<div class="{{if !existingStatDevices}}col-12{{else}}col-9{{end}} ml-1" >
-							<div class="md-form" >
-								{{if !existingStatDevices}} 
-								<input type="radio" class="form-check-input" id="createNewDeviceId" name="createOrSelectDevice" style="display:none" checked>
-								{{end}}
-								<input id="deviceName" type="text" class="form-control">                              
-							</div>
-						</div>
-					</div>
-											
-					{{if existingStatDevices}} 
-					Or
-					<div class="row">
-						<div class="md-form col">
-							<div class="form-check">
-								<input type="radio" class="form-check-input" id="selectExistingDeviceId" name="createOrSelectDevice">
-								<label class="form-check-label" for="selectExistingDeviceId">Select existing device</label>
-							</div>
-						</div>
-						
-						<div class="md-form ml-1 col-9" id="existingDeviceColId" style="display:none">
-							<select id="existingDeviceId" class="mdb-select md-form dropdown-primary colorful-select" name="existingDeviceId"  required>
-								<option value="" disabled="disabled" selected="selected">Select Device</option>
-								{{for id in statDevicesRefIds}}
-									<option value="{{id}}">{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>	
-								{{end}}			
-							</select> 
-						</div>
-					</div>
-					{{end}}
-									
-					<div id="error-message-div" class="text-danger">
-					</div>		
-					
-					<div class="step-actions" style="margin-top: 32px;">
-						<button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
-						<button class="waves-effect waves-dark btn btn-sm btn-primary next-step" data-feedback="createDevice">CREATE</button>
-					</div>            	
-				</div>   
-				
+                <div id="step5" class="step-new-content">
+                    {{if existingStatDevices}}
+                    Create new device or add to existing device ?
+                    {{end}}
+                    <div class="row">
+                        {{if existingStatDevices}}
+                        <div class="md-form col">
+                            <div class="form-check">
+                                <input type="radio" class="form-check-input" id="createNewDeviceId" name="createOrSelectDevice" checked>
+                                <label class="form-check-label" for="createNewDeviceId">Create new device</label>
+                            </div>
+                        </div>
+                        {{end}}
+
+                        <div class="{{if !existingStatDevices}}col-12{{else}}col-9{{end}} ml-1">
+                            <div class="md-form">
+                                {{if !existingStatDevices}}
+                                <input type="radio" class="form-check-input" id="createNewDeviceId" name="createOrSelectDevice" style="display:none" checked>
+                                {{end}}
+                                <input id="deviceName" type="text" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+
+                    {{if existingStatDevices}}
+                    Or
+                    <div class="row">
+                        <div class="md-form col">
+                            <div class="form-check">
+                                <input type="radio" class="form-check-input" id="selectExistingDeviceId" name="createOrSelectDevice">
+                                <label class="form-check-label" for="selectExistingDeviceId">Select existing device</label>
+                            </div>
+                        </div>
+
+                        <div class="md-form ml-1 col-9" id="existingDeviceColId" style="display:none">
+                            <select id="existingDeviceId" class="mdb-select md-form dropdown-primary colorful-select" name="existingDeviceId" required>
+                                <option value="" disabled="disabled" selected="selected">Select Device</option>
+                                {{for id in statDevicesRefIds}}
+                                <option value="{{id}}">{{device_name_full id true | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                    </div>
+                    {{end}}
+
+                    <div id="error-message-div" class="text-danger">
+                    </div>
+
+                    <div class="step-actions" style="margin-top: 32px;">
+                        <button class="waves-effect waves-dark btn btn-sm btn-secondary previous-step">BACK</button>
+                        <button class="waves-effect waves-dark btn btn-sm btn-primary next-step" data-feedback="createDevice">CREATE</button>
+                    </div>
+                </div>
             </li>
 
             <li class="step">
@@ -218,141 +218,141 @@
     <!-- Placed at the end of the document so the pages load faster -->
     {{includefile 'bootstrap/js/page_common.js'}}
     <script type="text/javascript" src="../bootstrap/js/addons-pro/steppers.min.js"></script>
-	<script type="text/javascript" src="/HistoricalRecords/moment.min.js"></script>
-	<script type="text/javascript" src="/HistoricalRecords/historicalrecords.common.js"></script>
+    <script type="text/javascript" src="/History/moment.min.js"></script>
+    <script type="text/javascript" src="/History/history.common.js"></script>
     <script type="text/javaScript">
-		let refId = null;
+        let refId = null;
         $(document).ready(function () {
             setupFunctionDurationControls();
             deviceSelectSetup();
-			$('.stepper').mdbStepper();
+            $('.stepper').mdbStepper();
         })
-		
-		function updateDeviceSelectElements() {	
-			if ($('#selectExistingDeviceId').prop('checked') == true) {		
-				$('#existingDeviceColId').show();
-				$('#deviceName').hide();
-			} else {
-				$('#existingDeviceColId').hide();		
-				$('#deviceName').show();		
-			}	
-		}
-		
-		function deviceSelectSetup() {	
-			$('#createNewDeviceId').change(updateDeviceSelectElements);	
-			$('#selectExistingDeviceId').change(updateDeviceSelectElements);		
-		}
-				
-		function prefillName() {	
-			if (!$('#deviceName').val()) {
-				const str = $('#deviceSelect option:selected').text();	
 
-				{{if show_refId}}		
-				const regex = new RegExp('^(.*)\\(\\d*\\)$', 'gms')
-				 			
-				let m;
+        function updateDeviceSelectElements() {
+            if ($('#selectExistingDeviceId').prop('checked') == true) {
+                $('#existingDeviceColId').show();
+                $('#deviceName').hide();
+            } else {
+                $('#existingDeviceColId').hide();
+                $('#deviceName').show();
+            }
+        }
 
-				while ((m = regex.exec(str)) !== null) {
-					// This is necessary to avoid infinite loops with zero-width matches
-					if (m.index === regex.lastIndex) {
-						regex.lastIndex++;
-					}
-					
-					// The result can be accessed through the `m`-variable.
-					m.forEach((match, groupIndex) => {
-						console.log(`Found match, group ${groupIndex}: ${match}`);
-						$('#deviceName').val(match + "Statistics");
-					});
-				}
-				{{else}}
-				$('#deviceName').val(str + " Statistics");
-				{{end}}	 
-			}
-			$('#process-stepper').nextStep();
-		}
-		
-        function createDevice() {		
-			const duration = getFunctionDuration();
-			
-			const refresh = moment.duration({
-				seconds: $('#secondsRefresh').val(),
-				minutes: $('#minutesRefresh').val(),
-				hours: $('#hoursRefresh').val() ,
-				days: $('#daysRefresh').val(),
-			});
-						
-			const formObject = {
-			   name: $('#deviceName').val(),
-			   parentRef: $('#selectExistingDeviceId').prop('checked') == true ? parseInt($('#existingDeviceId').val()) : null,
-			   data: {
-				   TrackedRef: $('#deviceSelect').val(),
-				   StatisticsFunction: $('#function').val(),
-				   StatisticsFunctionDuration: duration,
-				   RefreshIntervalSeconds: refresh.asSeconds(),				   
-			   }
-		    };
-			
-			const data = JSON.stringify(formObject);
-			
-			$('#error-message-div').html('');
-			
-			ajaxPostPlugIn("devicecreate", formObject, function (result) {	
-				$('#process-stepper').destroyFeedback();			
-				$('#process-stepper').nextStep();
-				refId = result.ref;
-			}, function (errorMessage) {	
-				$('#process-stepper').destroyFeedback();			
-				$('#error-message-div').html(errorMessage);
-			}
-			);
+        function deviceSelectSetup() {
+            $('#createNewDeviceId').change(updateDeviceSelectElements);
+            $('#selectExistingDeviceId').change(updateDeviceSelectElements);
+        }
+
+        function prefillName() {
+            if (!$('#deviceName').val()) {
+                const str = $('#deviceSelect option:selected').text();
+
+                {{if show_refId}}
+                const regex = new RegExp('^(.*)\\(\\d*\\)$', 'gms')
+
+                let m;
+
+                while ((m = regex.exec(str)) !== null) {
+                    // This is necessary to avoid infinite loops with zero-width matches
+                    if (m.index === regex.lastIndex) {
+                        regex.lastIndex++;
+                    }
+
+                    // The result can be accessed through the `m`-variable.
+                    m.forEach((match, groupIndex) => {
+                        console.log(`Found match, group ${groupIndex}: ${match}`);
+                        $('#deviceName').val(match + "Statistics");
+                    });
+                }
+                {{else}}
+                $('#deviceName').val(str + " Statistics");
+                {{end}}
+            }
+            $('#process-stepper').nextStep();
+        }
+
+        function createDevice() {
+            const duration = getFunctionDuration();
+
+            const refresh = moment.duration({
+                seconds: $('#secondsRefresh').val(),
+                minutes: $('#minutesRefresh').val(),
+                hours: $('#hoursRefresh').val() ,
+                days: $('#daysRefresh').val(),
+            });
+
+            const formObject = {
+               name: $('#deviceName').val(),
+               parentRef: $('#selectExistingDeviceId').prop('checked') == true ? parseInt($('#existingDeviceId').val()) : null,
+               data: {
+                   TrackedRef: $('#deviceSelect').val(),
+                   StatisticsFunction: $('#function').val(),
+                   StatisticsFunctionDuration: duration,
+                   RefreshIntervalSeconds: refresh.asSeconds(),
+               }
+            };
+
+            const data = JSON.stringify(formObject);
+
+            $('#error-message-div').html('');
+
+            ajaxPostPlugIn("devicecreate", formObject, function (result) {
+                $('#process-stepper').destroyFeedback();
+                $('#process-stepper').nextStep();
+                refId = result.ref;
+            }, function (errorMessage) {
+                $('#process-stepper').destroyFeedback();
+                $('#error-message-div').html(errorMessage);
+            }
+            );
         }
 
         function finish() {
             const devicesPage = window.location.origin + "/Devices.html?ref=" + refId + "&subpage=devprop&tab=settings";
             window.location.assign(devicesPage);
         }
-				 
-		function setupFunctionDurationControls() {
-			$(document).ready(function() {
-			  $('#startDurationId').change(function() {
-				if ($('#startDurationId').val() == 'now') {
-					$('#customFunctionDurationRowId').show();
-				}
-				else {
-					$('#customFunctionDurationRowId').hide();
-				}
-			  });
-			});
-		}
 
-		function getFunctionDuration() {
-			const durationType = $('#startDurationId').val();
-			switch($('#startDurationId').val()){
-				case "now":
-				{
-					let duration = moment.duration({
-						seconds: $('#secondsDuration').val(),
-						minutes: $('#minutesDuration').val(),
-						hours: $('#hoursDuration').val() ,
-						days: $('#daysDuration').val(),
-					});
+        function setupFunctionDurationControls() {
+            $(document).ready(function() {
+              $('#startDurationId').change(function() {
+                if ($('#startDurationId').val() == 'now') {
+                    $('#customFunctionDurationRowId').show();
+                }
+                else {
+                    $('#customFunctionDurationRowId').hide();
+                }
+              });
+            });
+        }
 
-					if (duration.isValid()) {
-						return  { CustomPeriod: { 
-										End:  { 
-											Type: 'Now'
-										}, 
-										FunctionDurationSeconds : duration.asSeconds()
-									}
-								};
-					}
+        function getFunctionDuration() {
+            const durationType = $('#startDurationId').val();
+            switch($('#startDurationId').val()){
+                case "now":
+                {
+                    let duration = moment.duration({
+                        seconds: $('#secondsDuration').val(),
+                        minutes: $('#minutesDuration').val(),
+                        hours: $('#hoursDuration').val() ,
+                        days: $('#daysDuration').val(),
+                    });
 
-					return null;
-				}
-				default:
-					return { PreDefinedPeriod:  durationType };
-			};
-		}
+                    if (duration.isValid()) {
+                        return  { CustomPeriod: {
+                                        End:  {
+                                            Type: 'Now'
+                                        },
+                                        FunctionDurationSeconds : duration.asSeconds()
+                                    }
+                                };
+                    }
+
+                    return null;
+                }
+                default:
+                    return { PreDefinedPeriod:  durationType };
+            };
+        }
     </script>
 </body>
 </html>

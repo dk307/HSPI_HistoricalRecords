@@ -6,7 +6,7 @@ using Hspi;
 using NUnit.Framework;
 using static HomeSeer.PluginSdk.PluginStatus;
 
-namespace HSPI_HistoricalRecordsTest
+namespace HSPI_HistoryTest
 
 {
     [TestFixture]
