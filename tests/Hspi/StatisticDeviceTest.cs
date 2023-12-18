@@ -127,7 +127,7 @@ namespace HSPI_HistoricalRecordsTest
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
 
-            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+            DateTimeOffset aTime = new(2222, 2, 2, 2, 2, 2, TimeSpan.FromHours(-11));
 
             int statsDeviceRefId = 100;
             int statsFeatureRefId = 1000;
@@ -141,10 +141,10 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
-                                           trackedDeviceRefId, 10, "10", aTime.AddMinutes(-10), 1);
+                                           trackedDeviceRefId, 10, "10", aTime.AddMinutes(-10).LocalDateTime, 1);
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
-                                           trackedDeviceRefId, 20, "20", aTime.AddMinutes(-5), 2);
+                                           trackedDeviceRefId, 20, "20", aTime.AddMinutes(-5).LocalDateTime, 2);
 
             Assert.That(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
 
@@ -174,10 +174,9 @@ namespace HSPI_HistoricalRecordsTest
         public void DeviceIsUpdatedRounded()
         {
             var plugIn = TestHelper.CreatePlugInMock();
-            var hsControllerMock =
-                TestHelper.SetupHsControllerAndSettings2(plugIn);
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
 
-            DateTime aTime = new(2222, 2, 2, 2, 2, 2, DateTimeKind.Local);
+            DateTimeOffset aTime = new(2222, 2, 2, 2, 2, 2, TimeSpan.FromHours(-2));
 
             int statsDeviceRefId = 100;
             int statsFeatureRefId = 1000;
@@ -195,7 +194,7 @@ namespace HSPI_HistoricalRecordsTest
 
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
-                                           trackedDeviceRefId, 11.85733, "11.2", aTime.AddMinutes(-10), 1);
+                                           trackedDeviceRefId, 11.85733, "11.2", aTime.AddMinutes(-10).LocalDateTime, 1);
 
             plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId);
 
@@ -204,9 +203,8 @@ namespace HSPI_HistoricalRecordsTest
             Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
         }
 
-        [TestCase(true)]
-        [TestCase(false)]
-        public void DevicePolled(bool device)
+        [Test]
+        public void DevicePolled([Values] bool device)
         {
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);

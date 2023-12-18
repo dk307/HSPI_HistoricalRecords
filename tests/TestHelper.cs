@@ -157,7 +157,6 @@ namespace HSPI_HistoricalRecordsTest
             var mockClock = new Mock<IGlobalTimerAndClock>(MockBehavior.Strict);
             plugIn.Protected().Setup<IGlobalTimerAndClock>("CreateClock").Returns(mockClock.Object);
             mockClock.Setup(x => x.FirstDayOfWeek).Returns(DayOfWeek.Monday);
-            mockClock.Setup(x => x.TimeZone).Returns(TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time"));
             mockClock.Setup(x => x.IntervalToRetrySqliteCollection).Returns(TimeSpan.FromSeconds(600));
             mockClock.Setup(x => x.TimeoutForBackup).Returns(TimeSpan.FromSeconds(600));
             mockClock.Setup(x => x.MaintenanceInterval).Returns(TimeSpan.FromSeconds(600));
@@ -231,7 +230,7 @@ namespace HSPI_HistoricalRecordsTest
 
             RaiseHSEvent(plugin, eventType, refId);
             Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, expectedCount));
-            return new RecordData(refId, value, status, ((DateTimeOffset)lastChange).ToUnixTimeSeconds());
+            return new RecordData(refId, value, status, lastChange.ToUnixTimeSeconds());
         }
 
         public static Mock<IHsController> SetupHsControllerAndSettings(Mock<PlugIn> mockPlugin,
@@ -292,13 +291,13 @@ namespace HSPI_HistoricalRecordsTest
         public static void SetupStatisticsFeature(StatisticsFunction statisticsFunction,
                                                   Mock<PlugIn> plugIn,
                                                   FakeHSController hsControllerMock,
-                                                  DateTime aTime,
+                                                  DateTimeOffset aTime,
                                                   int statsDeviceRefId,
                                                   int statsFeatureRefId,
                                                   int trackedFeatureRefId)
         {
             Mock<IGlobalTimerAndClock> mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugIn);
-            mockClock.Setup(x => x.UtcNow).Returns(aTime.AddSeconds(-1));
+            mockClock.Setup(x => x.LocalNow).Returns(aTime.AddSeconds(-1));
 
             hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
 

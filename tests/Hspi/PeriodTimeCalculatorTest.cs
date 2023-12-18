@@ -10,26 +10,83 @@ namespace HSPI_HistoricalRecordsTest
     public class PeriodTimeCalculatorTest
 
     {
+        [Test]
+        public void CalculateMinMaxSecondsForPredefinedPeriod([Values] PreDefinedPeriod preDefinedPeriod)
+        {
+            var period = Period.Create(preDefinedPeriod);
+
+            var dt = dateTimeLocal1;
+
+            FakeGlobalClock fakeGlobalClock = new(DateTimeOffset.MinValue, dateTimeLocal1, DayOfWeek.Monday);
+
+            DateTimeOffset minDateTime;
+            DateTimeOffset maxDateTime;
+
+            switch (preDefinedPeriod)
+            {
+                case PreDefinedPeriod.ThisHour:
+                    minDateTime = new DateTimeOffset(dt.Year, dt.Month, dt.Day, dt.Hour, 0, 0, dt.Offset);
+                    maxDateTime = dt;
+                    break;
+
+                case PreDefinedPeriod.Today:
+                    minDateTime = new DateTimeOffset(dt.Year, dt.Month, dt.Day, 0, 0, 0, dt.Offset);
+                    maxDateTime = dt;
+                    break;
+
+                case PreDefinedPeriod.Yesterday:
+                    maxDateTime = new DateTimeOffset(dt.Year, dt.Month, dt.Day, 0, 0, 0, dt.Offset);
+                    minDateTime = maxDateTime.AddDays(-1);
+                    break;
+
+                case PreDefinedPeriod.ThisWeek:
+                    minDateTime = (new DateTimeOffset(dt.Year, dt.Month, dt.Day, 0, 0, 0, dt.Offset)).AddDays(-1);
+                    maxDateTime = dt;
+
+                    break;
+
+                case PreDefinedPeriod.ThisMonth:
+                    minDateTime = new DateTimeOffset(dt.Year, dt.Month, 1, 0, 0, 0, dt.Offset);
+                    maxDateTime = dt;
+                    break;
+
+                default:
+                    throw new NotImplementedException();
+            }
+
+            Assert.That(period.CalculateMinMaxSeconds(fakeGlobalClock),
+                                                      Is.EqualTo(new MinMaxValues(minDateTime.ToUnixTimeSeconds(),
+                                                                                  maxDateTime.ToUnixTimeSeconds())));
+        }
+
         [TestCase(31536000UL)] // 1 year
         [TestCase(60UL)]
-        public void CalculateMinMaxSecondsForLastXDuration(ulong count)
+        public void CalculateMinMaxSecondsForPastDuration(ulong count)
         {
             var period = new Period(null, new Instant(InstantType.Now), count);
 
-            FakeGlobalClock fakeGlobalClock = new(dateTime1, TimeZoneInfo.FindSystemTimeZoneById("UTC"), DayOfWeek.Monday);
+            FakeGlobalClock fakeGlobalClock = new(DateTimeOffset.MinValue, dateTimeLocal1, DayOfWeek.Monday);
 
             Assert.That(period.CalculateMinMaxSeconds(fakeGlobalClock),
-                                                      Is.EqualTo(new MinMaxValues(dateTime1.AddSeconds(-(double)count).ToUnixTimeSeconds(),
-                                                                                  dateTime1.ToUnixTimeSeconds())));
+                                                      Is.EqualTo(new MinMaxValues(dateTimeLocal1.AddSeconds(-(double)count).ToUnixTimeSeconds(),
+                                                                                  dateTimeLocal1.ToUnixTimeSeconds())));
+        }
+
+        [Test]
+        public void InstantCalculateTimeForSundayStartOfWeek()
+        {
+            var instant = new Instant(InstantType.StartOfWeek, null);
+            Assert.That(instant.CalculateTime(dateTimeLocal1, DayOfWeek.Sunday),
+                        Is.EqualTo(dateTimeLocal1.AddSeconds(-2 * SecondsInDay - (dateTimeLocal1.Hour * SecondsInHour + dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second))));
         }
 
         [TestCaseSource(nameof(CreateInstantCalculateTimeCases))]
         public void InstantCalculateTime(InstantType type, IDictionary<PeriodUnits, int> offsets,
-                                            string timezoneId, DateTime dateTime, int expectedOffset)
+                                         DateTimeOffset dateTime, int expectedOffset)
         {
             var instant = new Instant(type, offsets);
-            Assert.That(instant.CalculateTime(dateTime, TimeZoneInfo.FindSystemTimeZoneById(timezoneId), DayOfWeek.Monday),
-                        Is.EqualTo(dateTime.AddSeconds(expectedOffset)));
+            Assert.That(instant.CalculateTime(dateTime, DayOfWeek.Monday).ToUnixTimeSeconds(),
+                        Is.EqualTo(dateTime.AddSeconds(expectedOffset).ToUnixTimeSeconds()));
         }
 
         [Test]
@@ -44,16 +101,16 @@ namespace HSPI_HistoricalRecordsTest
 
         private static IEnumerable<object[]> CreateInstantCalculateTimeCases()
         {
-            yield return new object[] { InstantType.Now, EmptyOffsets, utcTimeZone, dateTimeStartOfDay, 0 };
-            yield return new object[] { InstantType.Now, EmptyOffsets, "Tokyo Standard Time", dateTimeStartOfDay, 0 };
+            yield return new object[] { InstantType.Now, EmptyOffsets, dateTimeStartOfDayUtc, 0 };
+            yield return new object[] { InstantType.Now, EmptyOffsets, dateTimeStartOfDayUtc, 0 };
 
             // Try each type
-            yield return new object[] { InstantType.Now, OffsetFromSeconds(10), utcTimeZone, dateTimeStartOfDay, 10 };
-            yield return new object[] { InstantType.Now, OffsetFromMinutes(6), utcTimeZone, dateTimeStartOfDay, 6 * SecondsInMinute };
-            yield return new object[] { InstantType.Now, OffsetFromHours(6), utcTimeZone, dateTimeStartOfDay, 6 * SecondsInHour };
-            yield return new object[] { InstantType.Now, OffsetFromDays(-1), utcTimeZone, dateTimeStartOfDay, -SecondsInDay };
-            yield return new object[] { InstantType.Now, OffsetFromMonths(1), utcTimeZone, dateTimeStartOfDay, SecondsInDay * 30 };
-            yield return new object[] { InstantType.Now, OffsetFromYears(-1), utcTimeZone, dateTimeStartOfDay, -SecondsInDay * 365 };
+            yield return new object[] { InstantType.Now, OffsetFromSeconds(10), dateTimeStartOfDayUtc, 10 };
+            yield return new object[] { InstantType.Now, OffsetFromMinutes(6), dateTimeStartOfDayUtc, 6 * SecondsInMinute };
+            yield return new object[] { InstantType.Now, OffsetFromHours(6), dateTimeStartOfDayUtc, 6 * SecondsInHour };
+            yield return new object[] { InstantType.Now, OffsetFromDays(-1), dateTimeStartOfDayUtc, -SecondsInDay };
+            yield return new object[] { InstantType.Now, OffsetFromMonths(1), dateTimeStartOfDayUtc, SecondsInDay * 30 };
+            yield return new object[] { InstantType.Now, OffsetFromYears(-1), dateTimeStartOfDayUtc, -SecondsInDay * 365 };
 
             //combined
             yield return new object[] { InstantType.Now, new Dictionary<PeriodUnits, int>() {
@@ -65,49 +122,49 @@ namespace HSPI_HistoricalRecordsTest
                 { PeriodUnits.Seconds, 1 },
             },
 
-            utcTimeZone, dateTimeStartOfDay,
+             dateTimeStartOfDayUtc,
             SecondsInDay * 365 + SecondsInDay * 30 + SecondsInDay + SecondsInHour + SecondsInMinute + 1};
 
             // Leap year check
-            yield return new object[] { InstantType.Now, OffsetFromYears(2), utcTimeZone, dateTimeStartOfDay, 2 * SecondsInDay * 365 + SecondsInDay };
+            yield return new object[] { InstantType.Now, OffsetFromYears(2), dateTimeStartOfDayUtc, 2 * SecondsInDay * 365 + SecondsInDay };
 
             yield return new object[] { InstantType.Now,
                            new Dictionary<PeriodUnits, int>() { {PeriodUnits.Days, 14}, {PeriodUnits.Hours, 2 }, { PeriodUnits.Minutes, 1 } },
-                           "Pacific Standard Time", dateTimeStartOfDay,
+                           dateTimeStartOfDayUtc,
                            SecondsInDay * 14 + SecondsInHour * 2 + SecondsInMinute  };
 
             // start of hour
-            yield return new object[] { InstantType.StartOfHour, EmptyOffsets, utcTimeZone, dateTime1,
-                                       -(dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
-            yield return new object[] { InstantType.StartOfHour, OffsetFromHours(1), utcTimeZone, dateTime1,
-                                       SecondsInHour -(dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
-            yield return new object[] { InstantType.StartOfHour, EmptyOffsets, utcTimeZone, dateTimeStartOfDay, 0 };
+            yield return new object[] { InstantType.StartOfHour, EmptyOffsets,  dateTimeLocal1,
+                                       -(dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
+            yield return new object[] { InstantType.StartOfHour, OffsetFromHours(1),  dateTimeLocal1,
+                                       SecondsInHour -(dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
+            yield return new object[] { InstantType.StartOfHour, EmptyOffsets, dateTimeStartOfDayUtc, 0 };
 
             // start of day
-            yield return new object[] { InstantType.StartOfDay, EmptyOffsets, utcTimeZone, dateTime1,
-                                       -(dateTime1.Hour * SecondsInHour +  dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
-            yield return new object[] { InstantType.StartOfDay, OffsetFromHours(1), utcTimeZone, dateTime1,
-                                       SecondsInHour -(dateTime1.Hour * SecondsInHour + dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
-            yield return new object[] { InstantType.StartOfDay, OffsetFromDays(-1), utcTimeZone, dateTime1,
-                                       -SecondsInDay -(dateTime1.Hour * SecondsInHour + dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
-            yield return new object[] { InstantType.StartOfDay, EmptyOffsets, utcTimeZone, dateTimeStartOfDay, 0 };
+            yield return new object[] { InstantType.StartOfDay, EmptyOffsets,  dateTimeLocal1,
+                                       -(dateTimeLocal1.Hour * SecondsInHour +  dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
+            yield return new object[] { InstantType.StartOfDay, OffsetFromHours(1),  dateTimeLocal1,
+                                       SecondsInHour -(dateTimeLocal1.Hour * SecondsInHour + dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
+            yield return new object[] { InstantType.StartOfDay, OffsetFromDays(-1),  dateTimeLocal1,
+                                       -SecondsInDay -(dateTimeLocal1.Hour * SecondsInHour + dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
+            yield return new object[] { InstantType.StartOfDay, EmptyOffsets, dateTimeStartOfDayUtc, 0 };
 
             // start of month
-            yield return new object[] { InstantType.StartOfMonth, EmptyOffsets, utcTimeZone, dateTime1,
-                                       -((dateTime1.Day - 1) * SecondsInDay + dateTime1.Hour * SecondsInHour +  dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
-            yield return new object[] { InstantType.StartOfMonth, OffsetFromMonths(-1), utcTimeZone, dateTime1,
-                                       -SecondsInDay * 31 -((dateTime1.Day -1) * SecondsInDay + dateTime1.Hour * SecondsInHour + dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
-            yield return new object[] { InstantType.StartOfMonth, EmptyOffsets, utcTimeZone, dateTimeStartOfDay, 0 };
+            yield return new object[] { InstantType.StartOfMonth, EmptyOffsets,  dateTimeLocal1,
+                                       -((dateTimeLocal1.Day - 1) * SecondsInDay + dateTimeLocal1.Hour * SecondsInHour +  dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
+            yield return new object[] { InstantType.StartOfMonth, OffsetFromMonths(-1),  dateTimeLocal1,
+                                       -SecondsInDay * 31 -((dateTimeLocal1.Day -1) * SecondsInDay + dateTimeLocal1.Hour * SecondsInHour + dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
+            yield return new object[] { InstantType.StartOfMonth, EmptyOffsets, dateTimeStartOfDayUtc, 0 };
 
             // start of year
-            yield return new object[] { InstantType.StartOfYear, EmptyOffsets, utcTimeZone, dateTime1,
-                                       -(162 * SecondsInDay + dateTime1.Hour * SecondsInHour +  dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
-            yield return new object[] { InstantType.StartOfYear, OffsetFromMonths(1), utcTimeZone, dateTime1,
-                                       -((162 -31) * SecondsInDay + dateTime1.Hour * SecondsInHour +  dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
+            yield return new object[] { InstantType.StartOfYear, EmptyOffsets,  dateTimeLocal1,
+                                       -(162 * SecondsInDay + dateTimeLocal1.Hour * SecondsInHour +  dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
+            yield return new object[] { InstantType.StartOfYear, OffsetFromMonths(1),  dateTimeLocal1,
+                                       -((162 -31) * SecondsInDay + dateTimeLocal1.Hour * SecondsInHour +  dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
 
             // start of week
-            yield return new object[] { InstantType.StartOfWeek, EmptyOffsets, utcTimeZone, dateTime1,
-                                       -((1) * SecondsInDay + dateTime1.Hour * SecondsInHour +  dateTime1.Minute * SecondsInMinute + dateTime1.Second) };
+            yield return new object[] { InstantType.StartOfWeek, EmptyOffsets,  dateTimeLocal1,
+                                       -((1) * SecondsInDay + dateTimeLocal1.Hour * SecondsInHour +  dateTimeLocal1.Minute * SecondsInMinute + dateTimeLocal1.Second) };
         }
 
         private static Dictionary<PeriodUnits, int> OffsetFromDays(int count) => new() { { PeriodUnits.Days, count } };
@@ -125,10 +182,9 @@ namespace HSPI_HistoricalRecordsTest
         private const int SecondsInDay = SecondsInHour * 24;
         private const int SecondsInHour = 60 * SecondsInMinute;
         private const int SecondsInMinute = 60;
-        private const string utcTimeZone = "UTC";
-        private static readonly DateTime dateTime1 = new(2024, 6, 11, 11, 23, 30);
-        private static readonly DateTime dateTimeStartOfDay = new(2022, 11, 1, 0, 0, 0);
+        private static readonly DateTimeOffset dateTimeLocal1 = new(2024, 6, 11, 11, 23, 30, TimeSpan.FromHours(5));
+        private static readonly DateTimeOffset dateTimeStartOfDayUtc = new(2022, 11, 1, 0, 0, 0, TimeSpan.Zero);
         private static readonly Dictionary<PeriodUnits, int> EmptyOffsets = new();
-        private record FakeGlobalClock(DateTime UtcNow, TimeZoneInfo TimeZone, DayOfWeek FirstDayOfWeek) : IGlobalClock;
+        private record FakeGlobalClock(DateTimeOffset UtcNow, DateTimeOffset LocalNow, DayOfWeek FirstDayOfWeek) : IGlobalClock;
     }
 }

@@ -8,9 +8,9 @@ namespace Hspi
 {
     internal interface IGlobalClock
     {
-        DateTime UtcNow { get; }
+        DateTimeOffset LocalNow { get; }
 
-        TimeZoneInfo TimeZone { get; }
+        DateTimeOffset UtcNow { get; }
 
         DayOfWeek FirstDayOfWeek { get; }
     };
@@ -26,9 +26,8 @@ namespace Hspi
 
     internal class GlobalTimerAndClock : IGlobalTimerAndClock, IGlobalClock
     {
-        public DateTime UtcNow => DateTime.UtcNow;
-
-        public TimeZoneInfo TimeZone => TimeZoneInfo.Local;
+        public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+        public DateTimeOffset LocalNow => DateTimeOffset.Now;
 
         public DayOfWeek FirstDayOfWeek => CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
 
