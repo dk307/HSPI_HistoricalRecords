@@ -100,6 +100,7 @@
     <Compile Include="Hspi\Device\PeriodHumanizer.cs" />
     <Compile Include="Hspi\Device\PeriodTimeCalculator.cs" />
     <Compile Include="Hspi\Device\StatisticsDeviceData.cs" />
+    <Compile Include="Hspi\Device\StatisticsDeviceTimer.cs" />
     <Compile Include="Hspi\Device\StatisticsDeviceUpdater.cs" />
     <Compile Include="Hspi\Device\StatisticsFunctionDuration.cs" />
     <Compile Include="Hspi\HsFeatureCachedProperty.cs" />

@@ -60,6 +60,20 @@ namespace Hspi.Device
             return instant.Offsets != null ? ApplyOffsets(time, instant.Offsets) : time;
         }
 
+        public static DateTimeOffset StartOfDay(this DateTimeOffset x) => new(x.Year, x.Month, x.Day, 0, 0, 0, x.Offset);
+
+        public static DateTimeOffset StartOfHour(this DateTimeOffset x) => new(x.Year, x.Month, x.Day, x.Hour, 0, 0, x.Offset);
+
+        public static DateTimeOffset StartOfMonth(this DateTimeOffset x) => new(x.Year, x.Month, 1, 0, 0, 0, x.Offset);
+
+        public static DateTimeOffset StartOfWeek(this DateTimeOffset dt, DayOfWeek startOfWeek)
+        {
+            int diff = (7 + (dt.DayOfWeek - startOfWeek)) % 7;
+            return StartOfDay(dt.AddDays(-diff));
+        }
+
+        public static DateTimeOffset StartOfYear(this DateTimeOffset x) => new(x.Year, 1, 1, 0, 0, 0, x.Offset);
+
         private static DateTimeOffset ApplyOffsets(DateTimeOffset dt, ImmutableSortedDictionary<PeriodUnits, int> offsets)
         {
             foreach (var offset in offsets)
@@ -79,20 +93,6 @@ namespace Hspi.Device
 
             return dt;
         }
-
-        private static DateTimeOffset StartOfDay(DateTimeOffset x) => new(x.Year, x.Month, x.Day, 0, 0, 0, x.Offset);
-
-        private static DateTimeOffset StartOfHour(DateTimeOffset x) => new(x.Year, x.Month, x.Day, x.Hour, 0, 0, x.Offset);
-
-        private static DateTimeOffset StartOfMonth(DateTimeOffset x) => new(x.Year, x.Month, 1, 0, 0, 0, x.Offset);
-
-        private static DateTimeOffset StartOfWeek(this DateTimeOffset dt, DayOfWeek startOfWeek)
-        {
-            int diff = (7 + (dt.DayOfWeek - startOfWeek)) % 7;
-            return StartOfDay(dt.AddDays(-diff));
-        }
-
-        private static DateTimeOffset StartOfYear(DateTimeOffset x) => new(x.Year, 1, 1, 0, 0, 0, x.Offset);
     }
 
     internal record struct MinMaxValues(long Minimum, long Maximum)
