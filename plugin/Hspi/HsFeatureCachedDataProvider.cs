@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text.RegularExpressions;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
-using HomeSeer.PluginSdk.Devices.Identification;
 
 #nullable enable
 
@@ -68,35 +68,22 @@ namespace Hspi
 
         private int GetFeaturePrecision(int refId)
         {
-            var typeInfo = GetPropertyValue<TypeInfo>(refId, EProperty.DeviceType);
+            return UpdateMaxPrecision(refId) ?? 3;
 
-            int? precision = null;
-            if (typeInfo.ApiType == EApiType.Feature)
-            {
-                UpdateMaxPrecision(refId, ref precision);
-            }
-
-            precision ??= 3;
-            return precision.Value;
-
-            void UpdateMaxPrecision(int refId, ref int? precision)
+            int? UpdateMaxPrecision(int refId)
             {
                 var graphics = GetPropertyValue<List<StatusGraphic>>(refId, EProperty.StatusGraphics);
 
-                if (graphics == null)
+                if (graphics != null)
                 {
-                    return;
-                }
-
-                foreach (StatusGraphic graphic in graphics)
-                {
-                    if (graphic.IsRange)
+                    var decimalPlaces = graphics.Where(x => x.IsRange).Select(x => x.TargetRange.DecimalPlaces);
+                    if (decimalPlaces.Any())
                     {
-                        precision = precision == null ?
-                                    graphic.TargetRange.DecimalPlaces :
-                                    Math.Max(precision.Value, graphic.TargetRange.DecimalPlaces);
+                        return decimalPlaces.Max();
                     }
                 }
+
+                return null;
             }
         }
 

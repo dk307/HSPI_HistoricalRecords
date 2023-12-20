@@ -10,6 +10,7 @@
     <meta http-equiv="Expires" content="0" />
 
     {{includefile '/bootstrap/css/page_common.css'}}
+    <link href="/bootstrap/css/sweetalert/bootstrap-4.css" rel="stylesheet" type="text/css">
     <link href="/History/history.css" rel="stylesheet">
     <title>Edit Device</title>
 </head>
@@ -25,6 +26,26 @@
             <div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
                 <div class="spinner-border" role="status">
                     <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="changes_not_saved" tabindex="-1" role="dialog" aria-labelledby="ChangesLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="ChangesLabel">Changes Not Saved</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        Changes not saved!<br>Click "STAY" to remain on this tab or "DISCARD CHANGES" to leave and lose your changes.
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="but_discard_changes" class="btn btn-default" data-dismiss="modal">Discard Changes</button>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">Stay</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -48,7 +69,7 @@
                 {{ for tab in jsonDataStrings }}
                 <li class="nav-item">
                     <a class="nav-link {{if tab.key==selectedId}}active{{else}}{{end}}" id="tab-{{tab.key}}" data-toggle="tab" data-target="#md-{{tab.key}}" role="tab" aria-controls="md-{{tab.key}}" aria-selected="{{if tab.key==selectedId}}true{{else}}false{{end}}">
-                        {{device_prop tab.key "name" | html.escape}}{{if show_refId}}&nbsp;({{id}}){{end}}
+                        {{device_prop tab.key "name" | html.escape}}{{if show_refId}}&nbsp;({{tab.key}}){{end}}
                     </a>
                 </li>
                 {{end}}
@@ -175,10 +196,54 @@
         <script type="text/javascript" src="/History/iframeResizer.contentWindow.min.js"></script>
         <script type="text/javascript" src="/History/moment.min.js"></script>
         <script type="text/javascript" src="/History/history.common.js"></script>
+        <script type="text/javascript" src="/bootstrap/js/sweetalert/sweetalert2.min.js"></script>
 
         {{ for tab in jsonDataStrings }}
         <script>
+
 const jsonData{{tab.key}} = {{tab.value}};
+let dirty{{tab.key}} = false;
+
+function checkFormDirty{{tab.key}}(tab) {
+    if ( dirty{{tab.key}}) {
+            Swal.fire({
+                title: 'Changes Not Saved',
+                text: "Click STAY to remain on this tab or DISCARD CHANGES to leave and lose your changes",
+                icon: 'warning',
+                position: 'top',
+                showCancelButton: true,
+                confirmButtonText: "STAY",
+                cancelButtonText: "DISCARD CHANGES"
+            }).then((result) => {
+                if (!result.isConfirmed) {
+                    loadFormData{{tab.key}}();
+                    $(tab).tab('show');
+                }
+            });
+        return false;
+    }
+
+    return true;
+}
+
+function loadFormData{{tab.key}}() {
+    if (jsonData{{tab.key}} === null) {
+        Console.log("Invalid device data");
+    } else {
+        $('#deviceSelect-{{tab.key}}').val(jsonData{{tab.key}}.TrackedRef);
+        $('#function-{{tab.key}}').val(jsonData{{tab.key}}.StatisticsFunction);
+
+        updateFunctionDuration{{tab.key}}(jsonData{{tab.key}}.StatisticsFunctionDuration);
+
+        const refresh = moment.duration(jsonData{{tab.key}}.RefreshIntervalSeconds, 'seconds');
+        $('#daysRefresh-{{tab.key}}').val(Math.floor(refresh.asDays()));
+        $('#hoursRefresh-{{tab.key}}').val(refresh.hours());
+        $('#minutesRefresh-{{tab.key}}').val(refresh.minutes());
+        $('#secondsRefresh-{{tab.key}}').val(refresh.seconds());
+
+        dirty{{tab.key}} = false;
+    }
+}
 
 function setupFunctionInterval{{tab.key}}() {
     $(document).ready(function() {
@@ -242,20 +307,18 @@ function getFunctionDuration{{tab.key}}() {
 }
 
 $(document).ready(function () {
-    if (jsonData{{tab.key}} === null) {
-        Console.log("Invalid device data");
-    } else {
-        $('#deviceSelect-{{tab.key}}').val(jsonData{{tab.key}}.TrackedRef);
-        $('#function-{{tab.key}}').val(jsonData{{tab.key}}.StatisticsFunction);
 
-        updateFunctionDuration{{tab.key}}(jsonData{{tab.key}}.StatisticsFunctionDuration);
+    $('#mainform-{{tab.key}}').on('change', function () {
+        dirty{{tab.key}} = true;
+    });
 
-        const refresh = moment.duration(jsonData{{tab.key}}.RefreshIntervalSeconds, 'seconds');
-        $('#daysRefresh-{{tab.key}}').val(Math.floor(refresh.asDays()));
-        $('#hoursRefresh-{{tab.key}}').val(refresh.hours());
-        $('#minutesRefresh-{{tab.key}}').val(refresh.minutes());
-        $('#secondsRefresh-{{tab.key}}').val(refresh.seconds());
-    }
+    $('#tab-{{tab.key}}').on('hide.bs.tab', function (e) {
+        if (!checkFormDirty{{tab.key}}(e.relatedTarget)) {
+            e.preventDefault();
+        }
+    });
+
+    loadFormData{{tab.key}}();
 
     $("#mainform-{{tab.key}}").submit(function(e) {
         e.preventDefault();
@@ -284,7 +347,10 @@ $(document).ready(function () {
         $('#error-message-div-{{tab.key}}').hide();
         $('#error-message-div-{{tab.key}}').html('');
 
-        ajaxPostPlugIn("deviceedit", formObject, null,
+        ajaxPostPlugIn("deviceedit", formObject,
+            function() {
+                dirty{{tab.key}} = false;
+            },
             function (errorMessage) {
                 $('#error-message-div-{{tab.key}}').show();
                 $('#error-message-div-{{tab.key}}').html(errorMessage);
