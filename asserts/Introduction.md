@@ -31,7 +31,7 @@ Open the Plugin->Device Statistics and check which device is adding a large numb
 The database size is shown in Plugin->Database statistics page.
 
 * What is the duration for which the records are retained?
-It is controlled by the setting in the Plugin setting page. Default is 30 days. Only increase this if you machine allows for the increased size and compute requirements.
+It is controlled by the setting in the Plugin setting page. Default is 30 days. Only increase this if you homeseer machine allows for the increased size and compute requirements.
 
 * How do I take backup of the database ?
 The plugin supports the default backups of Homeseer. The sqlite database should get backed up with homeseer backup.

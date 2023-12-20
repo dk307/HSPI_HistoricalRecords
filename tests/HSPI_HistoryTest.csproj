@@ -46,6 +46,8 @@
   <ItemGroup>
     <Compile Include="FakeHSController.cs" />
     <Compile Include="Hspi\BackupTest.cs" />
+    <Compile Include="Hspi\FakeGlobalClock.cs" />
+    <Compile Include="Hspi\StatisticsDeviceTimerTest.cs" />
     <Compile Include="Hspi\PeriodHumanizerTest.cs" />
     <Compile Include="Hspi\PeriodTimeCalculatorTest.cs" />
     <Compile Include="Hspi\Utils\ExceptionHelperTest.cs" />
@@ -81,7 +83,7 @@
       <Version>1.4.4</Version>
     </PackageReference>
     <PackageReference Include="HtmlAgilityPack">
-      <Version>1.11.54</Version>
+      <Version>1.11.55</Version>
     </PackageReference>
     <PackageReference Include="Moq">
       <Version>4.20.70</Version>

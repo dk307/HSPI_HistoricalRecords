@@ -185,6 +185,5 @@ namespace HSPI_HistoryTest
         private static readonly DateTimeOffset dateTimeLocal1 = new(2024, 6, 11, 11, 23, 30, TimeSpan.FromHours(5));
         private static readonly DateTimeOffset dateTimeStartOfDayUtc = new(2022, 11, 1, 0, 0, 0, TimeSpan.Zero);
         private static readonly Dictionary<PeriodUnits, int> EmptyOffsets = new();
-        private record FakeGlobalClock(DateTimeOffset UtcNow, DateTimeOffset LocalNow, DayOfWeek FirstDayOfWeek) : IGlobalClock;
     }
 }

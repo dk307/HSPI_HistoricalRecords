@@ -21,40 +21,32 @@ namespace Hspi.Device
         public StatisticsDevice(IHsController hs,
                                 SqliteDatabaseCollector collector,
                                 int featureRefId,
-                                IGlobalTimerAndClock globalTimerAndClock,
+                                IGlobalClock globalClock,
                                 HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
                                 CancellationToken cancellationToken)
         {
             this.HS = hs;
             this.collector = collector;
             this.FeatureRefId = featureRefId;
-            this.globalTimerAndClock = globalTimerAndClock;
+            this.globalClock = globalClock;
             this.hsFeatureCachedDataProvider = hsFeatureCachedDataProvider;
-
             this.featureData = GetPlugExtraData<StatisticsDeviceData>(hs, featureRefId, DataKey);
             this.period = featureData.StatisticsFunctionDuration.DerviedPeriod;
-            timer = new Timer(UpdateDeviceValueFromDatabase, null, 0, RefreshInterval);
-
-            cancellationToken.Register(() =>
-            {
-                timer?.Dispose();
-            });
+            this.timer = new StatisticsDeviceTimer(globalClock, this.period,
+                                                   RefreshIntervalMilliseconds,
+                                                   UpdateDeviceValueFromDatabase,
+                                                   cancellationToken);
         }
 
         public string DataFromFeatureAsJson => GetPlugExtraDataString(HS, FeatureRefId, DataKey);
-        public int FeatureRefId { get; }
+
+        public int FeatureRefId { get; init; }
+
+        public int TrackedRefId => this.featureData.TrackedRef;
 
         private string NameForLog => HsHelper.GetNameForLog(HS, FeatureRefId);
 
-        private int RefreshInterval
-        {
-            get
-            {
-                var refreshInterval = Math.Max(featureData.RefreshIntervalSeconds * 1000, 1000);
-                var refreshInterval2 = (int)Math.Min(refreshInterval, int.MaxValue);
-                return refreshInterval2;
-            }
-        }
+        private long RefreshIntervalMilliseconds => Math.Max(featureData.RefreshIntervalSeconds * 1000, 1000);
 
         public static int Create(IHsController hsController, int parentRefId, StatisticsDeviceData data)
         {
@@ -88,7 +80,7 @@ namespace Hspi.Device
             timer?.Dispose();
         }
 
-        public void UpdateNow() => timer.Change(0, RefreshInterval);
+        public void UpdateNow() => timer.UpdateNow();
 
         private static int CreateImpl(IHsController hsController, int? parentRefId, string? newDeviceName, StatisticsDeviceData data)
         {
@@ -241,11 +233,11 @@ namespace Hspi.Device
             static bool HasValue(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
         }
 
-        private void UpdateDeviceValueFromDatabase(object state)
+        private void UpdateDeviceValueFromDatabase()
         {
             try
             {
-                var minMax = this.period.CalculateMinMaxSeconds(globalTimerAndClock);
+                var minMax = this.period.CalculateMinMaxSeconds(globalClock);
 
                 if (minMax.IsValid)
                 {
@@ -291,10 +283,10 @@ namespace Hspi.Device
         private const string DataKey = "data";
         private readonly SqliteDatabaseCollector collector;
         private readonly StatisticsDeviceData featureData;
-        private readonly Period period;
-        private readonly IGlobalTimerAndClock globalTimerAndClock;
+        private readonly IGlobalClock globalClock;
         private readonly IHsController HS;
         private readonly HsFeatureCachedDataProvider hsFeatureCachedDataProvider;
-        private readonly System.Threading.Timer timer;
+        private readonly Period period;
+        private readonly StatisticsDeviceTimer timer;
     }
 }

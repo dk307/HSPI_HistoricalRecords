@@ -13,6 +13,7 @@ function setUpPersistanceTable() {
 	paging: false,
 	responsive: true,
 	bInfo : false, 
+	searching: false,
 	ajax: function (data, callback, settings) {
 		const formObject = {
 		   refId : featureId,
