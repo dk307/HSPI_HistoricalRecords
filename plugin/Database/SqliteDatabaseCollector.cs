@@ -81,6 +81,8 @@ namespace Hspi.Database
         public Exception? RecordUpdateException { get; private set; }
         public Version? SqliteVersion { get; private set; }
 
+        private bool IsStrictTableSupported => SqliteVersion >= new Version(3, 37);
+
         public long DeleteAllRecordsForRef(long refId)
         {
             using var lock2 = CreateLockForDBConnection();
@@ -247,36 +249,7 @@ namespace Hspi.Database
                 var stb = new StringBuilder();
                 stb.Append(@"SELECT ts, value, str, duration FROM history_with_duration WHERE ref=$refid AND ts >=$minV AND ts <=$maxV");
 
-                List<string> orderBys = new();
-                foreach (var orderBy in sortByColumns)
-                {
-                    switch (orderBy)
-                    {
-                        case ResultSortBy.TimeDesc:
-                            orderBys.Add("ts DESC"); break;
-
-                        case ResultSortBy.ValueDesc:
-                            orderBys.Add("value DESC"); break;
-
-                        case ResultSortBy.StringDesc:
-                            orderBys.Add("str DESC"); break;
-
-                        case ResultSortBy.DurationDesc:
-                            orderBys.Add("duration DESC"); break;
-
-                        case ResultSortBy.TimeAsc:
-                            orderBys.Add("ts ASC"); break;
-
-                        case ResultSortBy.ValueAsc:
-                            orderBys.Add("value ASC"); break;
-
-                        case ResultSortBy.StringAsc:
-                            orderBys.Add("str ASC"); break;
-
-                        case ResultSortBy.DurationAsc:
-                            orderBys.Add("duration ASC"); break;
-                    }
-                }
+                var orderBys = CalculateOrderBys(sortByColumns);
 
                 if (orderBys.Count > 0)
                 {
@@ -316,6 +289,42 @@ namespace Hspi.Database
                 }
 
                 return records;
+            }
+
+            static List<string> CalculateOrderBys(IReadOnlyList<ResultSortBy> sortByColumns)
+            {
+                List<string> orderBys = new();
+                foreach (var orderBy in sortByColumns)
+                {
+                    switch (orderBy)
+                    {
+                        case ResultSortBy.TimeDesc:
+                            orderBys.Add("ts DESC"); break;
+
+                        case ResultSortBy.ValueDesc:
+                            orderBys.Add("value DESC"); break;
+
+                        case ResultSortBy.StringDesc:
+                            orderBys.Add("str DESC"); break;
+
+                        case ResultSortBy.DurationDesc:
+                            orderBys.Add("duration DESC"); break;
+
+                        case ResultSortBy.TimeAsc:
+                            orderBys.Add("ts ASC"); break;
+
+                        case ResultSortBy.ValueAsc:
+                            orderBys.Add("value ASC"); break;
+
+                        case ResultSortBy.StringAsc:
+                            orderBys.Add("str ASC"); break;
+
+                        case ResultSortBy.DurationAsc:
+                            orderBys.Add("duration ASC"); break;
+                    }
+                }
+
+                return orderBys;
             }
         }
 
@@ -580,8 +589,6 @@ namespace Hspi.Database
                 }
             }
         }
-
-        private bool IsStrictTableSupported => SqliteVersion >= new Version(3, 37);
 
         private void UpdateRecords()
         {

@@ -4,9 +4,9 @@ using System.Linq;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using Hspi;
-using NUnit.Framework;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NUnit.Framework;
 
 namespace HSPI_HistoryTest
 {
@@ -15,14 +15,15 @@ namespace HSPI_HistoryTest
     {
         public static IEnumerable<object[]> GetDatatableCallbacksData()
         {
-            // 1) min=0, max= lonf.max start = 0, length = 10, no ordering specified
+            // 1) min=0, max= lonf.max start = 0, length = 10, time sort asc
             yield return new object[] {
-                new  Func<HsFeature, List<RecordDataAndDuration>, string> ((feature, _) => $"refId={feature.Ref}&min=0&max={long.MaxValue}&start=0&length=10"),
+                new  Func<HsFeature, List<RecordDataAndDuration>, string> ((feature, _) => $"refId={feature.Ref}&min=0&max={long.MaxValue}&start=0&length=10&order[0][column]=0&order[0][dir]=asc"),
                 new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
-                    records.Sort(new TimeComparer());
-                    records.Reverse();
-                    return records.Take(10).ToList();
-                } )
+                    return records.OrderBy(x => x.TimeStamp)
+                                  .Take(10).ToList();
+                } ),
+                new Func<double>(() => GetUniqueRandom()),
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddMinutes(i*i)),
             };
 
             // 2) min , max, start = 0, length = 10, time sort ,desc
@@ -35,9 +36,13 @@ namespace HSPI_HistoryTest
                     return $"refId={feature.Ref}&min={min}&max={max}&start=0&length=10&order[0][column]=0&order[0][dir]=desc";
                 }),
                 new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
-                    records.Sort(new TimeComparer());
-                    return records.Skip(10).Take(30 - 10 + 1).Reverse().Take(10).ToList();
-                } )
+                    return records.OrderBy(x => x.TimeStamp)
+                                  .Skip(10).Take(30 - 10 + 1)
+                                  .OrderByDescending(x => x.TimeStamp)
+                                  .Take(10).ToList();
+                } ),
+                new Func<double>(() => GetUniqueRandom()),
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddMinutes(i*i)),
             };
 
             // 3) min , max, start = 10, length = 100, value sort ,desc
@@ -50,12 +55,13 @@ namespace HSPI_HistoryTest
                     return $"refId={feature.Ref}&min={min}&max={max}&start=10&length=100&order[0][column]=1&order[0][dir]=desc";
                 }),
                 new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
-                    records.Sort(new TimeComparer());
-                    var newList = records.Skip(20).Take(80 - 20 + 1).ToList();
-                    newList.Sort(new ValueComparer());
-                    newList.Reverse();
-                    return newList.Skip(10).Take(100).ToList();
-                } )
+                    return records.OrderBy(x => x.TimeStamp)
+                                  .Skip(20).Take(80 - 20 + 1)
+                                  .OrderByDescending(x => x.DeviceValue)
+                                  .Skip(10).Take(100).ToList();
+                } ),
+                new Func<double>(() => GetUniqueRandom()),
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddMinutes(i*i)),
              };
 
             // 4) min , max, start = 10, length = 100, string sort ,asc
@@ -68,11 +74,13 @@ namespace HSPI_HistoryTest
                     return $"refId={feature.Ref}&min={min}&max={max}&start=10&length=100&order[0][column]=2&order[0][dir]=asc";
                 }),
                 new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
-                    records.Sort(new TimeComparer());
-                    var newList = records.Skip(20).Take(80 - 20 + 1).ToList();
-                    newList.Sort(new StringValueComparer());
-                    return newList.Skip(10).Take(100).ToList();
-                } )
+                    return records.OrderBy(x => x.TimeStamp)
+                                  .Skip(20).Take(80 - 20 + 1)
+                                  .OrderBy(x => x.DeviceString)
+                                  .Skip(10).Take(100).ToList();
+                } ),
+                new Func<double>(() => GetUniqueRandom()),
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddMinutes(i*i)),
              };
 
             // 5) min , max, start = 10, length = 10, string sort ,asc
@@ -85,11 +93,13 @@ namespace HSPI_HistoryTest
                     return $"refId={feature.Ref}&min={min}&max={max}&start=10&length=10&order[0][column]=2&order[0][dir]=asc";
                 }),
                 new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
-                    records.Sort(new TimeComparer());
-                    var newList = records.Skip(20).Take(30 - 20 + 1).ToList();
-                    newList.Sort(new StringValueComparer());
-                    return newList.Skip(10).Take(10).ToList();
-                } )
+                    return records.OrderBy(x => x.TimeStamp)
+                                  .Skip(20).Take(30 - 20 + 1)
+                                  .OrderBy(x => x.DeviceString)
+                                  .Skip(10).Take(10).ToList();
+                } ),
+                new Func<double>(() => GetUniqueRandom()),
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddMinutes(i*i)),
              };
 
             // 6) min , max, start = 10, length = 10, duration sort ,asc
@@ -102,13 +112,60 @@ namespace HSPI_HistoryTest
                     return $"refId={feature.Ref}&min={min}&max={max}&start=10&length=10&order[0][column]=3&order[0][dir]=asc";
                 }),
                 new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
-                    records.Sort(new TimeComparer());
-                    var newList = records.Skip(20).Take(30 - 20 + 1).ToList();
-
-                    newList.Sort(new DurationComparer());
-                    return newList.Skip(10).Take(10).ToList();
-                } )
+                    return records.OrderBy(x => x.TimeStamp)
+                                  .Skip(20).Take(30 - 20 + 1)
+                                  .OrderBy(x => x.DurationSeconds)
+                                  .Skip(10).Take(10).ToList();
+                } ),
+                new Func<double>(() => GetUniqueRandom()),
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddMinutes(i*i)),
              };
+
+            // 7) min , max, start = 10, length = 10, value sort asc, time sort asc
+            yield return new object[] {
+                new Func<HsFeature, List<RecordDataAndDuration>, string> ((feature, records) =>
+                {
+                    records.Sort(new TimeComparer());
+                    var min = records[20].UnixTimeMilliSeconds;
+                    var max = records[30].UnixTimeMilliSeconds;
+                    return $"refId={feature.Ref}&min={min}&max={max}&start=10&length=10&order[0][column]=1&order[0][dir]=asc&order[1][column]=0&order[1][dir]=asc";
+                }),
+                new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
+                   return records.OrderBy(x => x.TimeStamp)
+                                 .Skip(20).Take(30 - 20 + 1)
+                                 .Skip(10).Take(10).ToList();
+                } ),
+                new Func<double>(() => 10.1D),      //same value
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddMinutes(i*i)),
+            };
+
+            // 8) min , max, start = 10, length = 10, value sort asc, duration sort asc, time sort desc
+            yield return new object[] {
+                new  Func<HsFeature, List<RecordDataAndDuration>, string> ((feature, _) =>
+                            $"refId={feature.Ref}&min=0&max={long.MaxValue}&start=0&length=10&order[0][column]=1&order[0][dir]=asc&order[1][column]=3&order[1][dir]=asc&order[2][column]=0&order[2][dir]=desc"),
+                new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
+                    return records.OrderByDescending( x=> x.TimeStamp)
+                                  .OrderBy(x => x.DurationSeconds)
+                                  .OrderBy(x => x.DeviceValue)
+                                  .Take(10).ToList();
+                } ),
+                new Func<double>(() => 10),   //same value
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddMinutes(i)),  // same duration
+            };
+
+            // 9) min , max, start = 0, length = 100, value sort asc, duration sort asc, time sort asc
+            yield return new object[] {
+                new  Func<HsFeature, List<RecordDataAndDuration>, string> ((feature, _) =>
+                            $"refId={feature.Ref}&min=0&max={long.MaxValue}&start=0&length=100&order[0][column]=1&order[0][dir]=asc&order[1][column]=3&order[1][dir]=asc&order[2][column]=0&order[2][dir]=asc"),
+                new Func<List<RecordDataAndDuration>, List<RecordDataAndDuration>>( (records) => {
+                    return records.OrderBy( x=> x.TimeStamp)
+                                  .OrderBy(x => x.DurationSeconds)
+                                  .OrderBy(x => x.DeviceValue)
+                                  .Take(100).ToList();
+                }),
+                new Func<double>(() => 10),   //same value
+                new Func<DateTime, int, DateTime>( (dt, i) => dt.AddSeconds(i)),  // same duration
+            };
         }
 
         public static IEnumerable<object[]> GetDatatableCallbackTotalData()
@@ -142,7 +199,9 @@ namespace HSPI_HistoryTest
         [TestCaseSource(nameof(GetDatatableCallbacksData))]
         public void DatatableCallbackDataCorrect(Func<HsFeature, List<RecordDataAndDuration>, string> createString,
                                                  Func<List<RecordDataAndDuration>,
-                                                 List<RecordDataAndDuration>> filter)
+                                                 List<RecordDataAndDuration>> filter,
+                                                 Func<double> valueGenerator,
+                                                 Func<DateTime, int, DateTime> lastChangeGenerator)
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
@@ -153,47 +212,45 @@ namespace HSPI_HistoryTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
-            var durations = new SortedDictionary<long, long?>();
+            TestHelper.WaitForRecordCountAndDeleteAll(plugin, refId, 1);
+
             var added = new List<RecordDataAndDuration>();
 
-            var existing = new List<double>();
             for (int i = 0; i < 100; i++)
             {
-                double val = GetUniqueRandom(existing);
-                DateTime lastChange = nowTime.AddMinutes(i * i);
+                double val = valueGenerator();
+                DateTime lastChange = lastChangeGenerator(nowTime, i);
                 var featureLastTime = (DateTime)mockHsController.GetFeatureValue(refId, EProperty.LastChange);
-                durations[((DateTimeOffset)featureLastTime).ToUnixTimeSeconds()] =
-                                (long)(lastChange - featureLastTime).TotalSeconds;
 
                 RecordData recordData = TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE,
                                                                          refId, val, val.ToString(), lastChange, i + 1);
 
-                long duration = (long)(lastChange - nowTime.AddMinutes((i - 1) * (i - 1))).TotalSeconds;
+                DateTime? nextChange = i < 99 ? lastChangeGenerator(nowTime, i + 1) : null;
+                long? duration = nextChange != null ? (long?)(nextChange.Value - lastChange).TotalSeconds : null;
                 added.Add(new RecordDataAndDuration(recordData.DeviceRefId, recordData.DeviceValue, recordData.DeviceString,
                                                     recordData.UnixTimeSeconds, duration));
             }
 
             var feature = mockHsController.GetFeature(refId);
-            durations[((DateTimeOffset)feature.LastChange).ToUnixTimeSeconds()] = null;
 
             string paramsForRecord = createString(feature, added.Clone());
-            var records = TestHelper.GetHistoryRecords(plugin, refId, paramsForRecord);
-            Assert.That(records, Is.Not.Null);
+            var resultRecords = TestHelper.GetHistoryRecords(plugin, refId, paramsForRecord);
+            Assert.That(resultRecords, Is.Not.Null);
 
             var filterRecords = filter(added.Clone());
 
-            Assert.That(filterRecords.Count, Is.EqualTo(records.Count));
+            Assert.That(filterRecords.Count, Is.EqualTo(resultRecords.Count));
 
-            for (int i = 0; i < records.Count; i++)
+            for (int i = 0; i < resultRecords.Count; i++)
             {
-                var record = records[i];
+                var record = resultRecords[i];
                 var expected = filterRecords[i];
 
                 Assert.That(expected.DeviceRefId, Is.EqualTo(record.DeviceRefId));
                 Assert.That(expected.UnixTimeSeconds, Is.EqualTo(record.UnixTimeSeconds));
                 Assert.That(expected.DeviceValue, Is.EqualTo(record.DeviceValue));
                 Assert.That(expected.DeviceString, Is.EqualTo(record.DeviceString));
-                Assert.That(durations[record.UnixTimeSeconds], Is.EqualTo(record.DurationSeconds));
+                Assert.That(expected.DurationSeconds, Is.EqualTo(record.DurationSeconds));
             }
         }
 
@@ -313,7 +370,7 @@ namespace HSPI_HistoryTest
             Assert.That(list[5], Is.EqualTo(10D));
             Assert.That(list[6], Is.EqualTo(20D));
 
-            // wait till all invalid records are deleted
+            // wait till all invalid resultRecords are deleted
             TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 0);
         }
 
@@ -363,7 +420,7 @@ namespace HSPI_HistoryTest
             Assert.That(list[6], Is.EqualTo(null));
         }
 
-        private static double GetUniqueRandom(List<double> existing, int max = 100000)
+        private static double GetUniqueRandom(int max = 100000)
         {
             double val = rand.Next(max);
 
@@ -377,26 +434,12 @@ namespace HSPI_HistoryTest
             return val;
         }
 
-        private class StringValueComparer : IComparer<RecordDataAndDuration>
-        {
-            public int Compare(RecordDataAndDuration x, RecordDataAndDuration y) => StringComparer.Ordinal.Compare(x.DeviceString, y.DeviceString);
-        }
-
         private class TimeComparer : IComparer<RecordDataAndDuration>
         {
             public int Compare(RecordDataAndDuration x, RecordDataAndDuration y) => Comparer<long>.Default.Compare(x.UnixTimeSeconds, y.UnixTimeSeconds);
         }
 
-        private class ValueComparer : IComparer<RecordDataAndDuration>
-        {
-            public int Compare(RecordDataAndDuration x, RecordDataAndDuration y) => Comparer<double>.Default.Compare(x.DeviceValue, y.DeviceValue);
-        }
-
-        private class DurationComparer : IComparer<RecordDataAndDuration>
-        {
-            public int Compare(RecordDataAndDuration x, RecordDataAndDuration y) => Comparer<long?>.Default.Compare(x.DurationSeconds, y.DurationSeconds);
-        }
-
         private static readonly Random rand = new();
+        private static List<double> existing = new();
     }
 }
