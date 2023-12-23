@@ -24,6 +24,11 @@ namespace HSPI_HistoryTest
             return listToClone.Select(item => item with { }).ToList();
         }
 
+        public static List<RecordDataAndDuration> Clone(this List<RecordDataAndDuration> listToClone)
+        {
+            return listToClone.Select(item => item with { }).ToList();
+        }
+
         public static long ToUnixTimeMilliseconds(this DateTime time)
         {
             return ((DateTimeOffset)time).ToUnixTimeMilliseconds();

@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using Destructurama.Attributed;
 
 #nullable enable
 
 namespace Hspi
 {
+    [DebuggerDisplay("ts={UnixTimeSeconds} value={DeviceValue}")]
     public record RecordData
     {
         public RecordData(long deviceRefId, in double deviceValue, string? deviceString,
@@ -38,6 +40,7 @@ namespace Hspi
         public DateTimeOffset TimeStamp => DateTimeOffset.FromUnixTimeSeconds(UnixTimeSeconds);
     }
 
+    [DebuggerDisplay("ts={UnixTimeSeconds} value={DeviceValue} duration={DurationSeconds}")]
     public sealed record RecordDataAndDuration : RecordData
     {
         public long? DurationSeconds { get; init; }
