@@ -429,7 +429,7 @@ namespace Hspi
             var refId = ParseParameterAsInt(parameters, "refId");
             var start = ParseParameterAsInt(parameters, "start");
             var length = ParseParameterAsInt(parameters, "length");
-            var sortOrder = CalculateSortOrder(parameters["order[0][column]"], parameters["order[0][dir]"]);
+            var sortOrders = CalculateAllSortOrders(parameters);
 
             long totalResultsCount;
 
@@ -457,7 +457,7 @@ namespace Hspi
                                                        max,
                                                        start,
                                                        length,
-                                                       sortOrder);
+                                                       sortOrders);
 
             using var stringWriter = new StringWriter(stb, CultureInfo.InvariantCulture);
             using var jsonWriter = new JsonTextWriter(stringWriter);
@@ -492,6 +492,27 @@ namespace Hspi
             jsonWriter.Close();
             return stb.ToString();
 
+            static List<ResultSortBy> CalculateAllSortOrders(NameValueCollection parameters)
+            {
+                List<ResultSortBy> result = new();
+
+                int i = 0;
+                while (true)
+                {
+                    var order = CalculateSortOrder(parameters[Invariant($"order[{i}][column]")], parameters[Invariant($"order[{i}][dir]")]);
+
+                    if (order == ResultSortBy.None)
+                    {
+                        break;
+                    }
+
+                    i++;
+                    result.Add(order);
+                }
+
+                return result;
+            }
+
             static ResultSortBy CalculateSortOrder(string? sortBy, string? sortDir)
             {
                 return sortBy switch
@@ -500,7 +521,7 @@ namespace Hspi
                     "1" => sortDir == "desc" ? ResultSortBy.ValueDesc : ResultSortBy.ValueAsc,
                     "2" => sortDir == "desc" ? ResultSortBy.StringDesc : ResultSortBy.StringAsc,
                     "3" => sortDir == "desc" ? ResultSortBy.DurationDesc : ResultSortBy.DurationAsc,
-                    _ => ResultSortBy.TimeDesc,
+                    _ => ResultSortBy.None,
                 };
             }
 

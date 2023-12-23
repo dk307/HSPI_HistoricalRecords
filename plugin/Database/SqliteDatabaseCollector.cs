@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using Hspi.Utils;
 using Nito.Disposables;
@@ -222,37 +223,100 @@ namespace Hspi.Database
         }
 
         public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
-                                                                        long start, long length, ResultSortBy sortBy)
+                                                       long start, long length,
+                                                       IReadOnlyList<ResultSortBy> sortByColumns)
         {
             using var lock2 = CreateLockForDBConnection();
 
-            var stmt = getHistoryCommand;
-
-            using var stmtRest = CreateStatementAutoReset(stmt);
-            ugly.bind_int64(stmt, 1, refId);
-            ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
-            ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
-            ugly.bind_int64(stmt, 4, (long)sortBy);
-            ugly.bind_int64(stmt, 5, length);
-            ugly.bind_int64(stmt, 6, start);
-
-            List<RecordDataAndDuration> records = new();
-
-            while (ugly.step(stmt) != SQLITE_DONE)
+            if ((sortByColumns.Count == 1) && sortByColumns[0] != ResultSortBy.None)
             {
-                // order: SELECT (time, value, string, duration) FROM history
-                var record = new RecordDataAndDuration(
-                        refId,
-                        ugly.column_double(stmt, 1),
-                        ugly.column_text(stmt, 2),
-                        ugly.column_int64(stmt, 0),
-                        ugly.column_type(stmt, 3) == SQLITE_NULL ? null : ugly.column_int64(stmt, 3)
-                    );
+                var stmt = getHistoryCommand;
 
-                records.Add(record);
+                using var stmtRest = CreateStatementAutoReset(stmt);
+                ugly.bind_int64(stmt, 1, refId);
+                ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
+                ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
+                ugly.bind_int64(stmt, 4, (long)(sortByColumns[0]));
+                ugly.bind_int64(stmt, 5, length);
+                ugly.bind_int64(stmt, 6, start);
+
+                return GetRecordsFromStatement(refId, stmt);
+            }
+            else
+            {
+                var stb = new StringBuilder();
+                stb.Append(@"SELECT ts, value, str, duration FROM history_with_duration WHERE ref=$refid AND ts >=$minV AND ts <=$maxV");
+
+                List<string> orderBys = new();
+                foreach (var orderBy in sortByColumns)
+                {
+                    switch (orderBy)
+                    {
+                        case ResultSortBy.TimeDesc:
+                            orderBys.Add("ts DESC"); break;
+
+                        case ResultSortBy.ValueDesc:
+                            orderBys.Add("value DESC"); break;
+
+                        case ResultSortBy.StringDesc:
+                            orderBys.Add("str DESC"); break;
+
+                        case ResultSortBy.DurationDesc:
+                            orderBys.Add("duration DESC"); break;
+
+                        case ResultSortBy.TimeAsc:
+                            orderBys.Add("ts ASC"); break;
+
+                        case ResultSortBy.ValueAsc:
+                            orderBys.Add("value ASC"); break;
+
+                        case ResultSortBy.StringAsc:
+                            orderBys.Add("str ASC"); break;
+
+                        case ResultSortBy.DurationAsc:
+                            orderBys.Add("duration ASC"); break;
+                    }
+                }
+
+                if (orderBys.Count > 0)
+                {
+                    stb.Append(@" ORDER BY ");
+                    stb.Append(string.Join(", ", orderBys));
+                }
+
+                stb.Append(" LIMIT $limit OFFSET $offset");
+
+                using var stmt = CreateStatement(stb.ToString());
+
+                ugly.bind_int64(stmt, 1, refId);
+                ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
+                ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
+                ugly.bind_int64(stmt, 4, length);
+                ugly.bind_int64(stmt, 5, start);
+
+                return GetRecordsFromStatement(refId, stmt);
             }
 
-            return records;
+            static IList<RecordDataAndDuration> GetRecordsFromStatement(long refId, sqlite3_stmt stmt)
+            {
+                List<RecordDataAndDuration> records = new();
+
+                while (ugly.step(stmt) != SQLITE_DONE)
+                {
+                    // order: SELECT (time, value, string, duration) FROM history
+                    var record = new RecordDataAndDuration(
+                            refId,
+                            ugly.column_double(stmt, 1),
+                            ugly.column_text(stmt, 2),
+                            ugly.column_int64(stmt, 0),
+                            ugly.column_type(stmt, 3) == SQLITE_NULL ? null : ugly.column_int64(stmt, 3)
+                        );
+
+                    records.Add(record);
+                }
+
+                return records;
+            }
         }
 
         public long GetRecordsCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
@@ -580,14 +644,14 @@ namespace Hspi.Database
                 SELECT ts, value, str, duration FROM history_with_duration
                 WHERE ref=$refid AND ts>=$minV AND ts<=$maxV
                 ORDER BY
-                    CASE WHEN $order = 0 THEN ts END DESC,
-                    CASE WHEN $order = 1 THEN value END DESC,
-                    CASE WHEN $order = 2 THEN str END DESC,
-                    CASE WHEN $order = 3 THEN duration END DESC,
-                    CASE WHEN $order = 4 THEN ts END ASC,
-                    CASE WHEN $order = 5 THEN value END ASC,
-                    CASE WHEN $order = 6 THEN str END ASC,
-                    CASE WHEN $order = 7 THEN duration END ASC
+                    CASE WHEN $order = 1 THEN ts END DESC,
+                    CASE WHEN $order = 2 THEN value END DESC,
+                    CASE WHEN $order = 3 THEN str END DESC,
+                    CASE WHEN $order = 4 THEN duration END DESC,
+                    CASE WHEN $order = 5 THEN ts END ASC,
+                    CASE WHEN $order = 6 THEN value END ASC,
+                    CASE WHEN $order = 7 THEN str END ASC,
+                    CASE WHEN $order = 8 THEN duration END ASC
                 LIMIT $limit OFFSET $offset";
 
         private readonly sqlite3_stmt allRefOldestRecordsCommand;
