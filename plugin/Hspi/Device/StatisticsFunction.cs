@@ -36,5 +36,6 @@ namespace Hspi.Device
         MinimumValue = 2,
         MaximumValue = 3,
         DistanceBetweenMinAndMax = 4,
+        RecordsCount = 5,
     };
 }

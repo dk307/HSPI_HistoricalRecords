@@ -161,6 +161,8 @@ namespace HSPI_HistoryTest
                     ExpectedValue = 50D; break;
                 case StatisticsFunction.DistanceBetweenMinAndMax:
                     ExpectedValue = 40D; break;
+                case StatisticsFunction.RecordsCount:
+                    ExpectedValue = 2D; break;
 
                 default:
                     Assert.Fail();
@@ -521,7 +523,10 @@ namespace HSPI_HistoryTest
             }
 
             Assert.That(newFeatureData.Feature[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
-            CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
+            if (function != StatisticsFunction.RecordsCount)
+            {
+                CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
+            }
             Assert.That(newFeatureData.Feature[EProperty.Location], Is.EqualTo(trackedFeature.Location));
             Assert.That(newFeatureData.Feature[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
             Assert.That(newFeatureData.Feature[EProperty.Misc],
@@ -556,17 +561,24 @@ namespace HSPI_HistoryTest
                 case StatisticsFunction.DistanceBetweenMinAndMax:
                     Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Distance Min-Max Value"));
                     break;
+
+                case StatisticsFunction.RecordsCount:
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Count"));
+                    break;
             }
 
-            var list1 = trackedFeature.StatusGraphics.Values;
-            var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
-            Assert.That(list1.Count, Is.EqualTo(1));
-            Assert.That(list2.Count, Is.EqualTo(1));
-            Assert.That(list2[0].Label, Is.EqualTo(list1[0].Label));
-            Assert.That(list2[0].IsRange, Is.EqualTo(list1[0].IsRange));
-            Assert.That(list2[0].ControlUse, Is.EqualTo(list1[0].ControlUse));
-            Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
-            Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
+            if (function != StatisticsFunction.RecordsCount)
+            {
+                var list1 = trackedFeature.StatusGraphics.Values;
+                var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
+                Assert.That(list1.Count, Is.EqualTo(1));
+                Assert.That(list2.Count, Is.EqualTo(1));
+                Assert.That(list2[0].Label, Is.EqualTo(list1[0].Label));
+                Assert.That(list2[0].IsRange, Is.EqualTo(list1[0].IsRange));
+                Assert.That(list2[0].ControlUse, Is.EqualTo(list1[0].ControlUse));
+                Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
+                Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
+            }
             return data;
         }
     }
