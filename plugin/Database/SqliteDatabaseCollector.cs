@@ -61,6 +61,7 @@ namespace Hspi.Database
             deleteAllRecordByRefCommand = CreateStatement(DeleteAllRecordByRefSql);
             getMaxValueCommand = CreateStatement(GetMaxValuesSql);
             getMinValueCommand = CreateStatement(GetMinValuesSql);
+            getDistanceMinMaxValueCommand = CreateStatement(GetMinMaxDistanceValuesSql);
             getStrForRefAndValueCommand = CreateStatement(GetStrForRefAndValueSql);
 
             var recordUpdateThread = new Thread(UpdateRecords);
@@ -140,6 +141,7 @@ namespace Hspi.Database
             deleteAllRecordByRefCommand.Dispose();
             getMaxValueCommand?.Dispose();
             getMinValueCommand?.Dispose();
+            getDistanceMinMaxValueCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
             if (sqliteConnection != null && SQLITE_OK != sqliteConnection.manual_close_v2())
             {
@@ -198,6 +200,11 @@ namespace Hspi.Database
             }
 
             return list;
+        }
+
+        public double? GetDistanceMinMaxValue(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        {
+            return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getDistanceMinMaxValueCommand);
         }
 
         public Tuple<DateTimeOffset, DateTimeOffset> GetEarliestAndOldestRecordTimeDate(long refId)
@@ -633,9 +640,8 @@ namespace Hspi.Database
         private const string EarliestAndOldestRecordSql = "SELECT MIN(ts), MAX(ts) FROM history WHERE ref=?";
 
         private const string GetMaxValuesSql = @"SELECT MAX(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
-
+        private const string GetMinMaxDistanceValuesSql = @"SELECT ABS(MAX(value) - MIN(value)) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
         private const string GetMinValuesSql = @"SELECT MIN(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
-
         private const string GetStrForRefAndValueSql = "SELECT str FROM history WHERE ref=? AND value=? ORDER BY ts DESC LIMIT 1";
 
         // 1 record before the time range and one after
@@ -665,6 +671,7 @@ namespace Hspi.Database
         private readonly SemaphoreSlim connectionMutex = new(1, 1);
         private readonly sqlite3_stmt deleteAllRecordByRefCommand;
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
+        private readonly sqlite3_stmt getDistanceMinMaxValueCommand;
         private readonly sqlite3_stmt getEarliestAndOldestRecordCommand;
         private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getMaxValueCommand;

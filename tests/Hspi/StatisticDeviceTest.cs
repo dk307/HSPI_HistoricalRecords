@@ -144,7 +144,7 @@ namespace HSPI_HistoryTest
                                            trackedDeviceRefId, 10, "10", aTime.AddMinutes(-10).LocalDateTime, 1);
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
-                                           trackedDeviceRefId, 20, "20", aTime.AddMinutes(-5).LocalDateTime, 2);
+                                           trackedDeviceRefId, 50, "50", aTime.AddMinutes(-5).LocalDateTime, 2);
 
             Assert.That(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
 
@@ -152,13 +152,15 @@ namespace HSPI_HistoryTest
             switch (statisticsFunction)
             {
                 case StatisticsFunction.AverageStep:
-                    ExpectedValue = ((10D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
+                    ExpectedValue = ((10D * 5 * 60) + (50D * 5 * 60)) / 600D; break;
                 case StatisticsFunction.AverageLinear:
-                    ExpectedValue = ((15D * 5 * 60) + (20D * 5 * 60)) / 600D; break;
+                    ExpectedValue = ((30D * 5 * 60) + (50D * 5 * 60)) / 600D; break;
                 case StatisticsFunction.MinimumValue:
                     ExpectedValue = 10D; break;
                 case StatisticsFunction.MaximumValue:
-                    ExpectedValue = 20D; break;
+                    ExpectedValue = 50D; break;
+                case StatisticsFunction.DistanceBetweenMinAndMax:
+                    ExpectedValue = 40D; break;
 
                 default:
                     Assert.Fail();
@@ -549,6 +551,10 @@ namespace HSPI_HistoryTest
 
                 case StatisticsFunction.MaximumValue:
                     Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Maximum Value"));
+                    break;
+
+                case StatisticsFunction.DistanceBetweenMinAndMax:
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Distance Min-Max Value"));
                     break;
             }
 
