@@ -527,6 +527,7 @@ namespace HSPI_HistoryTest
             {
                 CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
             }
+
             Assert.That(newFeatureData.Feature[EProperty.Location], Is.EqualTo(trackedFeature.Location));
             Assert.That(newFeatureData.Feature[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
             Assert.That(newFeatureData.Feature[EProperty.Misc],
@@ -579,6 +580,7 @@ namespace HSPI_HistoryTest
                 Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
                 Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
             }
+
             return data;
         }
     }
