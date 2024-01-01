@@ -124,10 +124,12 @@ namespace Hspi.Device
                 case StatisticsFunction.AverageLinear:
                 case StatisticsFunction.MinimumValue:
                 case StatisticsFunction.MaximumValue:
+                case StatisticsFunction.DistanceBetweenMinAndMax:
                     newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string>(feature.AdditionalStatusData);
                     newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(feature.StatusGraphics);
                     break;
 
+                case StatisticsFunction.RecordsCount:
                 default:
                     break;
             }
@@ -167,6 +169,8 @@ namespace Hspi.Device
                     StatisticsFunction.AverageStep => "Average(Step)",
                     StatisticsFunction.MinimumValue => "Minimum Value",
                     StatisticsFunction.MaximumValue => "Maximum Value",
+                    StatisticsFunction.DistanceBetweenMinAndMax => "Distance Min-Max Value",
+                    StatisticsFunction.RecordsCount => "Count",
                     _ => throw new NotImplementedException(),
                 };
             }
@@ -255,6 +259,8 @@ namespace Hspi.Device
                                                                                          this.featureData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
                         StatisticsFunction.MinimumValue => collector.GetMinValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
                         StatisticsFunction.MaximumValue => collector.GetMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        StatisticsFunction.DistanceBetweenMinAndMax => collector.GetDistanceMinMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        StatisticsFunction.RecordsCount => collector.GetRecordsCount(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
                         _ => throw new NotImplementedException(),
                     };
 

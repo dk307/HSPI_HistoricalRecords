@@ -6,12 +6,14 @@ using Newtonsoft.Json;
 namespace Hspi.Device
 {
     [JsonConverter(typeof(StringEnumConverter))]
-    public enum StatisticsFunction
+    public enum InstantType
     {
-        AverageStep = 0,
-        AverageLinear = 1,
-        MinimumValue = 2,
-        MaximumValue = 3,
+        Now = 0,
+        StartOfHour,
+        StartOfDay,
+        StartOfWeek,
+        StartOfMonth,
+        StartOfYear,
     };
 
     [JsonConverter(typeof(StringEnumConverter))]
@@ -27,13 +29,13 @@ namespace Hspi.Device
     }
 
     [JsonConverter(typeof(StringEnumConverter))]
-    public enum InstantType
+    public enum StatisticsFunction
     {
-        Now = 0,
-        StartOfHour,
-        StartOfDay,
-        StartOfWeek,
-        StartOfMonth,
-        StartOfYear,
+        AverageStep = 0,
+        AverageLinear = 1,
+        MinimumValue = 2,
+        MaximumValue = 3,
+        DistanceBetweenMinAndMax = 4,
+        RecordsCount = 5,
     };
 }

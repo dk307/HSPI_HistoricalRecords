@@ -439,7 +439,7 @@ namespace HSPI_HistoryTest
             public int Compare(RecordDataAndDuration x, RecordDataAndDuration y) => Comparer<long>.Default.Compare(x.UnixTimeSeconds, y.UnixTimeSeconds);
         }
 
+        private static readonly List<double> existing = new();
         private static readonly Random rand = new();
-        private static List<double> existing = new();
     }
 }
