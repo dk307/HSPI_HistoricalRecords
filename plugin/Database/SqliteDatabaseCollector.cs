@@ -165,27 +165,28 @@ namespace Hspi.Database
             using var lock2 = CreateLockForDBConnection();
             using var stmt = CreateStatement(sql);
 
-            List<Dictionary<string, object?>> list = new();
+            List<Dictionary<string, object?>> list = [];
 
-            List<Tuple<string, int>> colInfo = new();
+            List<string> colNames = [];
 
             while (ugly.step(stmt) != SQLITE_DONE)
             {
-                // fill the columns info once
-                if (colInfo.Count == 0)
+                // fill the columns name once
+                if (colNames.Count == 0)
                 {
                     for (var i = 0; i < ugly.column_count(stmt); i++)
                     {
                         var name = ugly.column_name(stmt, i) ?? string.Empty;
-                        var type = ugly.column_type(stmt, i);
-                        colInfo.Add(new Tuple<string, int>(name, type));
+                        colNames.Add(name);
                     }
                 }
 
-                Dictionary<string, object?> records = new();
-                for (var i = 0; i < colInfo.Count; i++)
+                Dictionary<string, object?> records = [];
+                for (var i = 0; i < colNames.Count; i++)
                 {
-                    object? value = colInfo[i].Item2 switch
+                    var type = ugly.column_type(stmt, i);
+
+                    object? value = type switch
                     {
                         SQLITE_INTEGER => ugly.column_int64(stmt, i),
                         SQLITE_FLOAT => ugly.column_double(stmt, i),
@@ -193,7 +194,7 @@ namespace Hspi.Database
                         SQLITE_BLOB => ugly.column_bytes(stmt, i),
                         _ => null,
                     };
-                    records.Add(colInfo[i].Item1, value);
+                    records.Add(colNames[i], value);
                 }
 
                 list.Add(records);
@@ -279,7 +280,7 @@ namespace Hspi.Database
 
             static IList<RecordDataAndDuration> GetRecordsFromStatement(long refId, sqlite3_stmt stmt)
             {
-                List<RecordDataAndDuration> records = new();
+                List<RecordDataAndDuration> records = [];
 
                 while (ugly.step(stmt) != SQLITE_DONE)
                 {
@@ -300,7 +301,7 @@ namespace Hspi.Database
 
             static List<string> CalculateOrderBys(IReadOnlyList<ResultSortBy> sortByColumns)
             {
-                List<string> orderBys = new();
+                List<string> orderBys = [];
                 foreach (var orderBy in sortByColumns)
                 {
                     switch (orderBy)
