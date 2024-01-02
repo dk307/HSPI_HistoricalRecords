@@ -290,6 +290,7 @@ namespace HSPI_HistoryTest
         }
 
         [TestCase(null, 3, 3)]
+        [TestCase("0 Watts", null, 3)]
         [TestCase("1.0", 3, 3)]
         [TestCase("-1.3382", 1, 4)]
         [TestCase("1.0", null, 1)]
