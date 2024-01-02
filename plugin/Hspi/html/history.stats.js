@@ -34,13 +34,25 @@ function setUpPersistanceTable() {
 					 "Average (Linear)",
 					 getJsonValue(data[1], '-'),
 					],
-					[	
-					 "Minimum Value",
-					 getJsonValue(data[2], 'No records found'),
+					[
+					 "Minimum value",
+					 getJsonValue(data[2], 'No records found'),					 
 					],
 					[	
-					 "Maximum Value",
+					 "Maximum value",
 					 getJsonValue(data[3], 'No records found'),
+					],
+					[	
+					 "Distance between minimum and maximum value",
+					 getJsonValue(data[4], 'No records found'),
+					],
+					[	
+					 "Records count",
+					 data[5],
+					],
+					[	
+					 "Number of time value changed",
+					 data[6],
 					],
 				]
 			};			
