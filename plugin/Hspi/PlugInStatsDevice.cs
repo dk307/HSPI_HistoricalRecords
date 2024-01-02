@@ -7,19 +7,29 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Hspi.Device;
+using Hspi.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 
 namespace Hspi
 {
     internal partial class PlugIn : HspiBase
     {
-        public IDictionary<int, string>? GetStatisticDeviceDataAsJson(object refIdString)
+        public IDictionary<int, string>? GetStatisticDeviceDataAsJson(object? refIdString)
         {
-            var refId = Hspi.Utils.TypeConverter.TryGetFromObject<int>(refIdString)
-                ?? throw new ArgumentException(null, nameof(refIdString));
+            try
+            {
+                var refId = Converter.TryGetFromObject<int>(refIdString)
+                    ?? throw new ArgumentException(null, nameof(refIdString));
 
-            return sqliteManager?.GetStatisticDeviceDataAsJson(refId);
+                return sqliteManager?.GetStatisticDeviceDataAsJson(refId);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("GetStatisticDeviceDataAsJson for {arg} failed with {error}", refIdString, ex.GetFullMessage());
+                throw;
+            }
         }
 
         // used by scrbian

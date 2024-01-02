@@ -17,7 +17,7 @@
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <Nullable>enable</Nullable>
-    <LangVersion>11.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -117,7 +117,8 @@
     <Compile Include="Hspi\Utils\HsDeviceInvalidException.cs" />
     <Compile Include="Hspi\Device\StatisticsDevice.cs" />
     <Compile Include="Hspi\Utils\HsHelper.cs" />
-    <Compile Include="Hspi\Utils\TypeConverter.cs" />
+    <Compile Include="Hspi\Utils\MonoHelper.cs" />
+    <Compile Include="Hspi\Utils\Converter.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueIterator.cs" />
     <Compile Include="Hspi\Utils\TimeAndValueQueryHelper.cs" />
     <Compile Include="Hspi\Utils\TimeSeriesHelper.cs" />

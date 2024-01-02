@@ -35,31 +35,29 @@ namespace Hspi
             get
             {
                 return Volatile.Read(ref this.collector) ??
-                       throw new InvalidOperationException("Sqlite initialize failed Or Backup in progress");
+                       throw new InvalidOperationException("Database initialize failed Or Backup in progress");
             }
         }
 
-        public PluginStatus Status
+        public Exception? Status
         {
             get
             {
                 if (collectorInitException != null)
                 {
-                    return PluginStatus.Critical(this.collectorInitException.GetFullMessage());
+                    return collectorInitException;
+                }
+
+                if (started)
+                {
+                    var collectorCopy = Volatile.Read(ref this.collector);
+
+                    return collectorCopy != null ? collectorCopy.RecordUpdateException :
+                                                   new Exception("Device records are not being stored");
                 }
                 else
                 {
-                    if (started)
-                    {
-                        var collectorCopy = Volatile.Read(ref this.collector);
-                        var collectorError = collectorCopy?.RecordUpdateException;
-                        return collectorError != null ?
-                                    PluginStatus.Warning(collectorError.GetFullMessage()) : PluginStatus.Ok();
-                    }
-                    else
-                    {
-                        return PluginStatus.Warning("Device records are not being stored");
-                    }
+                    return new Exception("Device records are not being stored");
                 }
             }
         }

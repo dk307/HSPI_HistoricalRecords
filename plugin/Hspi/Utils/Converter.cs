@@ -4,7 +4,7 @@
 
 namespace Hspi.Utils
 {
-    internal static class TypeConverter
+    internal static class Converter
     {
         public static T? TryGetFromObject<T>(object? value) where T : struct
         {

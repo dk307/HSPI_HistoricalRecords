@@ -5,16 +5,15 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime;
 using System.Threading;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
+using Hspi.Hspi.Utils;
 using Hspi.Utils;
 using Serilog;
-using SQLitePCL.Ugly;
 using SQLitePCL;
 using Constants = HomeSeer.PluginSdk.Constants;
 
@@ -59,7 +58,7 @@ namespace Hspi
             var recordCounts = Collector.GetRecordsWithCount(int.MaxValue)
                                         .ToDictionary(x => x.Key, x => x.Value);
 
-            List<Dictionary<string, object?>> result = new();
+            List<Dictionary<string, object?>> result = [];
             foreach (var refId in HomeSeerSystem.GetAllRefs())
             {
                 var (minValue, maxValue) = SettingsPages.GetDeviceRangeForValidValues(refId);
@@ -81,13 +80,21 @@ namespace Hspi
 
         public Dictionary<string, string> GetDatabaseStats()
         {
-            return new Dictionary<string, string>()
+            try
             {
-                { "path", SettingsPages.DBPath },
-                { "version", raw.sqlite3_libversion().utf8_to_string() },
-                { "size", GetTotalFileSize().ToString(CultureInfo.InvariantCulture) },
-                { "retentionPeriod", ((long)SettingsPages.GlobalRetentionPeriod.TotalSeconds).ToString(CultureInfo.InvariantCulture) },
-            };
+                return new Dictionary<string, string>()
+                {
+                    { "path", SettingsPages.DBPath },
+                    { "version", raw.sqlite3_libversion().utf8_to_string() },
+                    { "size", GetTotalFileSize().ToString(CultureInfo.InvariantCulture) },
+                    { "retentionPeriod", ((long)SettingsPages.GlobalRetentionPeriod.TotalSeconds).ToString(CultureInfo.InvariantCulture) },
+                };
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("GetDatabaseStats for failed with {error}", ex.GetFullMessage());
+                throw;
+            }
 
             long GetTotalFileSize()
             {
@@ -167,15 +174,18 @@ namespace Hspi
 
         protected override void BeforeReturnStatus()
         {
-            var sqliteStatus = sqliteManager?.Status;
-            if ((sqliteStatus != null) && sqliteStatus.Status != PluginStatus.EPluginStatus.Ok)
+            var exceptions = new Exception?[] { topLevelException, sqliteManager?.Status };
+
+            foreach (var exception in exceptions)
             {
-                this.Status = sqliteStatus;
+                if (exception != null)
+                {
+                    this.Status = new PluginStatus(PluginStatus.EPluginStatus.Critical, exception.GetFullMessage());
+                    return;
+                }
             }
-            else
-            {
-                this.Status = PluginStatus.Ok();
-            }
+
+            this.Status = PluginStatus.Ok();
         }
 
         protected override void Dispose(bool disposing)
@@ -200,6 +210,8 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
+                CheckMonoVersion();
+
                 sqliteManager = new SqliteManager(HomeSeerSystem, queue, settingsPages, featureCachedDataProvider, CreateClock(), ShutdownCancellationToken);
                 sqliteManager.TryStart();
 
@@ -217,7 +229,7 @@ namespace Hspi
             catch (Exception ex)
             {
                 Log.Error("Failed to initialize PlugIn with {error}", ex.GetFullMessage());
-                throw;
+                topLevelException = ex;
             }
         }
 
@@ -238,6 +250,20 @@ namespace Hspi
         {
             Log.Information("Shutting down");
             base.OnShutdown();
+        }
+
+        private static void CheckMonoVersion()
+        {
+            var monoVersion = MonoHelper.GetMonoVersion();
+            if (monoVersion != null)
+            {
+                Log.Debug("Mono version is {version}", monoVersion);
+                Version minVersion = new(6, 0, 0);
+                if (monoVersion < minVersion)
+                {
+                    throw new Exception($"Mono Version is less than {minVersion}. Need {minVersion} or higher;");
+                }
+            }
         }
 
         private static void CheckNotNull([NotNull] object? obj)
@@ -414,5 +440,6 @@ namespace Hspi
         private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
         private SqliteManager? sqliteManager;
+        private Exception? topLevelException;
     }
 }
