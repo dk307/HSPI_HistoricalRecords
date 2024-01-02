@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
+using HomeSeer.PluginSdk.Devices.Identification;
 
 #nullable enable
 
@@ -90,14 +91,20 @@ namespace Hspi
 
             int? GetMaxPrecisionFromGraphics(int refId)
             {
-                var graphics = GetPropertyValue<List<StatusGraphic>>(refId, EProperty.StatusGraphics);
+                var typeInfo = GetPropertyValue<TypeInfo>(refId, EProperty.DeviceType);
 
-                if (graphics != null)
+                // graphics are only completely valid for new devices/features
+                if (typeInfo.ApiType is EApiType.Device or EApiType.Feature)
                 {
-                    var decimalPlaces = graphics.Where(x => x.IsRange).Select(x => x.TargetRange.DecimalPlaces);
-                    if (decimalPlaces.Any())
+                    var graphics = GetPropertyValue<List<StatusGraphic>>(refId, EProperty.StatusGraphics);
+
+                    if (graphics != null)
                     {
-                        return decimalPlaces.Max();
+                        var decimalPlaces = graphics.Where(x => x.IsRange).Select(x => x.TargetRange.DecimalPlaces);
+                        if (decimalPlaces.Any())
+                        {
+                            return decimalPlaces.Max();
+                        }
                     }
                 }
 
