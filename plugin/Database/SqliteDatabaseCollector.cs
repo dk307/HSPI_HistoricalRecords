@@ -62,6 +62,7 @@ namespace Hspi.Database
             getMaxValueCommand = CreateStatement(GetMaxValuesSql);
             getMinValueCommand = CreateStatement(GetMinValuesSql);
             getDistanceMinMaxValueCommand = CreateStatement(GetMinMaxDistanceValuesSql);
+            getChangedValuesCountSqlCommand = CreateStatement(GetChangedCountValuesSql);
             getStrForRefAndValueCommand = CreateStatement(GetStrForRefAndValueSql);
 
             var recordUpdateThread = new Thread(UpdateRecords);
@@ -142,6 +143,7 @@ namespace Hspi.Database
             getMaxValueCommand?.Dispose();
             getMinValueCommand?.Dispose();
             getDistanceMinMaxValueCommand?.Dispose();
+            getChangedValuesCountSqlCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
             if (sqliteConnection != null && SQLITE_OK != sqliteConnection.manual_close_v2())
             {
@@ -167,25 +169,26 @@ namespace Hspi.Database
 
             List<Dictionary<string, object?>> list = new();
 
-            List<Tuple<string, int>> colInfo = new();
+            List<string> colNames = new();
 
             while (ugly.step(stmt) != SQLITE_DONE)
             {
-                // fill the columns info once
-                if (colInfo.Count == 0)
+                // fill the columns name once
+                if (colNames.Count == 0)
                 {
                     for (var i = 0; i < ugly.column_count(stmt); i++)
                     {
                         var name = ugly.column_name(stmt, i) ?? string.Empty;
-                        var type = ugly.column_type(stmt, i);
-                        colInfo.Add(new Tuple<string, int>(name, type));
+                        colNames.Add(name);
                     }
                 }
 
                 Dictionary<string, object?> records = new();
-                for (var i = 0; i < colInfo.Count; i++)
+                for (var i = 0; i < colNames.Count; i++)
                 {
-                    object? value = colInfo[i].Item2 switch
+                    var type = ugly.column_type(stmt, i);
+
+                    object? value = type switch
                     {
                         SQLITE_INTEGER => ugly.column_int64(stmt, i),
                         SQLITE_FLOAT => ugly.column_double(stmt, i),
@@ -193,7 +196,7 @@ namespace Hspi.Database
                         SQLITE_BLOB => ugly.column_bytes(stmt, i),
                         _ => null,
                     };
-                    records.Add(colInfo[i].Item1, value);
+                    records.Add(colNames[i], value);
                 }
 
                 list.Add(records);
@@ -229,6 +232,11 @@ namespace Hspi.Database
         public double? GetMinValue(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
             return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMinValueCommand);
+        }
+
+        public double? GetChangedValuesCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        {
+            return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getChangedValuesCountSqlCommand);
         }
 
         public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
@@ -641,6 +649,7 @@ namespace Hspi.Database
 
         private const string GetMaxValuesSql = @"SELECT MAX(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
         private const string GetMinMaxDistanceValuesSql = @"SELECT ABS(MAX(value) - MIN(value)) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
+        private const string GetChangedCountValuesSql = @"SELECT SUM(COALESCE(changed, 1)) from (SELECT value != LAG(value, 1) OVER ( PARTITION BY ref ORDER BY ts) as changed from history where ref=$ref AND ts>=$min AND ts<=$max)";
         private const string GetMinValuesSql = @"SELECT MIN(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
         private const string GetStrForRefAndValueSql = "SELECT str FROM history WHERE ref=? AND value=? ORDER BY ts DESC LIMIT 1";
 
@@ -672,6 +681,7 @@ namespace Hspi.Database
         private readonly sqlite3_stmt deleteAllRecordByRefCommand;
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
         private readonly sqlite3_stmt getDistanceMinMaxValueCommand;
+        private readonly sqlite3_stmt getChangedValuesCountSqlCommand;
         private readonly sqlite3_stmt getEarliestAndOldestRecordCommand;
         private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getMaxValueCommand;

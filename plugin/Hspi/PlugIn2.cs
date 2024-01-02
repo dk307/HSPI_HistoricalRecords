@@ -545,6 +545,9 @@ namespace Hspi
                TimeAndValueQueryHelper.Average(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds, FillStrategy.Linear),
                Collector.GetMinValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
                Collector.GetMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+               Collector.GetDistanceMinMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+               Collector.GetRecordsCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+               Collector.GetChangedValuesCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
             };
 
             return WriteJsonResult((jsonWriter) =>
