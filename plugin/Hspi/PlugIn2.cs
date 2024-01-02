@@ -36,24 +36,33 @@ namespace Hspi
 
         public List<string> GetAllowedDisplays(object? refIdString)
         {
-            var refId = Converter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
-
-            var feature = new HsFeatureData(HomeSeerSystem, refId);
-
-            List<string> displays = new()
+            try
             {
-                "table"
-            };
+                var refId = Converter.TryGetFromObject<int>(refIdString) ??
+                            throw new ArgumentException(null, nameof(refIdString));
 
-            if (ShouldShowChart(feature))
-            {
-                displays.Add("chart");
-                displays.Add("stats");
+                var feature = new HsFeatureData(HomeSeerSystem, refId);
+
+                List<string> displays =
+                [
+                    "table"
+                ];
+
+                if (ShouldShowChart(feature))
+                {
+                    displays.Add("chart");
+                    displays.Add("stats");
+                }
+
+                displays.Add("histogram");
+
+                return displays;
             }
-
-            displays.Add("histogram");
-
-            return displays;
+            catch (Exception ex)
+            {
+                Log.Warning("GetAllowedDisplays for {arg} failed with {error}", refIdString, ex.GetFullMessage());
+                throw;
+            }
 
             static bool ShouldShowChart(HsFeatureData feature)
             {
@@ -400,7 +409,7 @@ namespace Hspi
             {
                 leftOver = 0;
 
-                List<KeyValuePair<double, long>> result = new();
+                List<KeyValuePair<double, long>> result = [];
                 var count = maxCount - 1; // -1 for others
                 foreach (var pair in histogram.OrderByDescending(x => x.Value))
                 {
@@ -494,7 +503,7 @@ namespace Hspi
 
             static List<ResultSortBy> CalculateAllSortOrders(NameValueCollection parameters)
             {
-                List<ResultSortBy> result = new();
+                List<ResultSortBy> result = [];
 
                 int i = 0;
                 while (true)
@@ -539,16 +548,16 @@ namespace Hspi
 
             long minUnixTimeSeconds = min / 1000;
             long maxUnixTimeSeconds = max / 1000;
-            List<double?> stats = new()
-            {
-               TimeAndValueQueryHelper.Average(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds, FillStrategy.LOCF) ,
-               TimeAndValueQueryHelper.Average(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds, FillStrategy.Linear),
-               Collector.GetMinValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
-               Collector.GetMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
-               Collector.GetDistanceMinMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
-               Collector.GetRecordsCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
-               Collector.GetChangedValuesCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
-            };
+            List<double?> stats =
+            [
+                TimeAndValueQueryHelper.Average(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds, FillStrategy.LOCF),
+                TimeAndValueQueryHelper.Average(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds, FillStrategy.Linear),
+                Collector.GetMinValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+                Collector.GetMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+                Collector.GetDistanceMinMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+                Collector.GetRecordsCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+                Collector.GetChangedValuesCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+            ];
 
             return WriteJsonResult((jsonWriter) =>
             {

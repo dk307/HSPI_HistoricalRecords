@@ -5,19 +5,17 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime;
 using System.Threading;
 using HomeSeer.Jui.Views;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
+using Hspi.Hspi.Utils;
 using Hspi.Utils;
 using Serilog;
-using SQLitePCL.Ugly;
 using SQLitePCL;
 using Constants = HomeSeer.PluginSdk.Constants;
-using Hspi.Hspi.Utils;
 
 #nullable enable
 
@@ -60,7 +58,7 @@ namespace Hspi
             var recordCounts = Collector.GetRecordsWithCount(int.MaxValue)
                                         .ToDictionary(x => x.Key, x => x.Value);
 
-            List<Dictionary<string, object?>> result = new();
+            List<Dictionary<string, object?>> result = [];
             foreach (var refId in HomeSeerSystem.GetAllRefs())
             {
                 var (minValue, maxValue) = SettingsPages.GetDeviceRangeForValidValues(refId);
@@ -82,13 +80,21 @@ namespace Hspi
 
         public Dictionary<string, string> GetDatabaseStats()
         {
-            return new Dictionary<string, string>()
+            try
             {
-                { "path", SettingsPages.DBPath },
-                { "version", raw.sqlite3_libversion().utf8_to_string() },
-                { "size", GetTotalFileSize().ToString(CultureInfo.InvariantCulture) },
-                { "retentionPeriod", ((long)SettingsPages.GlobalRetentionPeriod.TotalSeconds).ToString(CultureInfo.InvariantCulture) },
-            };
+                return new Dictionary<string, string>()
+                {
+                    { "path", SettingsPages.DBPath },
+                    { "version", raw.sqlite3_libversion().utf8_to_string() },
+                    { "size", GetTotalFileSize().ToString(CultureInfo.InvariantCulture) },
+                    { "retentionPeriod", ((long)SettingsPages.GlobalRetentionPeriod.TotalSeconds).ToString(CultureInfo.InvariantCulture) },
+                };
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("GetDatabaseStats for failed with {error}", ex.GetFullMessage());
+                throw;
+            }
 
             long GetTotalFileSize()
             {

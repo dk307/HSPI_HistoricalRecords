@@ -19,7 +19,7 @@ namespace Hspi.Utils
         {
             var list = GetMessageList(ex);
 
-            List<string> results = new();
+            List<string> results = [];
             foreach (var element in list)
             {
                 if (results.Count == 0 || results[^1] != element)
