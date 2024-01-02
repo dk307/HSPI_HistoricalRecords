@@ -142,7 +142,7 @@ namespace HSPI_HistoryTest
             FireBackupStartEvent(plugin);
 
             var statusBackup = plugin.Object.OnStatusCheck();
-            Assert.That(statusBackup.Status, Is.EqualTo(EPluginStatus.Warning));
+            Assert.That(statusBackup.Status, Is.EqualTo(EPluginStatus.Critical));
             Assert.That(statusBackup.StatusText, Is.EqualTo("Device records are not being stored"));
 
             FireBackupStopEvent(plugin);

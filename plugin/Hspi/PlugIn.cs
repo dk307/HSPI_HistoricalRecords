@@ -167,15 +167,18 @@ namespace Hspi
 
         protected override void BeforeReturnStatus()
         {
-            var sqliteStatus = sqliteManager?.Status;
-            if ((sqliteStatus != null) && sqliteStatus.Status != PluginStatus.EPluginStatus.Ok)
+            var exceptions = new Exception?[] { topLevelException, sqliteManager?.Status };
+
+            foreach (var exception in exceptions)
             {
-                this.Status = sqliteStatus;
+                if (exception != null)
+                {
+                    this.Status = new PluginStatus(PluginStatus.EPluginStatus.Critical, exception.GetFullMessage());
+                    return;
+                }
             }
-            else
-            {
-                this.Status = PluginStatus.Ok();
-            }
+
+            this.Status = PluginStatus.Ok();
         }
 
         protected override void Dispose(bool disposing)
@@ -217,6 +220,7 @@ namespace Hspi
             catch (Exception ex)
             {
                 Log.Error("Failed to initialize PlugIn with {error}", ex.GetFullMessage());
+                topLevelException = ex;
                 throw;
             }
         }
@@ -414,5 +418,6 @@ namespace Hspi
         private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
         private SqliteManager? sqliteManager;
+        private Exception? topLevelException;
     }
 }
