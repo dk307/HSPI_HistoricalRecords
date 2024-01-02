@@ -36,7 +36,7 @@ namespace Hspi
 
         public List<string> GetAllowedDisplays(object? refIdString)
         {
-            var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
+            var refId = Converter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
 
             var feature = new HsFeatureData(HomeSeerSystem, refId);
 
@@ -74,7 +74,7 @@ namespace Hspi
 
         public List<object?> GetDevicePageHeaderStats(object? refIdString)
         {
-            var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
+            var refId = Converter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
             var result = new List<object?>();
 
             result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
@@ -91,7 +91,7 @@ namespace Hspi
 
         public IList<int> GetFeatureRefIdsForDevice(object? refIdString)
         {
-            var refId = TypeConverter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
+            var refId = Converter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
             var hashSet = (HashSet<int>)HomeSeerSystem.GetPropertyByRef(refId, EProperty.AssociatedDevices);
             hashSet.Add(refId);
             return hashSet.ToList();
@@ -527,7 +527,7 @@ namespace Hspi
 
             static long ParseParameterAsInt(NameValueCollection parameters, string name)
             {
-                return TypeConverter.TryGetFromObject<long>(parameters[name]) ?? throw new ArgumentException(name + " is invalid");
+                return Converter.TryGetFromObject<long>(parameters[name]) ?? throw new ArgumentException(name + " is invalid");
             }
         }
 

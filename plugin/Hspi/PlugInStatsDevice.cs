@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Hspi.Device;
+using Hspi.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -16,7 +17,7 @@ namespace Hspi
     {
         public IDictionary<int, string>? GetStatisticDeviceDataAsJson(object refIdString)
         {
-            var refId = Hspi.Utils.TypeConverter.TryGetFromObject<int>(refIdString)
+            var refId = Converter.TryGetFromObject<int>(refIdString)
                 ?? throw new ArgumentException(null, nameof(refIdString));
 
             return sqliteManager?.GetStatisticDeviceDataAsJson(refId);

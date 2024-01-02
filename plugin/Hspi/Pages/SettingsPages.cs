@@ -14,7 +14,7 @@ namespace Hspi
     {
         public SettingsPages(IHsController hs, SettingsCollection collection)
         {
-            this.dbPath = Path.Combine(hs.GetAppPath(), "data", PlugInData.PlugInId, "records.db");
+            this.dbPath = Path.GetFullPath(Path.Combine(hs.GetAppPath(), "data", PlugInData.PlugInId, "records.db"));
 
             var logLevelStr = collection[SettingPageId].GetViewById<SelectListView>(LoggingLevelId).GetSelectedOptionKey();
             if (!Enum.TryParse<LogEventLevel>(logLevelStr, out LogEventLevel logEventLevel))

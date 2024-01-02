@@ -279,7 +279,7 @@ namespace HSPI_HistoryTest
 
             Assert.That(TestHelper.TimedWaitTillTrue(() =>
             {
-                return EPluginStatus.Warning == plugin.Object.OnStatusCheck().Status;
+                return EPluginStatus.Critical == plugin.Object.OnStatusCheck().Status;
             }));
 
             Assert.That(plugin.Object.OnStatusCheck().StatusText, Is.EqualTo("attempt to write a readonly database"));

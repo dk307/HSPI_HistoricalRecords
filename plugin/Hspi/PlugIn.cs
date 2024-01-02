@@ -17,6 +17,7 @@ using Serilog;
 using SQLitePCL.Ugly;
 using SQLitePCL;
 using Constants = HomeSeer.PluginSdk.Constants;
+using Hspi.Hspi.Utils;
 
 #nullable enable
 
@@ -203,6 +204,8 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
+                CheckMonoVersion();
+
                 sqliteManager = new SqliteManager(HomeSeerSystem, queue, settingsPages, featureCachedDataProvider, CreateClock(), ShutdownCancellationToken);
                 sqliteManager.TryStart();
 
@@ -221,7 +224,6 @@ namespace Hspi
             {
                 Log.Error("Failed to initialize PlugIn with {error}", ex.GetFullMessage());
                 topLevelException = ex;
-                throw;
             }
         }
 
@@ -242,6 +244,20 @@ namespace Hspi
         {
             Log.Information("Shutting down");
             base.OnShutdown();
+        }
+
+        private static void CheckMonoVersion()
+        {
+            var monoVersion = MonoHelper.GetMonoVersion();
+            if (monoVersion != null)
+            {
+                Log.Debug("Mono version is {version}", monoVersion);
+                Version minVersion = new(6, 0, 0);
+                if (monoVersion < minVersion)
+                {
+                    throw new Exception($"Mono Version is less than {minVersion}. Need {minVersion} or higher;");
+                }
+            }
         }
 
         private static void CheckNotNull([NotNull] object? obj)
