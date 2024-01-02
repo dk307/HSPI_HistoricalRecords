@@ -144,7 +144,10 @@ namespace HSPI_HistoryTest
                                            trackedDeviceRefId, 10, "10", aTime.AddMinutes(-10).LocalDateTime, 1);
             TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
                                            Constants.HSEvent.VALUE_CHANGE,
-                                           trackedDeviceRefId, 50, "50", aTime.AddMinutes(-5).LocalDateTime, 2);
+                                           trackedDeviceRefId, 10, "10", aTime.AddMinutes(-9).LocalDateTime, 2);
+            TestHelper.RaiseHSEventAndWait(plugIn, hsControllerMock,
+                                           Constants.HSEvent.VALUE_CHANGE,
+                                           trackedDeviceRefId, 50, "50", aTime.AddMinutes(-5).LocalDateTime, 3);
 
             Assert.That(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
 
@@ -154,7 +157,7 @@ namespace HSPI_HistoryTest
                 case StatisticsFunction.AverageStep:
                     ExpectedValue = ((10D * 5 * 60) + (50D * 5 * 60)) / 600D; break;
                 case StatisticsFunction.AverageLinear:
-                    ExpectedValue = ((30D * 5 * 60) + (50D * 5 * 60)) / 600D; break;
+                    ExpectedValue = ((10D * 1 * 60) + (30D * 4 * 60) + (50D * 5 * 60)) / 600D; break;
                 case StatisticsFunction.MinimumValue:
                     ExpectedValue = 10D; break;
                 case StatisticsFunction.MaximumValue:
@@ -162,6 +165,8 @@ namespace HSPI_HistoryTest
                 case StatisticsFunction.DistanceBetweenMinAndMax:
                     ExpectedValue = 40D; break;
                 case StatisticsFunction.RecordsCount:
+                    ExpectedValue = 3D; break;
+                case StatisticsFunction.ValueChangedCount:
                     ExpectedValue = 2D; break;
 
                 default:
@@ -523,7 +528,7 @@ namespace HSPI_HistoryTest
             }
 
             Assert.That(newFeatureData.Feature[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
-            if (function != StatisticsFunction.RecordsCount)
+            if (function is not StatisticsFunction.RecordsCount and not StatisticsFunction.ValueChangedCount)
             {
                 CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
             }
@@ -566,9 +571,13 @@ namespace HSPI_HistoryTest
                 case StatisticsFunction.RecordsCount:
                     Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Count"));
                     break;
+
+                case StatisticsFunction.ValueChangedCount:
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Value Changed Count"));
+                    break;
             }
 
-            if (function != StatisticsFunction.RecordsCount)
+            if (function is not StatisticsFunction.RecordsCount and not StatisticsFunction.ValueChangedCount)
             {
                 var list1 = trackedFeature.StatusGraphics.Values;
                 var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;

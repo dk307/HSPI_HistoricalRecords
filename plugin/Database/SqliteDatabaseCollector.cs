@@ -62,6 +62,7 @@ namespace Hspi.Database
             getMaxValueCommand = CreateStatement(GetMaxValuesSql);
             getMinValueCommand = CreateStatement(GetMinValuesSql);
             getDistanceMinMaxValueCommand = CreateStatement(GetMinMaxDistanceValuesSql);
+            getChangedValuesCountSqlCommand = CreateStatement(GetChangedCountValuesSql);
             getStrForRefAndValueCommand = CreateStatement(GetStrForRefAndValueSql);
 
             var recordUpdateThread = new Thread(UpdateRecords);
@@ -142,6 +143,7 @@ namespace Hspi.Database
             getMaxValueCommand?.Dispose();
             getMinValueCommand?.Dispose();
             getDistanceMinMaxValueCommand?.Dispose();
+            getChangedValuesCountSqlCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
             if (sqliteConnection != null && SQLITE_OK != sqliteConnection.manual_close_v2())
             {
@@ -165,9 +167,9 @@ namespace Hspi.Database
             using var lock2 = CreateLockForDBConnection();
             using var stmt = CreateStatement(sql);
 
-            List<Dictionary<string, object?>> list = [];
+            List<Dictionary<string, object?>> list = new();
 
-            List<string> colNames = [];
+            List<string> colNames = new();
 
             while (ugly.step(stmt) != SQLITE_DONE)
             {
@@ -181,7 +183,7 @@ namespace Hspi.Database
                     }
                 }
 
-                Dictionary<string, object?> records = [];
+                Dictionary<string, object?> records = new();
                 for (var i = 0; i < colNames.Count; i++)
                 {
                     var type = ugly.column_type(stmt, i);
@@ -232,6 +234,11 @@ namespace Hspi.Database
             return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMinValueCommand);
         }
 
+        public double? GetChangedValuesCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        {
+            return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getChangedValuesCountSqlCommand);
+        }
+
         public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
                                                        long start, long length,
                                                        IReadOnlyList<ResultSortBy> sortByColumns)
@@ -280,7 +287,7 @@ namespace Hspi.Database
 
             static IList<RecordDataAndDuration> GetRecordsFromStatement(long refId, sqlite3_stmt stmt)
             {
-                List<RecordDataAndDuration> records = [];
+                List<RecordDataAndDuration> records = new();
 
                 while (ugly.step(stmt) != SQLITE_DONE)
                 {
@@ -301,7 +308,7 @@ namespace Hspi.Database
 
             static List<string> CalculateOrderBys(IReadOnlyList<ResultSortBy> sortByColumns)
             {
-                List<string> orderBys = [];
+                List<string> orderBys = new();
                 foreach (var orderBy in sortByColumns)
                 {
                     switch (orderBy)
@@ -642,6 +649,7 @@ namespace Hspi.Database
 
         private const string GetMaxValuesSql = @"SELECT MAX(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
         private const string GetMinMaxDistanceValuesSql = @"SELECT ABS(MAX(value) - MIN(value)) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
+        private const string GetChangedCountValuesSql = @"SELECT SUM(COALESCE(changed, 1)) from (SELECT value != LAG(value, 1) OVER ( PARTITION BY ref ORDER BY ts) as changed from history where ref=$ref AND ts>=$min AND ts<=$max)";
         private const string GetMinValuesSql = @"SELECT MIN(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
         private const string GetStrForRefAndValueSql = "SELECT str FROM history WHERE ref=? AND value=? ORDER BY ts DESC LIMIT 1";
 
@@ -673,6 +681,7 @@ namespace Hspi.Database
         private readonly sqlite3_stmt deleteAllRecordByRefCommand;
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
         private readonly sqlite3_stmt getDistanceMinMaxValueCommand;
+        private readonly sqlite3_stmt getChangedValuesCountSqlCommand;
         private readonly sqlite3_stmt getEarliestAndOldestRecordCommand;
         private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getMaxValueCommand;

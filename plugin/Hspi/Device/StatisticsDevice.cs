@@ -130,6 +130,7 @@ namespace Hspi.Device
                     break;
 
                 case StatisticsFunction.RecordsCount:
+                case StatisticsFunction.ValueChangedCount:
                 default:
                     break;
             }
@@ -171,6 +172,7 @@ namespace Hspi.Device
                     StatisticsFunction.MaximumValue => "Maximum Value",
                     StatisticsFunction.DistanceBetweenMinAndMax => "Distance Min-Max Value",
                     StatisticsFunction.RecordsCount => "Count",
+                    StatisticsFunction.ValueChangedCount => "Value Changed Count",
                     _ => throw new NotImplementedException(),
                 };
             }
@@ -261,6 +263,7 @@ namespace Hspi.Device
                         StatisticsFunction.MaximumValue => collector.GetMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
                         StatisticsFunction.DistanceBetweenMinAndMax => collector.GetDistanceMinMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
                         StatisticsFunction.RecordsCount => collector.GetRecordsCount(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        StatisticsFunction.ValueChangedCount => collector.GetChangedValuesCount(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
                         _ => throw new NotImplementedException(),
                     };
 

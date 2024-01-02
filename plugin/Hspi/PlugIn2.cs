@@ -547,6 +547,7 @@ namespace Hspi
                Collector.GetMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
                Collector.GetDistanceMinMaxValue(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
                Collector.GetRecordsCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+               Collector.GetChangedValuesCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
             };
 
             return WriteJsonResult((jsonWriter) =>
