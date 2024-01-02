@@ -68,9 +68,27 @@ namespace Hspi
 
         private int GetFeaturePrecision(int refId)
         {
-            return UpdateMaxPrecision(refId) ?? 3;
+            var precision1 = GetPrecisionFromDisplayStatus(refId);
+            var precision2 = GetMaxPrecisionFromGraphics(refId);
 
-            int? UpdateMaxPrecision(int refId)
+            if (precision1.HasValue && precision2.HasValue)
+            {
+                return Math.Max(precision1.Value, precision2.Value);
+            }
+            else if (precision2.HasValue)
+            {
+                return precision2.Value;
+            }
+            else if (precision1.HasValue)
+            {
+                return precision1.Value;
+            }
+            else
+            {
+                return 3;
+            }
+
+            int? GetMaxPrecisionFromGraphics(int refId)
             {
                 var graphics = GetPropertyValue<List<StatusGraphic>>(refId, EProperty.StatusGraphics);
 
@@ -85,24 +103,28 @@ namespace Hspi
 
                 return null;
             }
+
+            int? GetPrecisionFromDisplayStatus(int refId)
+            {
+                var value = ParseDisplayStatus(refId, 2);
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    return null;
+                }
+                else
+                {
+                    return value!.Length;
+                }
+            }
         }
 
         private string? GetFeatureUnit(int refId)
         {
             //  an ugly way to get unit, but there is no universal way to get them in HS4
-            var displayStatus = GetPropertyValue<string>(refId, EProperty.DisplayedStatus);
-            if (!string.IsNullOrWhiteSpace(displayStatus))
+            var unit = ParseDisplayStatus(refId, 3);
+            if (unit != null && validUnits.Contains(unit))
             {
-                var match = unitExtractionRegEx.Match(displayStatus);
-
-                if (match.Success)
-                {
-                    var unit = match.Groups[1].Value;
-                    if (validUnits.Contains(unit))
-                    {
-                        return unit;
-                    }
-                }
+                return unit;
             }
 
             return null;
@@ -139,7 +161,24 @@ namespace Hspi
             }
         }
 
-        private static readonly Regex unitExtractionRegEx = new(@"^\s*-?\d+(?:\.\d+)?\s*(.*)$",
+        private string? ParseDisplayStatus(int refId, int part)
+        {
+            var displayStatus = GetPropertyValue<string>(refId, EProperty.DisplayedStatus);
+            if (!string.IsNullOrWhiteSpace(displayStatus))
+            {
+                displayStatus = displayStatus.Trim();
+                var match = statusExtractionRegEx.Match(displayStatus);
+
+                if (match.Success)
+                {
+                    return match.Groups[part].Value;
+                }
+            }
+
+            return null;
+        }
+
+        private static readonly Regex statusExtractionRegEx = new(@"^^([-+]?\d+(?:\.(\d+))?)\s?(.*)$$",
                                                                 RegexOptions.Compiled | RegexOptions.CultureInvariant,
                                                                 TimeSpan.FromSeconds(5));
 
