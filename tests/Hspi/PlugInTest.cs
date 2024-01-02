@@ -165,7 +165,9 @@ namespace HSPI_HistoryTest
 
         [TestCase("96%", "%")]
         [TestCase("96 %", "%")]
-        [TestCase("-96 W", "W")]
+        [TestCase("-962 W", "W")]
+        [TestCase("+962 W", "W")]
+        [TestCase("213.00 C", "C")]
         [TestCase("93dkfe6 W", null)]
         [TestCase("96 kW hours", "kW hours")]
         [TestCase("96 F", "F")]
@@ -262,26 +264,54 @@ namespace HSPI_HistoryTest
         }
 
         [Test]
-        public void GetPrecision()
+        public void GetPrecisionInvalidation()
         {
             TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
 
             int refId = 10394;
-            mockHsController.SetupFeature(refId, 1.132, "1.1 F");
+            mockHsController.SetupFeature(refId, 1.1373646, "1 F");
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            List<StatusGraphic> statusGraphics1 = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 3 }) };
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusGraphics, statusGraphics1);
 
             var precision1 = plugin.Object.GetFeaturePrecision(refId);
             Assert.That(precision1, Is.EqualTo(3));
 
-            List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
-            mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusGraphics, statusGraphics);
+            List<StatusGraphic> statusGraphics2 = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 1 }) };
+            mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusGraphics, statusGraphics2);
 
             // invalidate the cache
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, refId, 0 });
 
             var precision2 = plugin.Object.GetFeaturePrecision(refId);
             Assert.That(precision2, Is.EqualTo(1));
+        }
+
+        [TestCase(null, 3, 3)]
+        [TestCase("1.0", 3, 3)]
+        [TestCase("-1.3382", 1, 4)]
+        [TestCase("1.0", null, 1)]
+        [TestCase("1 Volt", 5, 5)]
+        [TestCase(null, null, 3)]
+        public void GetPrecision(string displayStatus, int? graphicsMaxPrecision, int expectedPrecision)
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var mockHsController);
+
+            int refId = 10394;
+            mockHsController.SetupFeature(refId, 1.132, displayStatus);
+
+            if (graphicsMaxPrecision.HasValue)
+            {
+                List<StatusGraphic> statusGraphics = new() { new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = graphicsMaxPrecision.Value }) };
+                mockHsController.SetupDevOrFeatureValue(refId, EProperty.StatusGraphics, statusGraphics);
+            }
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            var precision1 = plugin.Object.GetFeaturePrecision(refId);
+            Assert.That(precision1, Is.EqualTo(expectedPrecision));
         }
 
         [Test]
