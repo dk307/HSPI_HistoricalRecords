@@ -257,7 +257,7 @@ function setupFunctionInterval{{tab.key}}() {
 function updateFunctionDuration{{tab.key}}(duration) {
     if (duration.CustomPeriod) {
         const period = duration.CustomPeriod;
-        if (!period.Start && period.End.Type === "Now" && period.FunctionDurationSeconds) {
+        if (!period.Start && period.End.Type === "Now" && period.FunctionDurationSeconds != null) {
             const duration = moment.duration(period.FunctionDurationSeconds, 'seconds');
 
             $('#daysDuration{{tab.key}}').val(Math.floor(duration.asDays()));
