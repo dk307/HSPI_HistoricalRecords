@@ -73,7 +73,7 @@ namespace Hspi.Device
 
         private static string HumanizeTimeSpan(TimeSpan timeSpan)
         {
-            List<string> parts = new();
+            List<string> parts = [];
 
             AddPart(timeSpan.Days, "day", parts);
             AddPart(timeSpan.Hours, "hour", parts);
