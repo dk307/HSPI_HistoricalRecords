@@ -53,7 +53,7 @@ namespace Hspi
         {
             var settings = PageFactory.CreateSettingsPage(SettingPageId, "Settings");
 
-            var spanView = new TimeSpanView(GlobalRetentionPeriodId, "Records retention period")
+            var spanView = new TimeSpanView(GlobalRetentionPeriodId, "History retention period")
             {
                 ShowDays = true,
                 ShowSeconds = false,
