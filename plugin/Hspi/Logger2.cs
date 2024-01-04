@@ -34,7 +34,10 @@ namespace Hspi
                 string hsDir = Path.GetDirectoryName(codeBase);
                 string logFile = Path.Combine(hsDir, "Logs", PlugInData.PlugInId, "file.log");
 
-                config = config.WriteTo.File(logFile, fileSizeLimitBytes: 10 * 1024 * 1024);
+                config = config.WriteTo.File(logFile,
+                                             fileSizeLimitBytes: 10 * 1024 * 1024,
+                                             rollOnFileSizeLimit: true,
+                                             retainedFileCountLimit: 3);
             }
 
             config = config.Destructure.UsingAttributes();
@@ -42,13 +45,8 @@ namespace Hspi
             Log.Logger = config.CreateLogger();
         }
 
-        public sealed class HomeSeerTarget : ILogEventSink
+        public sealed class HomeSeerTarget(IHsController hsController) : ILogEventSink
         {
-            public HomeSeerTarget(IHsController hsController)
-            {
-                this.loggerWeakReference = new WeakReference<IHsController>(hsController);
-            }
-
             public void Emit(LogEvent logEvent)
             {
                 if (loggerWeakReference.TryGetTarget(out var logger))
@@ -73,7 +71,7 @@ namespace Hspi
                 }
             }
 
-            private readonly WeakReference<IHsController> loggerWeakReference;
+            private readonly WeakReference<IHsController> loggerWeakReference = new(hsController);
         }
     }
 }

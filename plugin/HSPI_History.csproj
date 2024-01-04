@@ -135,9 +135,9 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resource.resx</DependentUpon>
     </Compile>
-    <Compile Include="Shared\Hspi\HSPIBase.cs" />
-    <Compile Include="Shared\Hspi\Logger2.cs" />
-    <Compile Include="Shared\Hspi\Utils\EnumHelper.cs" />
+    <Compile Include="Hspi\HSPIBase.cs" />
+    <Compile Include="Hspi\Logger2.cs" />
+    <Compile Include="Hspi\Utils\EnumHelper.cs" />
     <Compile Include="Hspi\Utils\ExceptionHelper.cs" />
   </ItemGroup>
   <ItemGroup>
