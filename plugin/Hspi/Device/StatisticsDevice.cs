@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
@@ -131,6 +132,17 @@ namespace Hspi.Device
 
                 case StatisticsFunction.RecordsCount:
                 case StatisticsFunction.ValueChangedCount:
+                    {
+                        var graphic = new StatusGraphic(GetImagePath("count"), int.MinValue, int.MaxValue);
+                        graphic.TargetRange.DecimalPlaces = 0;
+
+                        var graphics = new StatusGraphicCollection();
+                        graphics.Add(graphic);
+                        newFeatureData.Feature[EProperty.StatusGraphics] = graphics;
+                    }
+
+                    break;
+
                 default:
                     break;
             }
@@ -176,6 +188,11 @@ namespace Hspi.Device
                     _ => throw new NotImplementedException(),
                 };
             }
+        }
+
+        private static string GetImagePath(string iconFileName)
+        {
+            return Path.ChangeExtension(Path.Combine(PlugInData.PlugInId, "images", iconFileName), "png");
         }
 
         private static T GetPlugExtraData<T>(IHsController hsController,

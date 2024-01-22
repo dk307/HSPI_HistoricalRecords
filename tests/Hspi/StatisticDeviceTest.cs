@@ -589,6 +589,15 @@ namespace HSPI_HistoryTest
                 Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
                 Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
             }
+            else
+            {
+                var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
+                Assert.That(list2.Count, Is.EqualTo(1));
+                Assert.That(list2[0].IsRange, Is.True);
+                Assert.That(list2[0].TargetRange.Min, Is.EqualTo(int.MinValue));
+                Assert.That(list2[0].TargetRange.Max, Is.EqualTo(int.MaxValue));
+                Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(0));
+            }
 
             return data;
         }

@@ -24,7 +24,7 @@ namespace Hspi.Database
             RecordData result;
             while (!queue.TryDequeue(out result))
             {
-                WaitHandle[] waitHandles = new[] { addedEvent, cancellationToken.WaitHandle };
+                WaitHandle[] waitHandles = [addedEvent, cancellationToken.WaitHandle];
                 WaitHandle.WaitAny(waitHandles, -1, false);
                 cancellationToken.ThrowIfCancellationRequested();
             }

@@ -1,13 +1,14 @@
 This plugin retains historical numerical and string data from devices, making it accessible in the User interface through tables and graphs. Additionally, you can generate statistics, such as the average values over a specific time period. Furthermore, this plugin facilitates the creation of statistical devices that can be leveraged to enhance your events and automation.
 
 Features
-* The plugin records the historical numerical and string data for all devices, and it is designed to operate efficiently without consuming excessive resources. This plugin addresses the need to easily track device behavior over a specified interval, such as determining when heating was active or how frequently a door was opened, without requiring extensive initial setup.
-* You have the option to display the records as a table with the corresponding time duration for a specific interval.
+* The plugin records the historical numerical and string data for all devices, and it is designed to operate efficiently without consuming excessive resources. 
+* This plugin addresses the need to easily track device behavior over a specified interval, such as determining when heating was active or how frequently a door was opened, without requiring extensive initial setup.
+* You can view historical values of devices as a table for a specific interval.
 * You can visualize the records in the form of charts, and these charts are zoomable, allowing for increased accuracy as you zoom in.
 * You can view statistical functions like maximum, minimum, etc related to the records over a specific interval.
-* You can view histogram for the distribution of values. This can tell you information like how long AC was ruuning in last 24 hours.
+* You can view histogram for the distribution of values. This can tell you information like how long AC was running in last 24 hours.
+* You can create statistical devices in HomeSeer that can calculate functions such as averages over specified intervals for Homeseer devices. These HomeSeer devices, when integrated with events, offer a more flexible way to utilize statistical metrics like average, maximum, minimum, and other similar functions. This versatility enhances your ability to harness and apply these statistical insights within your HomeSeer automation setup.
 * The values are stored in an SQLite database, which is self-maintaining and requires no user intervention.
-* You have the capability to import the statistical functions of the device over a specified interval as HomeSeer devices. This approach, when integrated with events, provides a more flexible means to utilize statistical metrics like average, maximum, minimum, and other similar functions. This versatility enhances your ability to harness and utilize these statistical insights within your HomeSeer automation setup.
   
 
 FAQ
