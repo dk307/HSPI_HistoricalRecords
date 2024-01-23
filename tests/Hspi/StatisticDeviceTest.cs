@@ -168,6 +168,8 @@ namespace HSPI_HistoryTest
                     ExpectedValue = 3D; break;
                 case StatisticsFunction.ValueChangedCount:
                     ExpectedValue = 2D; break;
+                case StatisticsFunction.LinearRegression:
+                    ExpectedValue = 8.571D; break;
 
                 default:
                     Assert.Fail();
@@ -462,12 +464,12 @@ namespace HSPI_HistoryTest
 
         private static void SetUpFeatureWithLocationAndGraphics(FakeHSController hsControllerMock, int trackedRefId)
         {
-            hsControllerMock.SetupFeature(trackedRefId, 1.132);
+            hsControllerMock.SetupFeature(trackedRefId, 1.132, "10 A");
 
             hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.Name, "A Unique Device1");
             hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.Location, "Loc1");
             hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.Location2, "Loc1");
-            hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.AdditionalStatusData, new List<string> { "ad" });
+            hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.AdditionalStatusData, new List<string> { "A" });
 
             var collection = new StatusGraphicCollection();
             collection.Add(new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 2 }));
@@ -528,7 +530,11 @@ namespace HSPI_HistoryTest
             }
 
             Assert.That(newFeatureData.Feature[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
-            if (function is not StatisticsFunction.RecordsCount and not StatisticsFunction.ValueChangedCount)
+            if (function is StatisticsFunction.LinearRegression)
+            {
+                CollectionAssert.AreEqual((List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData], new List<string> { "A per minute" });
+            }
+            else if (function is not StatisticsFunction.RecordsCount and not StatisticsFunction.ValueChangedCount)
             {
                 CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
             }
@@ -575,28 +581,50 @@ namespace HSPI_HistoryTest
                 case StatisticsFunction.ValueChangedCount:
                     Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Value Changed Count"));
                     break;
+
+                case StatisticsFunction.LinearRegression:
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Slope"));
+                    break;
             }
 
-            if (function is not StatisticsFunction.RecordsCount and not StatisticsFunction.ValueChangedCount)
+            switch (function)
             {
-                var list1 = trackedFeature.StatusGraphics.Values;
-                var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
-                Assert.That(list1.Count, Is.EqualTo(1));
-                Assert.That(list2.Count, Is.EqualTo(1));
-                Assert.That(list2[0].Label, Is.EqualTo(list1[0].Label));
-                Assert.That(list2[0].IsRange, Is.EqualTo(list1[0].IsRange));
-                Assert.That(list2[0].ControlUse, Is.EqualTo(list1[0].ControlUse));
-                Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
-                Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
-            }
-            else
-            {
-                var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
-                Assert.That(list2.Count, Is.EqualTo(1));
-                Assert.That(list2[0].IsRange, Is.True);
-                Assert.That(list2[0].TargetRange.Min, Is.EqualTo(int.MinValue));
-                Assert.That(list2[0].TargetRange.Max, Is.EqualTo(int.MaxValue));
-                Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(0));
+                default:
+                    {
+                        var list1 = trackedFeature.StatusGraphics.Values;
+                        var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
+                        Assert.That(list1.Count, Is.EqualTo(1));
+                        Assert.That(list2.Count, Is.EqualTo(1));
+                        Assert.That(list2[0].Label, Is.EqualTo(list1[0].Label));
+                        Assert.That(list2[0].IsRange, Is.EqualTo(list1[0].IsRange));
+                        Assert.That(list2[0].ControlUse, Is.EqualTo(list1[0].ControlUse));
+                        Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
+                        Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
+                        break;
+                    }
+                case StatisticsFunction.LinearRegression:
+                    {
+                        var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
+                        Assert.That(list2.Count, Is.EqualTo(1));
+                        Assert.That(list2[0].IsRange, Is.True);
+                        Assert.That(list2[0].TargetRange.Min, Is.EqualTo(int.MinValue));
+                        Assert.That(list2[0].TargetRange.Max, Is.EqualTo(int.MaxValue));
+                        Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(5));
+                        Assert.That(list2[0].TargetRange.Suffix, Is.EqualTo(" $%0$"));
+                        break;
+                    }
+
+                case StatisticsFunction.RecordsCount:
+                case StatisticsFunction.ValueChangedCount:
+                    {
+                        var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
+                        Assert.That(list2.Count, Is.EqualTo(1));
+                        Assert.That(list2[0].IsRange, Is.True);
+                        Assert.That(list2[0].TargetRange.Min, Is.EqualTo(int.MinValue));
+                        Assert.That(list2[0].TargetRange.Max, Is.EqualTo(int.MaxValue));
+                        Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(0));
+                        break;
+                    }
             }
 
             return data;

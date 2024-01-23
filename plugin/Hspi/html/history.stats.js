@@ -52,6 +52,10 @@ function setUpPersistanceTable() {
                             "Number of times value changed",
                             data[6],
                         ],
+                        [
+                            "Slope",
+                            Math.round(data[7] * 60 * 10000) / 10000 + " " + deviceUnits + " per minute",
+                        ],
                     ]
                 };
                 callback(jsonResult);

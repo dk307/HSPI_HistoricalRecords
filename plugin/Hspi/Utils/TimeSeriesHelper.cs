@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Hspi.Database;
+using Newtonsoft.Json;
 
 #nullable enable
 
@@ -20,6 +21,49 @@ namespace Hspi.Utils
             this.minUnixTimeSeconds = minUnixTimeSeconds;
             this.maxUnixTimeSeconds = maxUnixTimeSeconds + 1; // make max inclusive
             this.timeAndValues = timeAndValues;
+        }
+
+        public double CalculateLinearRegression()
+        {
+            checked
+            {
+                var listIterator = new TimeAndValueIterator(timeAndValues, this.maxUnixTimeSeconds);
+
+                decimal sumOfX = 0;
+                decimal sumOfY = 0;
+                decimal sumOfXSq = 0;
+                decimal sumOfYSq = 0;
+                decimal sumCodeviates = 0;
+                int count = 0;
+
+                //list is sorted by ts, subtract minX to avoid overflow
+                var minX = listIterator.IsCurrentValid ? listIterator.Current.UnixTimeSeconds : 0;
+
+                while (listIterator.IsCurrentValid)
+                {
+                    count++;
+                    var x = listIterator.Current.UnixTimeSeconds - minX;
+                    decimal y = (decimal)listIterator.Current.DeviceValue;
+                    sumCodeviates += x * y;
+                    sumOfX += x;
+                    sumOfY += y;
+                    sumOfXSq += x * x;
+                    sumOfYSq += y * y;
+
+                    listIterator.MoveNext();
+                }
+
+                if (count <= 1)
+                {
+                    return 0;
+                }
+
+                decimal sCo = sumCodeviates - ((sumOfX * sumOfY) / count);
+                decimal ssX = sumOfXSq - ((sumOfX * sumOfX) / count);
+                decimal slope = sCo / ssX;
+
+                return (double)slope;
+            }
         }
 
         public IDictionary<double, long> CreateHistogram()

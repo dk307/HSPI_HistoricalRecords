@@ -99,12 +99,12 @@ namespace Hspi
             int newFeatureRefId;
             if (parentRefId.HasValue)
             {
-                newFeatureRefId = StatisticsDevice.Create(HomeSeerSystem, parentRefId.Value, statisticsDeviceData);
+                newFeatureRefId = StatisticsDevice.Create(FeatureCachedDataProvider, parentRefId.Value, statisticsDeviceData);
             }
             else
             {
                 var name = GetJsonValue<string>(jsonData, "name");
-                newFeatureRefId = StatisticsDevice.Create(HomeSeerSystem, name, statisticsDeviceData);
+                newFeatureRefId = StatisticsDevice.Create(FeatureCachedDataProvider, name, statisticsDeviceData);
             }
 
             sqliteManager?.RestartStatisticsDeviceUpdate();
