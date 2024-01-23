@@ -167,9 +167,9 @@ namespace Hspi.Database
             using var lock2 = CreateLockForDBConnection();
             using var stmt = CreateStatement(sql);
 
-            List<Dictionary<string, object?>> list = new();
+            List<Dictionary<string, object?>> list = [];
 
-            List<string> colNames = new();
+            List<string> colNames = [];
 
             while (ugly.step(stmt) != SQLITE_DONE)
             {
@@ -183,7 +183,7 @@ namespace Hspi.Database
                     }
                 }
 
-                Dictionary<string, object?> records = new();
+                Dictionary<string, object?> records = [];
                 for (var i = 0; i < colNames.Count; i++)
                 {
                     var type = ugly.column_type(stmt, i);
@@ -287,7 +287,7 @@ namespace Hspi.Database
 
             static IList<RecordDataAndDuration> GetRecordsFromStatement(long refId, sqlite3_stmt stmt)
             {
-                List<RecordDataAndDuration> records = new();
+                List<RecordDataAndDuration> records = [];
 
                 while (ugly.step(stmt) != SQLITE_DONE)
                 {
@@ -308,7 +308,7 @@ namespace Hspi.Database
 
             static List<string> CalculateOrderBys(IReadOnlyList<ResultSortBy> sortByColumns)
             {
-                List<string> orderBys = new();
+                List<string> orderBys = [];
                 foreach (var orderBy in sortByColumns)
                 {
                     switch (orderBy)
