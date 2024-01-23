@@ -21,6 +21,8 @@ namespace Hspi
             featurePrecisionCache = new HsFeatureCachedProperty<int>(x => GetFeaturePrecision(x));
         }
 
+        public IHsController HomeSeerSystem => homeSeerSystem;
+
         public int GetPrecision(int refId)
         {
             return featurePrecisionCache.Get(refId);
@@ -137,7 +139,7 @@ namespace Hspi
             return null;
         }
 
-        private T GetPropertyValue<T>(int refId, EProperty prop) => (T)homeSeerSystem.GetPropertyByRef(refId, prop);
+        private T GetPropertyValue<T>(int refId, EProperty prop) => (T)HomeSeerSystem.GetPropertyByRef(refId, prop);
 
         private bool IsMonitorableTypeFeature2(int refId)
         {

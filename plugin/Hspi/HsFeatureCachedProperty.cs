@@ -5,13 +5,8 @@ using System.Collections.Immutable;
 
 namespace Hspi
 {
-    internal sealed class HsFeatureCachedProperty<T>
+    internal sealed class HsFeatureCachedProperty<T>(Func<int, T> propertyGetter)
     {
-        public HsFeatureCachedProperty(Func<int, T> propertyGetter)
-        {
-            this.propertyGetter = propertyGetter;
-        }
-
         public T Get(int refId)
         {
             return ImmutableInterlocked.GetOrAdd(ref cache, refId, propertyGetter);
@@ -22,7 +17,7 @@ namespace Hspi
             ImmutableInterlocked.TryRemove(ref cache, refId, out var _);
         }
 
-        private readonly Func<int, T> propertyGetter;
+        private readonly Func<int, T> propertyGetter = propertyGetter;
         private ImmutableDictionary<int, T> cache = ImmutableDictionary<int, T>.Empty;
     }
 }

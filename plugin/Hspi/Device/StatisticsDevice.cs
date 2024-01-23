@@ -49,19 +49,19 @@ namespace Hspi.Device
 
         private long RefreshIntervalMilliseconds => Math.Max(featureData.RefreshIntervalSeconds * 1000, 1000);
 
-        public static int Create(IHsController hsController, int parentRefId, StatisticsDeviceData data)
+        public static int Create(HsFeatureCachedDataProvider hsFeatureCachedDataProvider, int parentRefId, StatisticsDeviceData data)
         {
-            return CreateImpl(hsController, parentRefId, null, data);
+            return CreateImpl(hsFeatureCachedDataProvider, parentRefId, null, data);
         }
 
-        public static int Create(IHsController hsController, string deviceName, StatisticsDeviceData data)
+        public static int Create(HsFeatureCachedDataProvider hsFeatureCachedDataProvider, string deviceName, StatisticsDeviceData data)
         {
-            return CreateImpl(hsController, null, deviceName, data);
+            return CreateImpl(hsFeatureCachedDataProvider, null, deviceName, data);
         }
 
         public static void EditDevice(IHsController hsController, int featureRefId, StatisticsDeviceData data)
         {
-            // check same interface and is a feature
+            // check same interface and is a trackedFeature
             var deviceInterface = (string)hsController.GetPropertyByRef(featureRefId, EProperty.Interface);
             var eRelationship = (ERelationship)hsController.GetPropertyByRef(featureRefId, EProperty.Relationship);
             if (deviceInterface != PlugInData.PlugInId || eRelationship != ERelationship.Feature)
@@ -83,21 +83,24 @@ namespace Hspi.Device
 
         public void UpdateNow() => timer.UpdateNow();
 
-        private static int CreateImpl(IHsController hsController, int? parentRefId, string? newDeviceName, StatisticsDeviceData data)
+        private static int CreateImpl(HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
+                                      int? parentRefId,
+                                      string? newDeviceName,
+                                      StatisticsDeviceData data)
         {
-            var feature = hsController.GetFeatureByRef(data.TrackedRef);
+            var trackedFeature = hsFeatureCachedDataProvider.HomeSeerSystem.GetFeatureByRef(data.TrackedRef);
 
             int featureParentRefId;
             if (!parentRefId.HasValue)
             {
                 var newDeviceData = DeviceFactory.CreateDevice(PlugInData.PlugInId)
                                                  .WithName(newDeviceName)
-                                                 .WithLocation(feature.Location)
-                                                 .WithLocation2(feature.Location2)
+                                                 .WithLocation(trackedFeature.Location)
+                                                 .WithLocation2(trackedFeature.Location2)
                                                  .PrepareForHs();
 
-                featureParentRefId = hsController.CreateDevice(newDeviceData);
-                Log.Information("Created device {name}", HsHelper.GetNameForLog(hsController, featureParentRefId));
+                featureParentRefId = hsFeatureCachedDataProvider.HomeSeerSystem.CreateDevice(newDeviceData);
+                Log.Information("Created device {name}", HsHelper.GetNameForLog(hsFeatureCachedDataProvider.HomeSeerSystem, featureParentRefId));
             }
             else
             {
@@ -112,8 +115,8 @@ namespace Hspi.Device
                                     (string.IsNullOrWhiteSpace(suffix) ? string.Empty : (" - " + suffix));
             var newFeatureData = FeatureFactory.CreateFeature(PlugInData.PlugInId)
                                                .WithName(featureName)
-                                               .WithLocation(feature.Location)
-                                               .WithLocation2(feature.Location2)
+                                               .WithLocation(trackedFeature.Location)
+                                               .WithLocation2(trackedFeature.Location2)
                                                .WithMiscFlags(EMiscFlag.StatusOnly)
                                                .WithMiscFlags(EMiscFlag.SetDoesNotChangeLastChange)
                                                .WithExtraData(plugExtraData)
@@ -126,8 +129,8 @@ namespace Hspi.Device
                 case StatisticsFunction.MinimumValue:
                 case StatisticsFunction.MaximumValue:
                 case StatisticsFunction.DistanceBetweenMinAndMax:
-                    newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string>(feature.AdditionalStatusData);
-                    newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(feature.StatusGraphics);
+                    newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string>(trackedFeature.AdditionalStatusData);
+                    newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(trackedFeature.StatusGraphics);
                     break;
 
                 case StatisticsFunction.RecordsCount:
@@ -143,14 +146,33 @@ namespace Hspi.Device
 
                     break;
 
+                case StatisticsFunction.LinearRegression:
+                    {
+                        var trackedFeatureUnit = hsFeatureCachedDataProvider.GetUnit(data.TrackedRef);
+                        string unitForGraphic = string.IsNullOrWhiteSpace(trackedFeatureUnit) ? "per minute" :
+                                                                                                 Invariant($"{trackedFeatureUnit} per minute");
+                        newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string?>() { unitForGraphic };
+
+                        var graphic = new StatusGraphic(GetImagePath("count"), int.MinValue, int.MaxValue);
+                        graphic.TargetRange.DecimalPlaces = 5;
+                        graphic.HasAdditionalData = true;
+                        graphic.TargetRange.Suffix = " " + HsFeature.GetAdditionalDataToken(0);
+
+                        var graphics = new StatusGraphicCollection();
+                        graphics.Add(graphic);
+                        newFeatureData.Feature[EProperty.StatusGraphics] = graphics;
+                    }
+
+                    break;
+
                 default:
                     break;
             }
 
-            int featureId = hsController.CreateFeatureForDevice(newFeatureData);
+            int featureId = hsFeatureCachedDataProvider.HomeSeerSystem.CreateFeatureForDevice(newFeatureData);
             Log.Information("Created {featureName} for  tracking {trackedName} for {name}",
-                            HsHelper.GetNameForLog(hsController, featureId),
-                            HsHelper.GetNameForLog(hsController, data.TrackedRef),
+                            HsHelper.GetNameForLog(hsFeatureCachedDataProvider.HomeSeerSystem, featureId),
+                            HsHelper.GetNameForLog(hsFeatureCachedDataProvider.HomeSeerSystem, data.TrackedRef),
                             data.StatisticsFunction.ToString());
 
             return featureId;
@@ -185,6 +207,7 @@ namespace Hspi.Device
                     StatisticsFunction.DistanceBetweenMinAndMax => "Distance Min-Max Value",
                     StatisticsFunction.RecordsCount => "Count",
                     StatisticsFunction.ValueChangedCount => "Value Changed Count",
+                    StatisticsFunction.LinearRegression => "Slope",
                     _ => throw new NotImplementedException(),
                 };
             }
@@ -281,6 +304,7 @@ namespace Hspi.Device
                         StatisticsFunction.DistanceBetweenMinAndMax => collector.GetDistanceMinMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
                         StatisticsFunction.RecordsCount => collector.GetRecordsCount(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
                         StatisticsFunction.ValueChangedCount => collector.GetChangedValuesCount(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        StatisticsFunction.LinearRegression => 60 * TimeAndValueQueryHelper.LinearRegression(collector, featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
                         _ => throw new NotImplementedException(),
                     };
 
