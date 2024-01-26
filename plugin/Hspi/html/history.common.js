@@ -43,6 +43,10 @@ async function ajaxPostPlugIn(url, data, successCallback = null, failureCallback
     return result;
 }
 
+function roundValueWithPrecision(num, precision) {
+    return Math.round(num * 10 ** precision) / 10 ** precision;
+}
+
 // needs moment.js
 function humanizeTime(unix_timestamp) {
     const ts = moment(unix_timestamp);

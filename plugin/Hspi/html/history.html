@@ -36,7 +36,8 @@
     displayMin=queries['displayMin'] ?? ""
     displayMax=queries['displayMax'] ?? ""
     displayPeriod=queries['displayPeriod'] ?? ""
-    # get list of features for devices
+   
+   # get list of features for devices
     childrenRefIds=plugin_function 'History' 'GetFeatureRefIdsForDevice'[refId]
     deviceDisplayDetails=plugin_function 'History' 'GetAllowedDisplays'[featureId]
     devicePageStats=plugin_function 'History' 'GetDevicePageHeaderStats'[featureId]
@@ -111,6 +112,9 @@
     show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
 }}
 
+
+<body class="body homeseer-skin mx-0" style="min-height: 3rem" aria-busy="true">
+
 <script>
 {{ if durationSeconds != "" }}
 const displayEndDate = 1000 * Math.round(Date.now() / 1000);
@@ -122,9 +126,9 @@ const displayStartDate = Math.min(displayEndDate, new Date({{displayMin}} * 1000
 
 const featureId = {{featureId}};
 const deviceUnits = '{{deviceUnits}}';
+const devicePrecision = '{{devicePrecision}}';
 </script>
 
-<body class="body homeseer-skin mx-0" style="min-height: 3rem" aria-busy="true">
     <!-- refId={{refId}}<BR> -->
     <!-- featureId={{featureId}}<BR> -->
     <!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
@@ -148,7 +152,6 @@ const deviceUnits = '{{deviceUnits}}';
                 <input type="hidden" id="ref" name="ref" value="{{refId}}">
                 <input type="hidden" id="displayMin" name="displayMin" value="{{displayMin}}">
                 <input type="hidden" id="displayMax" name="displayMax" value="{{displayMax}}">
-                <input type="hidden" id="displayLabel" name="displayLabel" value="{{displayLabel}}">
 
                 {{if displaySelect != ""}}
                 <div class="md-form my-0 mr-3" style="width:100%">
@@ -376,7 +379,7 @@ $(function() {
 });
 
 function roundValue(num) {
-    return Math.round(num * 10 ** {{devicePrecision}}) / 10 ** {{devicePrecision}};
+	return roundValueWithPrecision(num, {{devicePrecision}});
 }
     </script>
 
@@ -389,6 +392,7 @@ function roundValue(num) {
     <script src="/History/chartjs-adapter-moment.min.js"></script>
     <script src="/History/hammer.min.js"></script>
     <script src="/History/chartjs-plugin-zoom.min.js"></script>
+    <script src="/History/chart.common.js"></script>
     <script src="/History/history.chart.js"></script>
     {{else if displaySelect=="stats"}}
     <script src="/bootstrap/js/addons/datatables.min.js"></script>

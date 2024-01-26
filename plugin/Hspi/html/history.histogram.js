@@ -79,11 +79,9 @@ function setupPieChart() {
 				legend: {
 					display: false,
 				},
-			},
-			
+			},			
 			responsive: true,
 			maintainAspectRatio: false,
-
 		},
 	});
 	 

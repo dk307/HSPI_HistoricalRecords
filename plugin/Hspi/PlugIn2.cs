@@ -63,22 +63,6 @@ namespace Hspi
                 Log.Warning("GetAllowedDisplays for {arg} failed with {error}", refIdString, ex.GetFullMessage());
                 throw;
             }
-
-            static bool ShouldShowChart(HsFeatureData feature)
-            {
-                if (HasAnyRangeGraphics(feature))
-                {
-                    return true;
-                }
-
-                return false;
-            }
-
-            static bool HasAnyRangeGraphics(HsFeatureData feature)
-            {
-                List<StatusGraphic> statusGraphics = feature.StatusGraphics;
-                return statusGraphics.Exists(x => x.IsRange);
-            }
         }
 
         public List<object?> GetDevicePageHeaderStats(object? refIdString)
@@ -86,7 +70,7 @@ namespace Hspi
             var refId = Converter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
             var result = new List<object?>();
 
-            result.AddRange(GetEarliestAndOldestRecordTotalSeconds(refId).Select(x => (object)x));
+            result.AddRange(GetEarliestAndNewestRecordTotalSeconds(refId).Select(x => (object)x));
             result.Add(IsFeatureTracked(refId));
             result.Add(GetFeaturePrecision(refId));
             result.Add(GetFeatureUnit(refId) ?? string.Empty);
@@ -120,6 +104,9 @@ namespace Hspi
                     "updatedevicesettings" => HandleUpdatePerDeviceSettings(data),
                     "devicecreate" => HandleDeviceCreate(data),
                     "deviceedit" => HandleDeviceEdit(data),
+                    "graphcreate" => HandleGraphCreate(data),
+                    "graphlinecreate" => HandleGraphLineCreate(data),
+                    "graphlinedelete" => HandleGraphLineDelete(data),
                     "deletedevicerecords" => HandleDeleteRecords(data),
                     "execsql" => HandleExecSql(data),
                     _ => base.PostBackProc(page, data, user, userRights),
@@ -139,9 +126,9 @@ namespace Hspi
             return count;
         }
 
-        internal IList<long> GetEarliestAndOldestRecordTotalSeconds(int refId)
+        internal IList<long> GetEarliestAndNewestRecordTotalSeconds(int refId)
         {
-            var data = Collector.GetEarliestAndOldestRecordTimeDate(refId);
+            var data = Collector.GetEarliestAndNewestRecordTimeDate(refId);
 
             var now = CreateClock().UtcNow;
 
@@ -220,6 +207,21 @@ namespace Hspi
             if (max < min)
             {
                 throw new ArgumentException("max is less than min");
+            }
+        }
+
+        private static bool ShouldShowChart(HsFeatureData feature)
+        {
+            if (HasAnyRangeGraphics(feature))
+            {
+                return true;
+            }
+
+            return false;
+            static bool HasAnyRangeGraphics(HsFeatureData feature)
+            {
+                List<StatusGraphic> statusGraphics = feature.StatusGraphics;
+                return statusGraphics.Exists(x => x.IsRange);
             }
         }
 

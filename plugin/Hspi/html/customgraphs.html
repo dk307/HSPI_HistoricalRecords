@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!--Don't cache anything-->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    {{includefile 'bootstrap/css/page_common.css'}}
+    <link rel="stylesheet" href="/bootstrap/css/addons/datatables.min.css" />
+    <link rel="stylesheet" href="/bootstrap/css/addons/datatables-select.min.css" />
+    <link rel="stylesheet" href="/History/dataTables.bootstrap4.min.css" />
+
+    <title>History - Custom Graphs</title>
+	
+    <style>
+        canvas {
+            width: 100% !important;
+            object-fit: contain;
+            margin: auto;
+        }
+
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 60vh;
+        }
+    </style>
+</head>
+
+{{
+    graphid=queries['graphid'] ?? ""
+    displayMin=queries['displayMin'] ?? ""
+    displayMax=queries['displayMax'] ?? ""
+    displayPeriod=queries['displayPeriod'] ?? ""
+	
+	
+	customGraphs=plugin_function 'History' 'GetCustomGraphs'[refId]
+	customGraphs=customGraphs ?? []
+	
+	
+	
+   
+    rangeOptions=[]
+    durationSeconds = ""
+    if displaySelect != ""
+        rangeOptionsForOthers=[
+                         ["Last 6 hours", 21600, "6hr"],
+                         ["Last 24 hours", 86400, "1d"],
+                         ["Last 7 days", 604800, "7d"],
+                         ["Last 30 days", 2592000, "30d"],
+                         ["Last 90 days", 7776000, "90d"],
+                         ["Last 180 days", 15552000, "180d"],
+                         ["Last 365 days", 31536000, "365d"],
+                     ]
+        # Add range options less than oldest time stamp
+        for rangeOption in rangeOptionsForOthers
+            if  rangeOption[1] <= oldestRecordTimeSpan
+                rangeOptions = rangeOptions | array.add rangeOption
+            end
+        end
+		
+        # add max
+        maxRangeOption = ["Maximum", oldestRecordTimeSpan, "max"]
+        rangeOptions = rangeOptions | array.add maxRangeOption
+        rangeOptionFound = false
+        for rangeOption in rangeOptions
+            if rangeOption[2]==displayPeriod
+                rangeOptionFound=true
+                break
+            end
+        end
+        if !rangeOptionFound
+            # find the first option which would display some data
+            for rangeOption in rangeOptions
+                if rangeOption[1]>=earliestRecordTimeSpan
+                    displayPeriod=rangeOption[2]
+                    rangeOptionFound=true
+                    break
+                end
+            end
+        end
+        if !rangeOptionFound
+            displayPeriod=rangeOptions[0][2]
+        end
+        for rangeOption in rangeOptions
+            if  rangeOption[1] != "" && displayPeriod == rangeOption[2]
+                durationSeconds=rangeOption[1]
+                break
+            end
+        end
+    end
+    show_refId=(get_setting_bool 'gEnableDeviceRefColumn') == 'checked'
+	
+}}
+
+
+<body class="body homeseer-skin">
+    {{includefile 'header.html'}}
+    {{includefile 'navbar.html'}}
+    <div class="hs_spinner" id="loading">
+        <div class="hs_spinner d-flex justify-content-center align-items-center align-content-center">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+		{{if customGraphs.count > 0}}
+		<header>
+			<nav class="navbar">
+				<form class="form-inline my-0 mx-0" id="mainform" action="/History/customgraphs.html" method="GET" style="width:100%">
+					<input type="hidden" id="graphid" name="graphid" value="{{graphid}}">
+					<input type="hidden" id="displayMin" name="displayMin" value="{{displayMin}}">
+					<input type="hidden" id="displayMax" name="displayMax" value="{{displayMax}}">
+					
+					
+					
+					
+					 
+					<div class="md-form my-0 mr-3" style="width:100%">
+						<select id="feature" class="mdb-select md-form dropdown-primary colorful-select" name="feature">
+							{{for graph in customGraphs}}
+							<option value="{{graph["id"]}}" {{if graph["id"]==graphid}} selected{{end}}>{{graph["name"] | html.escape}}</option>
+							{{end}}
+							<option value="-1" selected>Add new graph</option>
+						</select>
+						<label class="mdb-main-label" for="feature">Graphs</label>
+					</div>
+					 
+
+					<div class="md-form my-0 mr-3">
+						<select id="displayPeriod" class="mdb-select md-form colorful-select" name="displayPeriod">
+							{{for rangeOption in rangeOptions}}
+							<option value="{{rangeOption[2]}}" {{if rangeOption[2]==displayPeriod;}} selected{{end}}>{{rangeOption[0] | html.escape}}</option>
+							{{end}}
+						</select>
+						<label class="mdb-main-label" for="displayPeriod">Period</label>
+					</div>
+					
+					
+				
+					<ul class="navbar-nav ml-auto nav-flex-icons nav-right">
+						<li class="nav-item">
+							<a class="btn-floating btn-sm btn-default" data-toggle="modal" data-target="#add_graph_modal"><i class="fas fa-plus" data-toggle='tooltip' data-placement='top' title='Add new graph'></i></a>
+						</li>
+					</ul>
+					
+				 
+				</form>
+			</nav>
+		</header>
+
+		<table class="table table-sm table-striped" id="idLegand">
+			<thead>
+			<th scope="col"></th>
+			<th scope="col"></th>
+			<thead>
+			<tbody></tbody>
+		</table>
+		<div class="chart-container">
+			<canvas id="myLineChart"></canvas>
+		</div>	
+		{{else}}
+		<div class="card ml-3">
+		 <span class="mt-2 ml-3">Add a new graph to get started<span>
+		 <a class="btn-floating btn-sm btn-default" data-toggle="modal" data-target="#add_graph_modal"><i class="fas fa-plus" data-toggle='tooltip' data-placement='top' title='Add new graph'></i></a>	
+		</div>
+		{{end}}
+    </div>
+	
+	
+	<!-- add graph -->
+	<div class="modal fade pg-show-modal" id="add_graph_modal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h4 class="modal-title">Add new graph</h4>
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+				</div>
+				<div class="modal-body">
+					<input type="hidden" id="graph_id">
+					<div class="md-form">
+						<input type="text" id="graph_name" class="form-control" name="graph_name">
+						<label for="graph_name">Name</label>
+                    </div>					
+ 				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-cancel" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-success" data-dismiss="modal" action="set_user_access">Create</button>                    
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- add graph line -->
+	<div class="modal fade pg-show-modal" id="add_graph_line_modal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h4 class="modal-title">Add device to graph</h4>
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+				</div>
+				<div class="modal-body">
+					<input type="hidden" id="graph_id">
+					<div class="md-form">
+						<input type="text" id="graph_name" class="form-control" name="graph_name">
+						<label for="graph_name">Name</label>
+                    </div>
+					
+					<div class="md-form">						
+						<span>Color for graph line</span>
+					</div>					
+					<div class="md-form mt-1">						
+						<div id="graph_line_color" class="mx-auto" name="graph_color"></div>
+					</div>					
+ 				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-cancel" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-success" data-dismiss="modal" action="set_user_access">Create</button>                    
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    {{includefile 'bootstrap/js/page_common.js'}}
+    <script type="text/javascript" src="/History/moment.min.js"></script>
+    <script type="text/javascript" src="/History/history.common.js"></script>
+
+    <script src="/History/chart.min.js"></script>
+    <script src="/History/chartjs-adapter-moment.min.js"></script>
+    <script src="/History/hammer.min.js"></script>
+    <script src="/History/chartjs-plugin-zoom.min.js"></script>
+    <script src="/History/chart.common.js"></script>
+    <script>
+	
+	let chart;
+	let color_picker_control;
+	const colors = [
+		"#007bff",
+		"#38812F",
+		"#005F60",
+	];
+
+
+	const displayEndDate = 1000 * Math.round(Date.now() / 1000);
+	const displayStartDate = Math.min(displayEndDate, displayEndDate + 1000 - 90000 * 1000);
+
+
+	function updateLegand() {
+		let legandTableBody = $('#idLegand tbody');
+		legandTableBody.empty();
+		const items = chart.options.plugins.legend.labels.generateLabels(chart);
+
+		items.forEach(item => {
+			const td = document.createElement('td');
+			td.style.alignItems = 'center';
+			td.style.display = 'flex';
+			td.style.flexDirection = 'row';
+			td.style.marginLeft = '10px';
+
+			// Color box
+			const boxSpan = document.createElement('div');
+			boxSpan.style.background = item.fillStyle;
+			boxSpan.style.borderColor = item.strokeStyle;
+			boxSpan.style.borderWidth = item.lineWidth + 'px';
+			boxSpan.style.display = 'inline-block';
+			boxSpan.style.flexShrink = 0;
+			boxSpan.style.height = '20px';
+			boxSpan.style.marginRight = '10px';
+			boxSpan.style.width = '20px';
+
+			// Text
+			const textContainer = document.createElement('p');
+			textContainer.style.color = item.fontColor;
+			textContainer.style.margin = 0;
+			textContainer.style.padding = 0;
+
+			const text = document.createTextNode(item.text);
+			textContainer.appendChild(text);
+
+			td.appendChild(boxSpan);
+			td.appendChild(textContainer);
+			 			
+			let row = $("<tr>");
+			row.append(td);
+			row.append($("<td>").html('<div style="float: right;">' + 
+									   '<a class="fas fa-lg fa-point fa-sliders-h" data-mdb-toggle="tooltip" title="Change options" onclick="javascript:editGraph('+item.datasetIndex+')"></a>'+
+									   '&nbsp;' +
+									   '<a class="far fa-lg fa-point fa-trash-alt" data-mdb-toggle="tooltip" title="Remove from graph" onclick="javascript:deleteRecords('+item.datasetIndex+')"></a>'+
+									   '</div>'));
+			row.appendTo(legandTableBody);
+		});
+	}
+
+	function setupLineChart() {
+		{{if graphid != ""}}
+		let ctx = document.getElementById("myLineChart").getContext('2d');
+
+		chart = createLineChart(ctx, displayStartDate, displayEndDate);
+		//addDatasetToChart(chart, colors[0], false, colors[0], 1999, "ppm", 3, "Long tine");
+		//addDatasetToChart(chart, colors[1], false, colors[1], 2000, "C", 3, "eeee");
+		addDatasetToChart(chart, colors[2], false, colors[2], 2001, "D1", 3, "dddd");
+
+		for (let i = 0; i < chart.data.datasets.length; i++) {
+			startFetchWithMinMax(chart, displayStartDate, displayEndDate, i);
+		}
+
+		chart.options.animation = {
+			onComplete: function() {
+				updateLegand();
+			}
+		};
+		{{end}}
+	}
+
+	function initColorPicker() {
+		color_picker_control = new Pickr(
+			{
+				el: '#graph_line_color', 
+				default: '#007bff',
+				components: {
+                    preview: true,
+                    opacity: true,
+                    hue: true,
+
+                    interaction: {
+                        hex: true,
+                        rgba: true,
+                        hsla: false,
+                        hsva: false,
+                        cmyk: false,
+                        input: true,
+                        clear: false,
+                        save: true
+                    }                
+                }
+			}
+		);
+		
+	}
+
+	$(document).ready(function() {
+		setupLineChart();
+		initColorPicker();
+		$('#loading').hide();
+	});
+	</script>
+</body>
+</html>

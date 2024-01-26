@@ -333,7 +333,7 @@ namespace HSPI_HistoryTest
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId, 33434, "333", nowTime.AddSeconds(-1000), 2);
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId, 334, "333", nowTime.AddSeconds(-2000), 3);
 
-            var records = plugin.Object.GetEarliestAndOldestRecordTotalSeconds(refId);
+            var records = plugin.Object.GetEarliestAndNewestRecordTotalSeconds(refId);
             Assert.That(records[0], Is.EqualTo(2000));
             Assert.That(records[1], Is.EqualTo(100));
         }
