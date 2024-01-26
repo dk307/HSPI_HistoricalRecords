@@ -81,7 +81,7 @@ function startFetchWithMinMax(chart, min, max, datasetIndex) {
     };
 
     ajaxPostPlugIn("graphrecords", formObject, function(result) {
-        console.log('Fetched data between ' + min + ' and ' + max + ' for refId ' + featureRefId);
+        console.log('Fetched data between ' + min + ' and ' + max + ' for refId ' + datasetIndex);
         chart.data.datasets[datasetIndex].data = result.data;
         chart.stop(); // make sure animations are not running
         chart.options.plugins.subtitle.text = getRangeString(min, max);
@@ -96,7 +96,7 @@ function startFetchWithMinMax(chart, min, max, datasetIndex) {
     });
 }
 
-function addDatasetToChart(chart, backgroundColor, fill, borderColor, featureRefId, deviceUnits, precision, label) {
+function addDatasetToChart(chart, backgroundColor, fill, borderColor, featureRefId, deviceUnits, precision) {
 	// generate a unique y axis based on units
 	const yAxisID = "y" + deviceUnits.replace(/\s/g, '');
     const dataset = {
@@ -113,7 +113,6 @@ function addDatasetToChart(chart, backgroundColor, fill, borderColor, featureRef
 		deviceUnits: deviceUnits,
 		yAxisID: yAxisID,
 		precision: precision,
-		label: label,
     };
 	
 	// add y axis if not added
@@ -141,7 +140,7 @@ function startFetch({chart}) {
     const {min,max} = chart.scales.x;
 	
     for (let i = 0; i < chart.data.datasets.length; i++) {
-        startFetchWithMinMax(chart, Math.round(min), Math.round(max), 0);
+        startFetchWithMinMax(chart, Math.round(min), Math.round(max), i);
     }
 }
 

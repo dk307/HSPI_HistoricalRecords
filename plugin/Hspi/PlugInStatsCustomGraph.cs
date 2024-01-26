@@ -100,6 +100,30 @@ namespace Hspi
             return SendCustomGraphIdResult(customGraph.Id);
         }
 
+        private string HandleGraphEdit(string data)
+        {
+            var jsonData = ParseToJObject(data);
+            var id = GetJsonValue<int>(jsonData, "id");
+            var name = GetJsonValue<string>(jsonData, "name");
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("name is empty");
+            }
+
+            CustomGraph customGraph = CustomGraphManager.UpdateGraph(id, name);
+            return SendCustomGraphIdResult(customGraph.Id);
+        }
+
+        private string HandleGraphDelete(string data)
+        {
+            var jsonData = ParseToJObject(data);
+            var id = GetJsonValue<int>(jsonData, "id");
+
+            CustomGraphManager.DeleteGraph(id);
+            return "{}";
+        }
+
         private string HandleGraphLineCreate(string data)
         {
             var jsonData = ParseToJObject(data);
@@ -123,6 +147,18 @@ namespace Hspi
             var graphlineid = GetJsonValue<int>(jsonData, "graphlineid");
 
             CustomGraph customGraph = CustomGraphManager.DeleteGraphLine(graphid, graphlineid);
+            return SendCustomGraphIdResult(customGraph.Id);
+        }
+
+        private string HandleGraphLineEdit(string data)
+        {
+            var jsonData = ParseToJObject(data);
+            var graphid = GetJsonValue<int>(jsonData, "graphid");
+            var graphlineid = GetJsonValue<int>(jsonData, "graphlineid");
+            var refid = GetJsonValue<int>(jsonData, "refid");
+            var color = GetJsonValue<string>(jsonData, "linecolor");
+
+            CustomGraph customGraph = CustomGraphManager.UpdateGraphLine(graphid, graphlineid, new CustomGraphLine(refid, color));
             return SendCustomGraphIdResult(customGraph.Id);
         }
     }

@@ -58,7 +58,6 @@
 	earliestRecordTimeSpan=0
 	newestRecordTimeSpan=99999999
 	
-	
 	units={}
 	precision={}
 	
@@ -177,7 +176,9 @@
 					
 					<ul class="navbar-nav ml-auto nav-flex-icons nav-right">
 						<li class="nav-item">
-							<a class="btn-floating btn-sm btn-default" data-toggle="modal" data-target="#add_graph_modal"><i class="fas fa-plus" data-toggle='tooltip' data-placement='top' title='Add new graph'></i></a>
+							<a class="btn-floating btn-sm btn-default" onclick="addGraph()">
+								<i class="fas fa-plus" data-toggle='tooltip' data-placement='top' title='Add new graph'></i>
+							</a>
 						</li>
 					</ul>
 				</form>
@@ -195,7 +196,16 @@
 						<a class="dropdown-item" onclick="chartFunction(2)">Linear</a>
 					</div>
 				</div>
-				<button type="button" class="btn btn-info" onclick="showAddGraphLineModal()">Add device to graph</button>
+
+				<div class="btn-group" role="group">
+					<button id="btnGroupChangeGraph" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Change Graph</button>
+					<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+						<a class="dropdown-item" onclick="showAddGraphLineModal()">Add device to graph</a>
+						<a class="dropdown-item" onclick="renameGraph()">Rename graph</a>
+						<a class="dropdown-item" onclick="deleteGraph()">Delete graph</a>
+					</div>
+				</div>
+
 			</div>
 		</div>
 
@@ -204,44 +214,64 @@
 			<th scope="col"></th>
 			<th scope="col"></th>
 			<thead>
-			<tbody></tbody>
+			<tbody>
+			{{for line in customGraph["lines"]}}
+			{{id = line.value["refId"]}}
+			{{color = line.value["lineColor"]}}
+			<tr>
+				<td style="padding-top:2px;padding-bottom:2px" class="ml-3">
+					<div style="background-color:{{color}} !important;width:20px;height:20px;display:inline-block" class="mr-3"></div>
+					<span>{{device_name_full id true | html.escape}}{{if show_refId}} ({{id}}){{end}}</span>
+				</td>
+				<td style="padding-top:2px;padding-bottom:2px">
+					<div style="float:right;">
+						<a class="fas fa-point fa-sliders-h" data-mdb-toggle="tooltip" title="Change options" onclick="javascript:editGraphLine({{line.key}}, {{id}}, '{{color}}')"></a>
+						&nbsp;
+						<a class="far fa-point fa-trash-alt" data-mdb-toggle="tooltip" title="Remove from graph" onclick="javascript:deleteGraphLine({{line.key}})"></a>
+					</div>
+				</td>
+			</tr>
+			{{end}}
+			</tbody>
 		</table>
 		
 		
 		<div class="chart-container mt-0">
 			<canvas id="myLineChart"></canvas>
 		</div>	
-		<div class="mt-5 card" id="idNotDevicesInGraph" style="display:none">
-		 <span class="text-center">The graph has no devices. Use Add device to graph button to add devices to graph.<span>
+		<div class="mt-5 w-100 text-center" id="idNotDevicesInGraph" style="display:none">
+		  The graph has no devices. Click <a href="javascript:showAddGraphLineModal()">here</a> to add devices to graph.
 		</div>
 		{{else}}
 		<div class="card ml-3">
 		 <span class="mt-2 ml-3">Add a new graph to get started<span>
-		 <a class="btn-floating btn-sm btn-default" data-toggle="modal" data-target="#add_graph_modal"><i class="fas fa-plus" data-toggle='tooltip' data-placement='top' title='Add new graph'></i></a>	
+		 <a class="btn-floating btn-sm btn-default" onclick="addGraph()"><i class="fas fa-plus" data-toggle='tooltip' data-placement='top' title='Add new graph'></i></a>	
 		</div>
 		{{end}}
     </div>
 	
 	
 	<!-- add graph -->
-	<div class="modal fade pg-show-modal" id="add_graph_modal" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal fade pg-show-modal" id="idGraphAddUpdate" tabindex="-1" role="dialog" aria-hidden="true">
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h4 class="modal-title">Add new graph</h4>
+					<h4 class="modal-title" id="idGraphAddTitle">Add new graph</h4>
+					<h4 class="modal-title" id="idGraphUpdateTitle">Rename graph</h4>
 					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
 				</div>
 				<form id="idGraphForm">
 					<div class="modal-body">
-						<input type="hidden" id="graph_id">
+						<input type="hidden" id="idGraphId">
 						<div class="md-form">
-							<input type="text" id="graphName" class="form-control" name="graphName" required>
-							<label for="graphName">Name</label>
+							<input type="text" id="idGraphName" class="form-control" name="idGraphName" required>
+							<label for="idGraphName">Name</label>
 						</div>					
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-cancel" data-dismiss="modal">Cancel</button>
-						<button type="submit" class="btn btn-success">Create</button>                    
+						<button type="submit" class="btn btn-success" id="idGraphAddSubmit">Create</button>                    
+						<button type="submit" class="btn btn-success" id="idGraphUpdateSubmit">Rename</button>                    
 					</div>
 				</form>
 			</div>
@@ -249,16 +279,17 @@
 	</div>
 
 	<!-- add graph line -->
-	<div class="modal fade pg-show-modal" id="add_graph_line_modal" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal fade pg-show-modal" id="idGraphLineAddUpdate" tabindex="-1" role="dialog" aria-hidden="true">
 		<div class="modal-dialog">
 			<div class="modal-content">
 				<div class="modal-header">
-					<h4 class="modal-title">Add device to graph</h4>
+					<h4 class="modal-title" id="idGraphLineAddTitle">Add device to graph</h4>
+					<h4 class="modal-title"id="idGraphLineUpdateTitle">Edit device for graph</h4>
 					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
 				</div>
 				<form id="idGraphLineForm">
 					<div class="modal-body">
-						<input type="hidden" id="graphid">
+						<input type="hidden" id="graphlineid">
 						<div class="md-form">
 							<select class='mdb-select md-form colorful-select' id='graphLineDevice' searchable="Search for a device here" required>
 								<option value="" disabled="disabled" selected="selected">Select Device</option>
@@ -278,17 +309,14 @@
 					</div>
 					<div class="modal-footer">
 						<button type="button" class="btn btn-cancel" data-dismiss="modal">Cancel</button>
-						<button type="submit" class="btn btn-success">Create</button>                    
+						<button type="submit" class="btn btn-success" id="idGraphLineAddSubmit">Add</button>                    
+						<button type="submit" class="btn btn-success"  id="idGraphLineUpdateSubmit">Save</button>                    
 					</div>
 				</form>
 			</div>
 		</div>
 	</div>
 	
-	<BR>
-	<BR>
-
-
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
@@ -306,95 +334,38 @@
 	let chart;
 	let colorPickerControl;
 	let colorPickerControlValue = "#007bff";
-	const colors = [
-		"#007bff",
-		"#38812F",
-		"#005F60",
-	];
-
 
 	{{ if durationSeconds != "" }}
 	const displayEndDate = 1000 * Math.round(Date.now() / 1000);
 	const displayStartDate = Math.min(displayEndDate, displayEndDate + 1000 - {{durationSeconds}} * 1000);
 	{{end}}
 
-
-	function updateLegand() {
-		let legandTableBody = $('#idLegand tbody');
-		legandTableBody.empty();
-		const items = chart.options.plugins.legend.labels.generateLabels(chart);
-
-		items.forEach(item => {
-			const td = document.createElement('td');
-			td.style.alignItems = 'center';
-			td.style.display = 'flex';
-			td.style.flexDirection = 'row';
-			td.style.marginLeft = '10px';
-
-			// Color box
-			const boxSpan = document.createElement('div');
-			boxSpan.style.background = item.fillStyle;
-			boxSpan.style.borderColor = item.strokeStyle;
-			boxSpan.style.borderWidth = item.lineWidth + 'px';
-			boxSpan.style.display = 'inline-block';
-			boxSpan.style.flexShrink = 0;
-			boxSpan.style.height = '20px';
-			boxSpan.style.marginRight = '10px';
-			boxSpan.style.width = '20px';
-
-			// Text
-			const textContainer = document.createElement('p');
-			textContainer.style.color = item.fontColor;
-			textContainer.style.margin = 0;
-			textContainer.style.padding = 0;
-
-			const text = document.createTextNode(item.text);
-			textContainer.appendChild(text);
-
-			td.appendChild(boxSpan);
-			td.appendChild(textContainer);
-			 			
-			let row = $("<tr>");
-			row.append(td);
-			row.append($("<td>").html('<div style="float: right;">' + 
-									   '<a class="fas fa-lg fa-point fa-sliders-h" data-mdb-toggle="tooltip" title="Change options" onclick="javascript:editGraph('+item.datasetIndex+')"></a>'+
-									   '&nbsp;' +
-									   '<a class="far fa-lg fa-point fa-trash-alt" data-mdb-toggle="tooltip" title="Remove from graph" onclick="javascript:deleteRecords('+item.datasetIndex+')"></a>'+
-									   '</div>'));
-			row.appendTo(legandTableBody);
-		});
-	}
-
+	
 	function setupLineChart() {
-		{{if customGraph && ((array.size customGraph["lines"]) > 0)}}
+		{{if customGraph}}
+		{{if (array.size customGraph["lines"]) > 0}}
 		let ctx = document.getElementById("myLineChart").getContext('2d');
 		
 		chart = createLineChart(ctx, displayStartDate, displayEndDate);
 		{{for line in customGraph["lines"]}}
 		// {{line.value}}
 		{{id = line.value["refId"]}}
-		addDatasetToChart(chart, '{{line.value["lineColor"]}}', false, '{{line.value["lineColor"]}}', {{id}}, '{{units[id]}}', {{precision[id]}}, 
-					     '{{device_name_full id true | html.escape}}{{if show_refId}} ({{id}}){{end}}');
+		addDatasetToChart(chart, '{{line.value["lineColor"]}}', false, '{{line.value["lineColor"]}}', {{id}}, '{{units[id]}}', {{precision[id]}});
 		{{end}}
 
 		for (let i = 0; i < chart.data.datasets.length; i++) {
 			startFetchWithMinMax(chart, displayStartDate, displayEndDate, i);
 		}
 
-		chart.options.animation = {
-			onComplete: function() {
-				updateLegand();
-			}
-		};
 		{{else}}
 		$('#idLegand').hide();
 		$('#myLineChart').parent().hide();
 		$('#idNotDevicesInGraph').show();
 		{{end}}
+		{{end}}
 	}
 
-	function initColorPicker() {
-		
+	function initColorPicker() {	
 		colorPickerControl = new Pickr(
 			{
 				el: '#graph_line_color', 
@@ -423,7 +394,6 @@
 	}
 	
 	function hook() {
-
 		$('#graphid').change(function() {
 			this.form.submit();
 		});
@@ -435,41 +405,164 @@
 
 	    $( "#idGraphForm").on("submit",async function (e) {
 			e.preventDefault();
+			const formGraphId = $('#idGraphId').val();
 			
-
 			const formObject = {
-			   name: $('#graphName').val(),
+			   id: formGraphId,
+			   name: $('#idGraphName').val(),
 			};
 			const data = JSON.stringify(formObject);
 
-			ajaxPostPlugIn("graphcreate", formObject, function (result) {		 
-					graphid = result.id;
-					window.location = "/History/customgraphs.html?graphid=" + graphid;
+			ajaxPostPlugIn(formGraphId != "" ? "graphedit" : "graphcreate", formObject, function (result) {	
+					if (formGraphId != "") {
+						window.location.reload();
+					}else {
+						window.location = "/History/customgraphs.html?graphid=" + result.id;
+					}
 				}
 			);
 		});
 		
+		{{if graphid}}
 	    $("#idGraphLineForm").on("submit",async function (e) {
 			e.preventDefault();
 			
+			const graphLineId = $('#graphlineid').val();
+			
 			const formObject = {
 			   graphid: {{graphid}},
+			   graphlineid: graphLineId,
 			   refid: $('#graphLineDevice').val(),
 			   linecolor: colorPickerControlValue,
 			};
 			const data = JSON.stringify(formObject);
 
-			ajaxPostPlugIn("graphlinecreate", formObject, function (result) {		 
-					graphid = result.id;
-					window.location = "/History/customgraphs.html?graphid=" + graphid;
+			ajaxPostPlugIn(graphLineId != "" ? "graphlineedit": "graphlinecreate", formObject, function (result) {		 
+					window.location.reload();
 				}
 			);
 		});
+		{{end}}
 	}
 	
-	function showAddGraphLineModal() {
-		 $('#add_graph_line_modal').modal('show');
+	{{if graphid}}
+	function deleteGraphLine(graphLineId) {		
+		const formObject = {
+		   graphid: {{graphid}},
+		   graphlineid: graphLineId,
+		};
+		const data = JSON.stringify(formObject);
+		
+		 swal.fire({
+                title: 'Confirmation',
+                text: 'Do you want to delete device from the graph ?',
+                position: 'top',
+                focusConfirm: false,
+                reverseButtons: false,
+                showCancelButton: true,
+                cancelButtonText: 'No',
+                confirmButtonText: 'Yes',
+            }).then((result) => {
+                if (result.isConfirmed) {
+					ajaxPostPlugIn("graphlinedelete", formObject, function (result) {		 
+							window.location.reload();
+						}
+					);
+                }
+        });
 	}
+	{{end}}
+	
+	function editGraphLine(graphLineId, featureRefId, color ) {
+		$('#graphlineid').val(graphLineId);
+		$('#graphLineDevice').val(featureRefId);
+		colorPickerControl.setColor(color);
+		
+		
+		$("#idGraphLineAddSubmit").hide();
+		$("#idGraphLineUpdateSubmit").show();
+		$("#idGraphLineAddTitle").hide();
+		$("#idGraphLineUpdateTitle").show();
+
+		$('#idGraphLineAddUpdate').modal('show');
+	}
+	
+	 function randomColor() {
+		const r = Math.floor(Math.random() * 255);
+		const g = Math.floor(Math.random() * 255);
+		const b = Math.floor(Math.random() * 255);
+		return "rgb(" + r + "," + g + "," + b + ")";
+    };
+	
+	function showAddGraphLineModal() {
+		$('#graphlineid').val('');
+		$('#graphLineDevice').val(-1);
+		colorPickerControl.setColor(randomColor());
+		
+		$("#idGraphLineAddSubmit").show();
+		$("#idGraphLineUpdateSubmit").hide();
+		$("#idGraphLineAddTitle").show();
+		$("#idGraphLineUpdateTitle").hide();
+
+		$('#idGraphLineAddUpdate').modal('show');
+	}
+	
+	function addGraph() {
+		$('#idGraphId').val('');
+		$('#idGraphName').val('');
+		$("label[for='idGraphName']").addClass('active')
+			
+		$("#idGraphAddSubmit").show();
+		$("#idGraphUpdateSubmit").hide();
+		$("#idGraphAddTitle").show();
+		$("#idGraphUpdateTitle").hide();
+
+		$('#idGraphAddUpdate').modal('show');
+	}
+
+
+	{{if graphid}}
+	
+	
+	function renameGraph() {
+		$('#idGraphId').val('{{graphid}}');
+		$('#idGraphName').val('{{customGraph["name"]}}');
+		$("label[for='idGraphName']").addClass('active')
+			
+		$("#idGraphAddSubmit").hide();
+		$("#idGraphUpdateSubmit").show();
+		$("#idGraphAddTitle").hide();
+		$("#idGraphUpdateTitle").show();
+
+		$('#idGraphAddUpdate').modal('show');
+	}
+	
+	
+	function deleteGraph() {
+		const formObject = {
+		   id: {{graphid}},
+		};
+		const data = JSON.stringify(formObject);
+		
+		 swal.fire({
+                title: 'Confirmation',
+                text: 'Do you want to delete the graph ?',
+                position: 'top',
+                focusConfirm: false,
+                reverseButtons: false,
+                showCancelButton: true,
+                cancelButtonText: 'No',
+                confirmButtonText: 'Yes',
+            }).then((result) => {
+                if (result.isConfirmed) {
+					ajaxPostPlugIn("graphdelete", formObject, function (result) {		 
+							window.location.reload();
+						}
+					);
+                }
+        });
+	}
+	{{end}}
 
 	$(document).ready(function() {
 		setupLineChart();

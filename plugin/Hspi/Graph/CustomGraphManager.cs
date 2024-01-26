@@ -29,7 +29,7 @@ namespace Hspi.Graph
                 graphs = ImmutableDictionary<int, CustomGraph>.Empty;
             }
 
-            Log.Information("Loaded {count} graph from settings", graphs.Count);
+            Log.Information("Loaded {count} graph(s) from settings", graphs.Count);
         }
 
         public ImmutableDictionary<int, CustomGraph> Graphs => graphs;
@@ -56,6 +56,27 @@ namespace Hspi.Graph
             }
         }
 
+        public CustomGraph CreateGraph(string name)
+        {
+            lock (graphsLock)
+            {
+                CustomGraph graph = new(MaxId + 1, name, ImmutableDictionary<int, CustomGraphLine>.Empty);
+                AddOrUpdate(graph);
+                return graph;
+            }
+        }
+
+        public void DeleteGraph(int id)
+        {
+            lock (graphsLock)
+            {
+                var builder = graphs.ToBuilder();
+                builder.Remove(id);
+                graphs = builder.ToImmutableDictionary();
+                Save();
+            }
+        }
+
         public CustomGraph DeleteGraphLine(int graphId, int graphLineId)
         {
             lock (graphsLock)
@@ -74,26 +95,36 @@ namespace Hspi.Graph
             }
         }
 
-        public CustomGraph CreateGraph(string name)
+        public CustomGraph UpdateGraphLine(int graphId, int graphLineId, CustomGraphLine customGraphLine)
         {
             lock (graphsLock)
             {
-                var builder = graphs.ToBuilder();
+                if (!graphs.TryGetValue(graphId, out var customGraph))
+                {
+                    throw new ArgumentException("graphId is invalid");
+                }
 
-                CustomGraph graph = new(MaxId + 1, name, ImmutableDictionary<int, CustomGraphLine>.Empty);
-                AddOrUpdate(graph);
-                return graph;
+                var lineBuilder = customGraph.Lines.ToBuilder();
+                lineBuilder[graphLineId] = customGraphLine;
+                var newValue = customGraph with { Lines = lineBuilder.ToImmutableDictionary() };
+
+                AddOrUpdate(newValue);
+                return newValue;
             }
         }
 
-        public void DeleteGraph(int id)
+        internal CustomGraph UpdateGraph(int id, string name)
         {
             lock (graphsLock)
             {
-                var builder = graphs.ToBuilder();
-                builder.Remove(id);
-                graphs = builder.ToImmutableDictionary();
-                Save();
+                if (!graphs.TryGetValue(id, out var customGraph))
+                {
+                    throw new ArgumentException("id is invalid");
+                }
+
+                CustomGraph graph = customGraph with { Name = name };
+                AddOrUpdate(graph);
+                return graph;
             }
         }
 
