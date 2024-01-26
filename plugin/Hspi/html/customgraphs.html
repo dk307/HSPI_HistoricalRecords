@@ -219,8 +219,8 @@
 			{{id = line.value["refId"]}}
 			{{color = line.value["lineColor"]}}
 			<tr>
-				<td style="padding-top:2px;padding-bottom:2px" class="ml-3">
-					<div style="background-color:{{color}} !important;width:20px;height:20px;display:inline-block" class="mr-3"></div>
+				<td style="padding-top:2px;padding-bottom:2px" class="ml-3 d-flex">
+					<span style="background-color:{{color}} !important;width:20px;height:20px;display:inline-block" class="mr-3"></span>
 					<span>{{device_name_full id true | html.escape}}{{if show_refId}} ({{id}}){{end}}</span>
 				</td>
 				<td style="padding-top:2px;padding-bottom:2px">
@@ -520,10 +520,7 @@
 		$('#idGraphAddUpdate').modal('show');
 	}
 
-
 	{{if graphid}}
-	
-	
 	function renameGraph() {
 		$('#idGraphId').val('{{graphid}}');
 		$('#idGraphName').val('{{customGraph["name"]}}');
