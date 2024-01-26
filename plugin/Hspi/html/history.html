@@ -33,8 +33,6 @@
     refId=queries['ref'] ?? ""
     featureId=queries['feature'] ?? refId
     displaySelect=queries['displaySelect'] ?? ""
-    displayMin=queries['displayMin'] ?? ""
-    displayMax=queries['displayMax'] ?? ""
     displayPeriod=queries['displayPeriod'] ?? ""
    
    # get list of features for devices
@@ -43,8 +41,9 @@
     devicePageStats=plugin_function 'History' 'GetDevicePageHeaderStats'[featureId]
     deviceDisplayDetails=deviceDisplayDetails ?? []
     devicePageStats=devicePageStats ?? [0,0,false,0,""]
-    oldestRecordTimeSpan=devicePageStats[0]
-    earliestRecordTimeSpan=devicePageStats[1]
+	
+    earliestRecordTimeSpan=devicePageStats[0]
+    newestRecordTimeSpan=devicePageStats[1]
     deviceTracked=devicePageStats[2]
     devicePrecision=devicePageStats[3]
     deviceUnits=devicePageStats[4] ?? ""
@@ -75,12 +74,12 @@
                      ]
         # Add range options less than oldest time stamp
         for rangeOption in rangeOptionsForOthers
-            if  rangeOption[1] <= oldestRecordTimeSpan
+            if  rangeOption[1] <= earliestRecordTimeSpan
                 rangeOptions = rangeOptions | array.add rangeOption
             end
         end
         # add max
-        maxRangeOption = ["Maximum", oldestRecordTimeSpan, "max"]
+        maxRangeOption = ["Maximum", earliestRecordTimeSpan, "max"]
         rangeOptions = rangeOptions | array.add maxRangeOption
         rangeOptionFound = false
         for rangeOption in rangeOptions
@@ -92,7 +91,7 @@
         if !rangeOptionFound
             # find the first option which would display some data
             for rangeOption in rangeOptions
-                if rangeOption[1]>=earliestRecordTimeSpan
+                if rangeOption[1]>=newestRecordTimeSpan
                     displayPeriod=rangeOption[2]
                     rangeOptionFound=true
                     break
@@ -119,9 +118,6 @@
 {{ if durationSeconds != "" }}
 const displayEndDate = 1000 * Math.round(Date.now() / 1000);
 const displayStartDate = Math.min(displayEndDate, displayEndDate + 1000 - {{durationSeconds}} * 1000);
-{{else if displayMax != ""}}
-const displayEndDate = new Date({{displayMax}} * 1000).getTime();
-const displayStartDate = Math.min(displayEndDate, new Date({{displayMin}} * 1000).getTime());
 {{end}}
 
 const featureId = {{featureId}};
@@ -133,11 +129,9 @@ const devicePrecision = '{{devicePrecision}}';
     <!-- featureId={{featureId}}<BR> -->
     <!-- deviceDisplayDetails={{deviceDisplayDetails}}<BR> -->
     <!-- displaySelect={{displaySelect}}<BR> -->
-    <!-- displayMin={{displayMin}}<BR> -->
-    <!-- displayMax={{displayMax}}<BR> -->
     <!-- displayPeriod={{displayPeriod}}<BR> -->
+    <!-- newestRecordTimeSpan={{newestRecordTimeSpan}}<BR> -->
     <!-- earliestRecordTimeSpan={{earliestRecordTimeSpan}}<BR> -->
-    <!-- oldestRecordTimeSpan={{oldestRecordTimeSpan}}<BR> -->
     <!-- durationSeconds={{durationSeconds}}<BR> -->
     <!-- deviceTracked={{deviceTracked}}<BR> -->
     <!-- devicePrecision={{devicePrecision}}<BR> -->
@@ -150,8 +144,6 @@ const devicePrecision = '{{devicePrecision}}';
         <nav class="navbar">
             <form class="form-inline my-0 mx-0" id="mainform" action="/History/history.html" method="GET" style="width:100%">
                 <input type="hidden" id="ref" name="ref" value="{{refId}}">
-                <input type="hidden" id="displayMin" name="displayMin" value="{{displayMin}}">
-                <input type="hidden" id="displayMax" name="displayMax" value="{{displayMax}}">
 
                 {{if displaySelect != ""}}
                 <div class="md-form my-0 mr-3" style="width:100%">
@@ -236,18 +228,20 @@ const devicePrecision = '{{devicePrecision}}';
             </thead>
         </table>
         {{else if displaySelect=="chart"}}
-        <div class="btn-group mt-2 mx-auto" role="group" aria-label="Graph options">
-            <button type="button" class="btn btn-info" onclick="chartFunction(0)">Reset Zoom</button>
+		<div class="text-center">
+			<div class="btn-group mt-2 mx-auto" role="group" aria-label="Graph options">
+				<button type="button" class="btn btn-info" onclick="chartFunction(0)">Reset Zoom</button>
 
-            <div class="btn-group" role="group">
-                <button id="btnGroupDropCurve" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Curve</button>
-                <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-                    <a class="dropdown-item" onclick="chartFunction(1)">Step</a>
-                    <a class="dropdown-item" onclick="chartFunction(2)">Linear</a>
-                </div>
-            </div>
-        </div>
-        <div class="chart-container">
+				<div class="btn-group" role="group">
+					<button id="btnGroupDropCurve" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Curve</button>
+					<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
+						<a class="dropdown-item" onclick="chartFunction(1)">Step</a>
+						<a class="dropdown-item" onclick="chartFunction(2)">Linear</a>
+					</div>
+				</div>
+			</div>
+		</div>
+        <div class="chart-container mt-2">
             <canvas id="myLineChart"></canvas>
         </div>
         {{else if displaySelect=="stats"}}
@@ -334,18 +328,8 @@ $(function() {
         this.form.submit();
     });
 
-    $('#displaySelect').change(function() {
-        this.form.submit();
-    });
-
     $('#displayPeriod').change(function() {
-        if ($('#displayPeriod').val() == "customrange") {
-            $('#modalRangeOptions').modal();
-        } else {
-            $('#displayMin').val('');
-            $('#displayMax').val('');
-            this.form.submit();
-        }
+		this.form.submit();
     });
 
     $('#idModalEditLink').click(function(){
