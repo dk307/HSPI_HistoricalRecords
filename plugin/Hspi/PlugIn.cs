@@ -11,6 +11,7 @@ using HomeSeer.PluginSdk;
 using HomeSeer.PluginSdk.Devices;
 using HomeSeer.PluginSdk.Types;
 using Hspi.Database;
+using Hspi.Graph;
 using Hspi.Hspi.Utils;
 using Hspi.Utils;
 using Serilog;
@@ -34,6 +35,15 @@ namespace Hspi
         public override bool SupportsConfigFeature => true;
 
         private SqliteDatabaseCollector Collector => sqliteManager?.Collector ?? throw new InvalidOperationException("Plugin Not Initialized");
+
+        private CustomGraphManager CustomGraphManager
+        {
+            get
+            {
+                CheckNotNull(customGraphManager);
+                return customGraphManager;
+            }
+        }
 
         private HsFeatureCachedDataProvider FeatureCachedDataProvider
         {
@@ -210,6 +220,9 @@ namespace Hspi
                 settingsPages = new SettingsPages(HomeSeerSystem, Settings);
                 UpdateDebugLevel();
 
+                string graphsJsonPath = Path.Combine(HomeSeerSystem.GetAppPath(), "data", PlugInData.PlugInId, "graphs.json");
+                customGraphManager = new CustomGraphManager(graphsJsonPath);
+
                 CheckMonoVersion();
 
                 sqliteManager = new SqliteManager(HomeSeerSystem, queue, settingsPages, featureCachedDataProvider, CreateClock(), ShutdownCancellationToken);
@@ -219,6 +232,7 @@ namespace Hspi
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(BackupEvent, PlugInData.PlugInId);
+                HomeSeerSystem.RegisterDeviceIncPage(this.Id, "customgraphs.html", "Custom graphs");
                 HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a statistics device");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "alldevices.html", "Device statistics");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
@@ -437,6 +451,7 @@ namespace Hspi
 
         private const Constants.HSEvent BackupEvent = (Constants.HSEvent)0x200;
         private readonly RecordDataProducerConsumerQueue queue = new();
+        private CustomGraphManager? customGraphManager;
         private HsFeatureCachedDataProvider? featureCachedDataProvider;
         private SettingsPages? settingsPages;
         private SqliteManager? sqliteManager;
