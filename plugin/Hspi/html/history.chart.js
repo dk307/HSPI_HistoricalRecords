@@ -9,6 +9,11 @@ const colors = {
     },
 };
 
+function resizeDone() {
+    console.log("resize chart fetch");
+    startFetch({ chart });
+}
+
 function setupLineChart() {
     let ctx = document.getElementById("myLineChart").getContext('2d');
 
@@ -17,15 +22,20 @@ function setupLineChart() {
     gradient.addColorStop(0.25, colors.blue.quarter);
     gradient.addColorStop(1, colors.blue.zero);
 
-    chart = createLineChart(ctx, displayStartDate, displayEndDate);	
+    chart = createLineChart(ctx, displayStartDate, displayEndDate);
     addDatasetToChart(chart, gradient, true, colors.blue.default, featureId, deviceUnits, devicePrecision);
-    
-	for (let i = 0; i < chart.data.datasets.length; i++) {
+
+    for (let i = 0; i < chart.data.datasets.length; i++) {
         startFetchWithMinMax(chart, displayStartDate, displayEndDate, i);
     }
+
+    $(window).on("resize", function () {
+        clearTimeout(chart.resizeTimer);
+        chart.resizeTimer = setTimeout(resizeDone, 150);
+    });
 }
 
-$(document).ready(function() {
+$(document).ready(function () {
     setupLineChart();
     $('#loading').hide();
 });
