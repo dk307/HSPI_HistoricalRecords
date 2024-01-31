@@ -30,6 +30,7 @@
 
 {{
     graphid=queries['graphid']
+    noedit=queries['noedit']
     displayPeriod=queries['displayPeriod'] ?? ""
 	
 	customGraphs=plugin_function 'History' 'GetCustomGraphs'[]
@@ -174,7 +175,7 @@
 					</div>
 					
 					
-					<ul class="navbar-nav ml-auto nav-flex-icons nav-right">
+					<ul class="navbar-nav ml-auto nav-flex-icons nav-right noedit">
 						<li class="nav-item">
 							<a class="btn-floating btn-sm btn-default" onclick="addGraph()">
 								<i class="fas fa-plus" data-toggle='tooltip' data-placement='top' title='Add new graph'></i>
@@ -198,7 +199,7 @@
 				</div>
 
 				<div class="btn-group" role="group">
-					<button id="btnGroupChangeGraph" type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Change Graph</button>
+					<button id="btnGroupChangeGraph" type="button" class="btn btn-info dropdown-toggle noedit" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Change Graph</button>
 					<div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
 						<a class="dropdown-item" onclick="showAddGraphLineModal()">Add device to graph</a>
 						<a class="dropdown-item" onclick="renameGraph()">Rename graph</a>
@@ -224,7 +225,7 @@
 					<span>{{device_name_full id true | html.escape}}{{if show_refId}} ({{id}}){{end}}</span>
 				</td>
 				<td style="padding-top:2px;padding-bottom:2px">
-					<div style="float:right;">
+					<div style="float:right" class="noedit">
 						<a class="fas fa-point fa-sliders-h" data-mdb-toggle="tooltip" title="Change options" onclick="javascript:editGraphLine({{line.key}}, {{id}}, '{{color}}')"></a>
 						&nbsp;
 						<a class="far fa-point fa-trash-alt" data-mdb-toggle="tooltip" title="Remove from graph" onclick="javascript:deleteGraphLine({{line.key}})"></a>
@@ -243,7 +244,7 @@
 		  The graph has no devices. Click <a href="javascript:showAddGraphLineModal()">here</a> to add devices to graph.
 		</div>
 		{{else}}
-		<div class="card ml-3">
+		<div class="card ml-3 noedit">
 		 <span class="mt-2 ml-3">Add a new graph to get started<span>
 		 <a class="btn-floating btn-sm btn-default" onclick="addGraph()"><i class="fas fa-plus" data-toggle='tooltip' data-placement='top' title='Add new graph'></i></a>	
 		</div>
@@ -533,8 +534,7 @@
 
 		$('#idGraphAddUpdate').modal('show');
 	}
-	
-	
+		
 	function deleteGraph() {
 		const formObject = {
 		   id: {{graphid}},
@@ -565,6 +565,10 @@
 		setupLineChart();
 		initColorPicker();
 		hook();
+		{{if noedit}}
+		$('.noedit').hide();
+		{{end}}
+		
 		$('#loading').hide();
 	});
 	</script>

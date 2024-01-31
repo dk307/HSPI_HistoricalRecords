@@ -106,7 +106,7 @@ namespace Hspi.Utils
         }
 
         /// <summary>
-        /// This function create a average value in the interval using spceified fill stratgey.
+        /// This function create a average value in the interval using specified fill stratgey.
         /// The time stamps returned are left edge of the interval with average of value from the interval.
         /// </summary>
         /// <param name="intervalUnixTimeSeconds"></param>

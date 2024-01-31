@@ -232,7 +232,7 @@ namespace Hspi
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.STRING_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(Constants.HSEvent.CONFIG_CHANGE, PlugInData.PlugInId);
                 HomeSeerSystem.RegisterEventCB(BackupEvent, PlugInData.PlugInId);
-                HomeSeerSystem.RegisterDeviceIncPage(this.Id, "customgraphs.html", "Custom graphs");
+                HomeSeerSystem.RegisterFeaturePage(this.Id, "customgraphs.html", "Graphs");
                 HomeSeerSystem.RegisterDeviceIncPage(this.Id, "adddevice.html", "Add a statistics device");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "alldevices.html", "Device statistics");
                 HomeSeerSystem.RegisterFeaturePage(this.Id, "dbstats.html", "Database statistics");
