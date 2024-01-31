@@ -330,6 +330,7 @@ namespace HSPI_HistoryTest
             mockHsController.Verify(x => x.RegisterEventCB((Constants.HSEvent)0x200, PlugInData.PlugInId));
             mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "dbstats.html", "Database statistics"));
             mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "alldevices.html", "Device statistics"));
+            mockHsController.Verify(x => x.RegisterFeaturePage(PlugInData.PlugInId, "customgraphs.html", "Graphs"));
             mockHsController.Verify(x => x.RegisterDeviceIncPage(PlugInData.PlugInId, "adddevice.html", "Add a statistics device"));
 
             string dbPath = Path.Combine(mockHsController.Object.GetAppPath(), "data", PlugInData.PlugInId, "records.db");

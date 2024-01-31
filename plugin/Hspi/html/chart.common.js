@@ -62,9 +62,9 @@ const scales = {
 const tooltip = {
     enabled: true,
     callbacks: {
-        label: (data) => {			
-            return roundValueWithPrecision(data.raw.y, data.chart.data.datasets[data.datasetIndex].precision).toString() + 
-			       data.chart.data.datasets[data.datasetIndex].deviceUnits;
+        label: (data) => {
+            return roundValueWithPrecision(data.raw.y, data.chart.data.datasets[data.datasetIndex].precision).toString() +
+                data.chart.data.datasets[data.datasetIndex].deviceUnits;
         },
     }
 };
@@ -77,10 +77,10 @@ function startFetchWithMinMax(chart, min, max, datasetIndex) {
         min: min,
         max: max,
         fill: chart.data.datasets[datasetIndex].stepped ? 0 : 1,
-        points: Math.max(Math.abs((chart.chartArea.right - chart.chartArea.left) / 5), 25),
+        points: Math.floor(Math.abs(chart.chartArea.right - chart.chartArea.left)),
     };
 
-    ajaxPostPlugIn("graphrecords", formObject, function(result) {
+    ajaxPostPlugIn("graphrecords", formObject, function (result) {
         console.log('Fetched data between ' + min + ' and ' + max + ' for refId ' + datasetIndex);
         chart.data.datasets[datasetIndex].data = result.data;
         chart.stop(); // make sure animations are not running
@@ -97,48 +97,48 @@ function startFetchWithMinMax(chart, min, max, datasetIndex) {
 }
 
 function addDatasetToChart(chart, backgroundColor, fill, borderColor, featureRefId, deviceUnits, precision) {
-	// generate a unique y axis based on units
-	const yAxisID = "y" + deviceUnits.replace(/\s/g, '');
+    // generate a unique y axis based on units
+    const yAxisID = "y" + deviceUnits.replace(/\s/g, '');
     const dataset = {
         data: [],
         stepped: false,
         tension: defaultTension,
         pointStyle: false,
         fill: fill,
-		backgroundColor: backgroundColor,
+        backgroundColor: backgroundColor,
         borderColor: borderColor,
         borderWidth: 2,
         pointRadius: 3,
         featureRefId: featureRefId,
-		deviceUnits: deviceUnits,
-		yAxisID: yAxisID,
-		precision: precision,
+        deviceUnits: deviceUnits,
+        yAxisID: yAxisID,
+        precision: precision,
     };
-	
-	// add y axis if not added
-	if (!chart.options.scales[yAxisID]) {
-		chart.options.scales[yAxisID] = {
-			type: 'linear',
-			position: chart.options.nextYAxisIsLeft ? 'left' : 'right',
-			display: true,
-			ticks : {},
-		};
-		
-		chart.options.nextYAxisIsLeft = !chart.options.nextYAxisIsLeft;
-		
-		// set the axis unit
-		chart.options.scales[yAxisID].ticks.callback = function(value, index, ticks) {
-			return Chart.Ticks.formatters.numeric.apply(this, [value, index, ticks]) + deviceUnits;
-		};	
-	}
-		
+
+    // add y axis if not added
+    if (!chart.options.scales[yAxisID]) {
+        chart.options.scales[yAxisID] = {
+            type: 'linear',
+            position: chart.options.nextYAxisIsLeft ? 'left' : 'right',
+            display: true,
+            ticks: {},
+        };
+
+        chart.options.nextYAxisIsLeft = !chart.options.nextYAxisIsLeft;
+
+        // set the axis unit
+        chart.options.scales[yAxisID].ticks.callback = function (value, index, ticks) {
+            return Chart.Ticks.formatters.numeric.apply(this, [value, index, ticks]) + deviceUnits;
+        };
+    }
+
     chart.data.datasets.push(dataset);
-	return dataset;
+    return dataset;
 }
 
-function startFetch({chart}) {
-    const {min,max} = chart.scales.x;
-	
+function startFetch({ chart }) {
+    const { min, max } = chart.scales.x;
+
     for (let i = 0; i < chart.data.datasets.length; i++) {
         startFetchWithMinMax(chart, Math.round(min), Math.round(max), i);
     }
@@ -147,9 +147,9 @@ function startFetch({chart}) {
 function createLineChart(ctx, min, max) {
     Chart.defaults.font.family = "sans-serif";
     Chart.defaults.font.size = 16;
-		
-	scales.x.min = min;
-	scales.x.max = max;
+
+    scales.x.min = min;
+    scales.x.max = max;
 
     let myChart = new Chart(ctx, {
         type: "line",
@@ -157,7 +157,8 @@ function createLineChart(ctx, min, max) {
             datasets: [],
         },
         options: {
-			nextYAxisIsLeft : true,
+            animation: false,
+            nextYAxisIsLeft: true,
             scales: scales,
             responsive: true,
             maintainAspectRatio: false,
@@ -172,13 +173,6 @@ function createLineChart(ctx, min, max) {
                     text: '',
                 }
             },
-            transitions: {
-                zoom: {
-                    animation: {
-                        duration: 100
-                    }
-                }
-            }
         },
     });
 
@@ -191,19 +185,19 @@ function chartFunction(reason) {
             chart.resetZoom();
             break;
         case 1:
-			for (let i = 0; i < chart.data.datasets.length; i++) {
-				chart.data.datasets[i].stepped = 'before';
-				chart.data.datasets[i].tension = 0;
-			}
+            for (let i = 0; i < chart.data.datasets.length; i++) {
+                chart.data.datasets[i].stepped = 'before';
+                chart.data.datasets[i].tension = 0;
+            }
             chart.update();
             break;
         case 2:
-			for (let i = 0; i < chart.data.datasets.length; i++) {
-				chart.data.datasets[i].stepped = false;
-				chart.data.datasets[i].tension = defaultTension;
-			}
+            for (let i = 0; i < chart.data.datasets.length; i++) {
+                chart.data.datasets[i].stepped = false;
+                chart.data.datasets[i].tension = defaultTension;
+            }
             chart.update();
             break;
     }
-    startFetch({chart});
+    startFetch({ chart });
 }
