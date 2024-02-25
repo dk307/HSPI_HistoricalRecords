@@ -131,11 +131,8 @@ namespace HSPI_HistoryTest
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
 
-            hsControllerMock.SetupFeature(trackedRefId, 1.132, "10.03847264 A");
+            hsControllerMock.SetupFeature(trackedRefId, 10.03847264, "10.03847264 A");
             hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.Name, "A Unique Device1");
-            hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.Location, "Loc1");
-            hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.Location2, "Loc1");
-            hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.AdditionalStatusData, new List<string> { "A" });
 
             var collection = new StatusGraphicCollection();
             collection.Add(new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 0 }));
