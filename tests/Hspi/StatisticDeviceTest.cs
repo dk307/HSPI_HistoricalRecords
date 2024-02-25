@@ -122,6 +122,41 @@ namespace HSPI_HistoryTest
         }
 
         [Test]
+        public void DecimalPlaceCalculatedProperlyForStatDevice()
+        {
+            int trackedRefId = 1039423;
+            var function = StatisticsFunction.AverageStep;
+            var preDefinedPeriod = PreDefinedPeriod.Today;
+
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            hsControllerMock.SetupFeature(trackedRefId, 10.03847264, "10.03847264 A");
+            hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.Name, "A Unique Device1");
+
+            var collection = new StatusGraphicCollection();
+            collection.Add(new StatusGraphic("path", new ValueRange(int.MinValue, int.MaxValue) { DecimalPlaces = 0 }));
+            hsControllerMock.SetupDevOrFeatureValue(trackedRefId, EProperty.StatusGraphics, collection);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            string deviceName = "A New Device";
+            long refreshInterval = (long)new TimeSpan(3, 8, 1, 30).TotalSeconds;
+            JObject request = CreateJsonForNewDevice(null, function, trackedRefId,
+                                                     deviceName, preDefinedPeriod, refreshInterval);
+
+            //add
+            string data2 = plugIn.Object.PostBackProc("devicecreate", request.ToString(), string.Empty, 0);
+
+            NewFeatureData newFeatureData = hsControllerMock.CreatedFeatures.First().Value;
+            Assert.IsNotNull(newFeatureData);
+
+            var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
+            Assert.That(list2.Count, Is.EqualTo(1));
+            Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(8));
+        }
+
+        [Test]
         public void DeviceIsUpdated([Values] StatisticsFunction statisticsFunction)
         {
             var plugIn = TestHelper.CreatePlugInMock();
@@ -296,7 +331,7 @@ namespace HSPI_HistoryTest
             int trackedDeviceRefId = 10;
 
             TestHelper.SetupStatisticsFeature(StatisticsFunction.AverageLinear, plugIn, hsControllerMock, aTime,
-                                  statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
+                                              statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 

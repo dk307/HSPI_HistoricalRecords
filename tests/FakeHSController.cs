@@ -568,6 +568,13 @@ namespace HSPI_HistoryTest
             if (deviceOrFeatureData.TryGetValue(devOrFeatRef, out var keyValues) &&
                 keyValues.TryGetValue(property, out var value))
             {
+                if (property == EProperty.StatusGraphics)
+                {
+                    if (value is StatusGraphicCollection collection)
+                    {
+                        return collection.Values;
+                    }
+                }
                 return value;
             }
 
@@ -982,7 +989,7 @@ namespace HSPI_HistoryTest
             properties[EProperty.Ref] = deviceRefId;
             properties[EProperty.DeviceType] = new HomeSeer.PluginSdk.Devices.Identification.TypeInfo() { ApiType = EApiType.Feature };
             properties[EProperty.Relationship] = ERelationship.Feature;
-            properties[EProperty.StatusGraphics] = new List<StatusGraphic>();
+            properties[EProperty.StatusGraphics] = new StatusGraphicCollection();
             properties[EProperty.PlugExtraData] = new PlugExtraData();
             properties[EProperty.Interface] = featureInterface ?? "Z-Wave";
             properties[EProperty.Value] = value;

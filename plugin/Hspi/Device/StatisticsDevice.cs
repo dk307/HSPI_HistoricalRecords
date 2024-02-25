@@ -130,7 +130,8 @@ namespace Hspi.Device
                 case StatisticsFunction.MaximumValue:
                 case StatisticsFunction.DistanceBetweenMinAndMax:
                     newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string>(trackedFeature.AdditionalStatusData);
-                    newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(trackedFeature.StatusGraphics);
+                    newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(trackedFeature.Ref, hsFeatureCachedDataProvider,
+                                                                                     trackedFeature.StatusGraphics);
                     break;
 
                 case StatisticsFunction.RecordsCount:
@@ -177,15 +178,26 @@ namespace Hspi.Device
 
             return featureId;
 
-            static StatusGraphicCollection CloneGraphics(StatusGraphicCollection collection)
+            static StatusGraphicCollection CloneGraphics(int refId,
+                                                         HsFeatureCachedDataProvider hsFeatureCachedDataProvider,
+                                                         StatusGraphicCollection collection)
             {
                 StatusGraphicCollection copy = new();
-                foreach (var t in collection.Values)
+                foreach (var original in collection.Values)
                 {
                     try
                     {
                         // some of the graphics values can be invalid and clone fails
-                        copy.Add(t.Clone());
+                        StatusGraphic statusGraphic = original.Clone();
+
+                        // for HS3 devices, decimal places are not correct
+                        if (statusGraphic.IsRange)
+                        {
+                            statusGraphic.TargetRange.DecimalPlaces = Math.Max(hsFeatureCachedDataProvider.GetPrecision(refId),
+                                                                               statusGraphic.TargetRange.DecimalPlaces);
+                        }
+
+                        copy.Add(statusGraphic);
                     }
                     catch
                     {
