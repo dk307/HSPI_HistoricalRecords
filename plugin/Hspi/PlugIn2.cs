@@ -65,12 +65,19 @@ namespace Hspi
             }
         }
 
+        // used by web pages
+        public long GetUtcTimeNow()
+        {
+            var now = CreateClock().UtcNow;
+            return now.ToUnixTimeSeconds();
+        }
+
         public List<object?> GetDevicePageHeaderStats(object? refIdString)
         {
             var refId = Converter.TryGetFromObject<int>(refIdString) ?? throw new ArgumentException(null, nameof(refIdString));
             var result = new List<object?>();
 
-            result.AddRange(GetEarliestAndNewestRecordTotalSeconds(refId).Select(x => (object)x));
+            result.AddRange(GetEarliestAndNewestRecords(refId).Select(x => (object)x));
             result.Add(IsFeatureTracked(refId));
             result.Add(GetFeaturePrecision(refId));
             result.Add(GetFeatureUnit(refId) ?? string.Empty);
@@ -129,13 +136,14 @@ namespace Hspi
             return count;
         }
 
-        internal IList<long> GetEarliestAndNewestRecordTotalSeconds(int refId)
+        internal IList<long> GetEarliestAndNewestRecords(int refId)
         {
             var data = Collector.GetEarliestAndNewestRecordTimeDate(refId);
 
             var now = CreateClock().UtcNow;
 
             return new List<long>() {
+                now.ToUnixTimeSeconds(),
                 (long)Math.Round((now - data.Item1).TotalSeconds),
                 (long)Math.Round((now - data.Item2).TotalSeconds)
                 };

@@ -43,7 +43,7 @@ namespace HSPI_HistoryTest
 
             Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, 112));
 
-            Assert.That(plugin.Object.GetEarliestAndNewestRecordTotalSeconds(refId)[0], Is.EqualTo(10 - 8));
+            Assert.That(plugin.Object.GetEarliestAndNewestRecords(refId)[1], Is.EqualTo(10 - 8));
         }
 
         [Test]
@@ -73,7 +73,7 @@ namespace HSPI_HistoryTest
             Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, SettingsPages.MinRecordsToKeepDefault));
 
             // first 20 are gone
-            Assert.That(plugin.Object.GetEarliestAndNewestRecordTotalSeconds(refId)[0], Is.EqualTo(200 - 20));
+            Assert.That(plugin.Object.GetEarliestAndNewestRecords(refId)[1], Is.EqualTo(200 - 20));
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace HSPI_HistoryTest
             Assert.That(TestHelper.WaitTillTotalRecords(plugin, refId, 115));
 
             // first 5 are gone
-            Assert.That(plugin.Object.GetEarliestAndNewestRecordTotalSeconds(refId)[0], Is.EqualTo(10 - 5));
+            Assert.That(plugin.Object.GetEarliestAndNewestRecords(refId)[1], Is.EqualTo(10 - 5));
         }
 
         private static void AddRecordsAndPrune(Mock<PlugIn> plugin, FakeHSController mockHsController, int refId, DateTime aTime, int addedRecordCount)

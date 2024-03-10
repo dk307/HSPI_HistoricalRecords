@@ -319,7 +319,8 @@
     let colorPickerControlValue = "#007bff";
 
     {{ if durationSeconds != "" }}
-    const displayEndDate = 1000 * Math.round(Date.now() / 1000);
+	{{utcTimeNow=plugin_function 'History' 'GetUtcTimeNow'[]}}
+    const displayEndDate = 1000 * {{utcTimeNow}};
     const displayStartDate = Math.min(displayEndDate, displayEndDate + 1000 - {{durationSeconds}} * 1000);
     {{end}}
 

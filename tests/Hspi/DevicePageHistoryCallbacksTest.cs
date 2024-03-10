@@ -333,9 +333,23 @@ namespace HSPI_HistoryTest
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId, 33434, "333", nowTime.AddSeconds(-1000), 2);
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId, 334, "333", nowTime.AddSeconds(-2000), 3);
 
-            var records = plugin.Object.GetEarliestAndNewestRecordTotalSeconds(refId);
-            Assert.That(records[0], Is.EqualTo(2000));
-            Assert.That(records[1], Is.EqualTo(100));
+            var records = plugin.Object.GetEarliestAndNewestRecords(refId);
+            Assert.That(records[0], Is.EqualTo(nowTime.ToUnixTimeSeconds()));
+            Assert.That(records[1], Is.EqualTo(2000));
+            Assert.That(records[2], Is.EqualTo(100));
+        }
+
+        [Test]
+        public void GetUtcTimeNow()
+        {
+            TestHelper.CreateMockPlugInAndHsController2(out var plugin, out var _);
+
+            DateTime nowTime = TestHelper.SetUpMockSystemClockForCurrentTime(plugin);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugin);
+
+            var value = plugin.Object.GetUtcTimeNow();
+            Assert.That(value, Is.EqualTo(nowTime.ToUnixTimeSeconds()));
         }
 
         [Test]
@@ -367,8 +381,8 @@ namespace HSPI_HistoryTest
             Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
 
             var list = plugin.Object.GetDevicePageHeaderStats(deviceRefId);
-            Assert.That(list[5], Is.EqualTo(10D));
-            Assert.That(list[6], Is.EqualTo(20D));
+            Assert.That(list[6], Is.EqualTo(10D));
+            Assert.That(list[7], Is.EqualTo(20D));
 
             // wait till all invalid resultRecords are deleted
             TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 0);
@@ -416,8 +430,8 @@ namespace HSPI_HistoryTest
             Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
 
             var list = plugin.Object.GetDevicePageHeaderStats(deviceRefId);
-            Assert.That(list[5], Is.EqualTo(null));
             Assert.That(list[6], Is.EqualTo(null));
+            Assert.That(list[7], Is.EqualTo(null));
         }
 
         private static double GetUniqueRandom(int max = 100000)

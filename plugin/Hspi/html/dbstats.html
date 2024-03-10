@@ -78,10 +78,12 @@
 
     {{if dbStats}}
     <script>
+	
+	{{utcTimeNow=plugin_function 'History' 'GetUtcTimeNow'[]}}
 
 	const unit = 12 * 60 * 60; // 12 hrs
 	const unitCount = 1 + Math.ceil({{retentionPeriodSeconds}} / unit);
-	const displayEndDate = 1000 * Math.round(Date.now() / 1000);
+	const displayEndDate = 1000 * {{utcTimeNow}};
 	const displayStartDate = displayEndDate + 1000 - (unitCount * unit) * 1000;
 
 	const colors = {

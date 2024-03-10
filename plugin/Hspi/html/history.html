@@ -42,13 +42,14 @@
     deviceDisplayDetails=deviceDisplayDetails ?? []
     devicePageStats=devicePageStats ?? [0,0,false,0,""]
 	
-    earliestRecordTimeSpan=devicePageStats[0]
-    newestRecordTimeSpan=devicePageStats[1]
-    deviceTracked=devicePageStats[2]
-    devicePrecision=devicePageStats[3]
-    deviceUnits=devicePageStats[4] ?? ""
-    minValue=devicePageStats[5] ?? ""
-    maxValue=devicePageStats[6] ?? ""
+    utcTimeNow=devicePageStats[0]
+    earliestRecordTimeSpan=devicePageStats[1]
+    newestRecordTimeSpan=devicePageStats[2]
+    deviceTracked=devicePageStats[3]
+    devicePrecision=devicePageStats[4]
+    deviceUnits=devicePageStats[5] ?? ""
+    minValue=devicePageStats[6] ?? ""
+    maxValue=devicePageStats[7] ?? ""
     if deviceDisplayDetails.empty?
         # there is no valid displays
         displaySelect=""
@@ -116,7 +117,7 @@
 
 <script>
 {{ if durationSeconds != "" }}
-const displayEndDate = 1000 * Math.round(Date.now() / 1000);
+const displayEndDate = 1000 * {{utcTimeNow}};
 const displayStartDate = Math.min(displayEndDate, displayEndDate + 1000 - {{durationSeconds}} * 1000);
 {{end}}
 
@@ -131,6 +132,7 @@ const devicePrecision = '{{devicePrecision}}';
     <!-- displaySelect={{displaySelect}}<BR> -->
     <!-- displayPeriod={{displayPeriod}}<BR> -->
     <!-- newestRecordTimeSpan={{newestRecordTimeSpan}}<BR> -->
+    <!-- utcTimeNow={{utcTimeNow}}<BR> -->
     <!-- earliestRecordTimeSpan={{earliestRecordTimeSpan}}<BR> -->
     <!-- durationSeconds={{durationSeconds}}<BR> -->
     <!-- deviceTracked={{deviceTracked}}<BR> -->
