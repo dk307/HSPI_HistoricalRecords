@@ -563,6 +563,7 @@ namespace Hspi
                 Collector.GetRecordsCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
                 Collector.GetChangedValuesCount(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
                 TimeAndValueQueryHelper.LinearRegression(Collector, refId, minUnixTimeSeconds, maxUnixTimeSeconds),
+                Collector.GetDifferenceFromValuesAt(refId, minUnixTimeSeconds, maxUnixTimeSeconds),
             ];
 
             return WriteJsonResult((jsonWriter) =>

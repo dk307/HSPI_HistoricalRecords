@@ -99,7 +99,7 @@ namespace HSPI_HistoryTest
             Assert.That(jsonData, Is.Not.Null);
 
             var result = (JArray)jsonData["result"]["data"];
-            Assert.That(result.Count, Is.EqualTo(8));
+            Assert.That(result.Count, Is.EqualTo(9));
             Assert.That((double)result[0], Is.EqualTo((10D * 60 + 100D * 60) / 120D));
             Assert.That((double)result[1], Is.EqualTo((55D * 60 + 100D * 60) / 120D));
             Assert.That((double)result[2], Is.EqualTo(10D));
@@ -108,6 +108,7 @@ namespace HSPI_HistoryTest
             Assert.That((double)result[5], Is.EqualTo(2));
             Assert.That((double)result[6], Is.EqualTo(2));
             Assert.That((double)result[7], Is.EqualTo(90D / 60));
+            Assert.That((double)result[8], Is.EqualTo(90D));
         }
     }
 }

@@ -39,5 +39,6 @@ namespace Hspi.Device
         RecordsCount = 5,
         ValueChangedCount = 6,
         LinearRegression = 7,
+        Difference = 8,
     };
 }

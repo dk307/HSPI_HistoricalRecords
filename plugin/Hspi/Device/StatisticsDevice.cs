@@ -129,6 +129,7 @@ namespace Hspi.Device
                 case StatisticsFunction.MinimumValue:
                 case StatisticsFunction.MaximumValue:
                 case StatisticsFunction.DistanceBetweenMinAndMax:
+                case StatisticsFunction.Difference:
                     newFeatureData.Feature[EProperty.AdditionalStatusData] = new List<string>(trackedFeature.AdditionalStatusData);
                     newFeatureData.Feature[EProperty.StatusGraphics] = CloneGraphics(trackedFeature.Ref, hsFeatureCachedDataProvider,
                                                                                      trackedFeature.StatusGraphics);
@@ -220,6 +221,7 @@ namespace Hspi.Device
                     StatisticsFunction.RecordsCount => "Count",
                     StatisticsFunction.ValueChangedCount => "Value Changed Count",
                     StatisticsFunction.LinearRegression => "Slope",
+                    StatisticsFunction.Difference => "Difference",
                     _ => throw new NotImplementedException(),
                 };
             }
@@ -295,11 +297,11 @@ namespace Hspi.Device
         {
             try
             {
-                var minMax = this.period.CalculateMinMaxSeconds(globalClock);
+                var minMaxTime = this.period.CalculateMinMaxSeconds(globalClock);
 
-                if (minMax.IsValid)
+                if (minMaxTime.IsValid)
                 {
-                    if (minMax.Minimum < 0)
+                    if (minMaxTime.Minimum < 0)
                     {
                         throw new ArgumentException("Duration too long");
                     }
@@ -308,15 +310,16 @@ namespace Hspi.Device
                     {
                         StatisticsFunction.AverageStep or StatisticsFunction.AverageLinear => TimeAndValueQueryHelper.Average(collector,
                                                                                          featureData.TrackedRef,
-                                                                                         minMax.Minimum,
-                                                                                         minMax.Maximum,
+                                                                                         minMaxTime.Minimum,
+                                                                                         minMaxTime.Maximum,
                                                                                          this.featureData.StatisticsFunction == StatisticsFunction.AverageStep ? FillStrategy.LOCF : FillStrategy.Linear),
-                        StatisticsFunction.MinimumValue => collector.GetMinValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
-                        StatisticsFunction.MaximumValue => collector.GetMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
-                        StatisticsFunction.DistanceBetweenMinAndMax => collector.GetDistanceMinMaxValue(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
-                        StatisticsFunction.RecordsCount => collector.GetRecordsCount(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
-                        StatisticsFunction.ValueChangedCount => collector.GetChangedValuesCount(featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
-                        StatisticsFunction.LinearRegression => 60 * TimeAndValueQueryHelper.LinearRegression(collector, featureData.TrackedRef, minMax.Minimum, minMax.Maximum),
+                        StatisticsFunction.MinimumValue => collector.GetMinValue(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
+                        StatisticsFunction.MaximumValue => collector.GetMaxValue(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
+                        StatisticsFunction.DistanceBetweenMinAndMax => collector.GetDistanceMinMaxValue(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
+                        StatisticsFunction.RecordsCount => collector.GetRecordsCount(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
+                        StatisticsFunction.ValueChangedCount => collector.GetChangedValuesCount(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
+                        StatisticsFunction.LinearRegression => 60 * TimeAndValueQueryHelper.LinearRegression(collector, featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
+                        StatisticsFunction.Difference => collector.GetDifferenceFromValuesAt(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
                         _ => throw new NotImplementedException(),
                     };
 
@@ -330,7 +333,7 @@ namespace Hspi.Device
                 }
                 else
                 {
-                    Debug.Assert(minMax.Minimum <= minMax.Maximum);
+                    Debug.Assert(minMaxTime.Minimum <= minMaxTime.Maximum);
                 }
             }
             catch (Exception ex)

@@ -64,6 +64,7 @@ namespace Hspi.Database
             getDistanceMinMaxValueCommand = CreateStatement(GetMinMaxDistanceValuesSql);
             getChangedValuesCountSqlCommand = CreateStatement(GetChangedCountValuesSql);
             getStrForRefAndValueCommand = CreateStatement(GetStrForRefAndValueSql);
+            getDifferenceSqlCommand = CreateStatement(GetDifferenceSql);
 
             var recordUpdateThread = new Thread(UpdateRecords);
             recordUpdateThread.Start();
@@ -145,6 +146,7 @@ namespace Hspi.Database
             getDistanceMinMaxValueCommand?.Dispose();
             getChangedValuesCountSqlCommand?.Dispose();
             getStrForRefAndValueCommand?.Dispose();
+            getDifferenceSqlCommand?.Dispose();
             if (sqliteConnection != null && SQLITE_OK != sqliteConnection.manual_close_v2())
             {
                 Log.Warning("Sqlite has open handles during close");
@@ -205,6 +207,41 @@ namespace Hspi.Database
             return list;
         }
 
+        public double? GetChangedValuesCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        {
+            return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getChangedValuesCountSqlCommand);
+        }
+
+        public double? GetDifferenceFromValuesAt(int refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
+        {
+            using var lock2 = CreateLockForDBConnection();
+            var stmt = getDifferenceSqlCommand;
+            using var stmtRest = CreateStatementAutoReset(stmt);
+            ugly.bind_int64(stmt, 1, refId);
+            ugly.bind_int64(stmt, 2, minUnixTimeSeconds);
+            ugly.bind_int64(stmt, 3, maxUnixTimeSeconds);
+
+            // first value
+            if (ugly.step(stmt) != SQLITE_DONE)
+            {
+                var valueMin = GetCol0(stmt);
+
+                // second value
+                if (ugly.step(stmt) != SQLITE_DONE)
+                {
+                    var valueMax = GetCol0(stmt);
+                    return valueMin.HasValue && valueMax.HasValue ? valueMax.Value - valueMin.Value : null;
+                }
+            }
+
+            return null;
+
+            static double? GetCol0(sqlite3_stmt stmt)
+            {
+                return ugly.column_type(stmt, 0) == SQLITE_NULL ? null : ugly.column_double(stmt, 0);
+            }
+        }
+
         public double? GetDistanceMinMaxValue(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
             return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getDistanceMinMaxValueCommand);
@@ -232,11 +269,6 @@ namespace Hspi.Database
         public double? GetMinValue(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
         {
             return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getMinValueCommand);
-        }
-
-        public double? GetChangedValuesCount(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds)
-        {
-            return ExecRefIdMinMaxStatement(refId, minUnixTimeSeconds, maxUnixTimeSeconds, getChangedValuesCountSqlCommand);
         }
 
         public IList<RecordDataAndDuration> GetRecords(long refId, long minUnixTimeSeconds, long maxUnixTimeSeconds,
@@ -647,9 +679,15 @@ namespace Hspi.Database
         private const string DeleteOldRecordByRefSql = "DELETE from history where ref=$ref and ts<$time AND ts NOT IN ( SELECT ts FROM history WHERE ref=$ref ORDER BY ts DESC LIMIT $limit)";
         private const string EarliestAndNewestRecordSql = "SELECT MIN(ts), MAX(ts) FROM history WHERE ref=?";
 
+        private const string GetChangedCountValuesSql = @"SELECT SUM(COALESCE(changed, 1)) from (SELECT value != LAG(value, 1) OVER ( PARTITION BY ref ORDER BY ts) as changed from history where ref=$ref AND ts>=$min AND ts<=$max)";
+
+        // 1 record before/same the time range for both min & max
+        private const string GetDifferenceSql =
+            @"SELECT * FROM (SELECT value FROM history WHERE ref=$ref AND ts<=$min ORDER BY ts DESC LIMIT 1) UNION
+              SELECT * FROM (SELECT value FROM history WHERE ref=$ref AND ts<=$max ORDER BY ts DESC LIMIT 1)";
+
         private const string GetMaxValuesSql = @"SELECT MAX(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
         private const string GetMinMaxDistanceValuesSql = @"SELECT ABS(MAX(value) - MIN(value)) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
-        private const string GetChangedCountValuesSql = @"SELECT SUM(COALESCE(changed, 1)) from (SELECT value != LAG(value, 1) OVER ( PARTITION BY ref ORDER BY ts) as changed from history where ref=$ref AND ts>=$min AND ts<=$max)";
         private const string GetMinValuesSql = @"SELECT MIN(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";
         private const string GetStrForRefAndValueSql = "SELECT str FROM history WHERE ref=? AND value=? ORDER BY ts DESC LIMIT 1";
 
@@ -680,8 +718,9 @@ namespace Hspi.Database
         private readonly SemaphoreSlim connectionMutex = new(1, 1);
         private readonly sqlite3_stmt deleteAllRecordByRefCommand;
         private readonly sqlite3_stmt deleteOldRecordByRefCommand;
-        private readonly sqlite3_stmt getDistanceMinMaxValueCommand;
         private readonly sqlite3_stmt getChangedValuesCountSqlCommand;
+        private readonly sqlite3_stmt getDifferenceSqlCommand;
+        private readonly sqlite3_stmt getDistanceMinMaxValueCommand;
         private readonly sqlite3_stmt getEarliestAndNewestRecordCommand;
         private readonly sqlite3_stmt getHistoryCommand;
         private readonly sqlite3_stmt getMaxValueCommand;

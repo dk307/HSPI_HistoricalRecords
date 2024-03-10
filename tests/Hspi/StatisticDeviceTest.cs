@@ -186,32 +186,35 @@ namespace HSPI_HistoryTest
 
             Assert.That(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
 
-            double ExpectedValue = 0;
+            double expectedValue = 0;
             switch (statisticsFunction)
             {
                 case StatisticsFunction.AverageStep:
-                    ExpectedValue = ((10D * 5 * 60) + (50D * 5 * 60)) / 600D; break;
+                    expectedValue = ((int)(1000 * ((10D * 5 * 61) + (50D * 5 * 60)) / 601D)) / 1000D; break;
                 case StatisticsFunction.AverageLinear:
-                    ExpectedValue = ((10D * 1 * 60) + (30D * 4 * 60) + (50D * 5 * 60)) / 600D; break;
+                    const double value = ((10D * 1 * 60) + (30D * 4 * 60) + (50D * 301)) / 601D;
+                    expectedValue = Math.Round(value, 3); break;
                 case StatisticsFunction.MinimumValue:
-                    ExpectedValue = 10D; break;
+                    expectedValue = 10D; break;
                 case StatisticsFunction.MaximumValue:
-                    ExpectedValue = 50D; break;
+                    expectedValue = 50D; break;
                 case StatisticsFunction.DistanceBetweenMinAndMax:
-                    ExpectedValue = 40D; break;
+                    expectedValue = 40D; break;
                 case StatisticsFunction.RecordsCount:
-                    ExpectedValue = 3D; break;
+                    expectedValue = 3D; break;
                 case StatisticsFunction.ValueChangedCount:
-                    ExpectedValue = 2D; break;
+                    expectedValue = 2D; break;
                 case StatisticsFunction.LinearRegression:
-                    ExpectedValue = 8.571D; break;
+                    expectedValue = 8.571D; break;
+                case StatisticsFunction.Difference:
+                    expectedValue = 40D; break;
 
                 default:
                     Assert.Fail();
                     break;
             }
 
-            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, ExpectedValue);
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, expectedValue);
 
             Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
         }

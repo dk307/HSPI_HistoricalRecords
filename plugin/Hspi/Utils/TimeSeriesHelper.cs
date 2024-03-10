@@ -11,6 +11,7 @@ namespace Hspi.Utils
 {
     internal sealed class TimeSeriesHelper
     {
+        ///
         public TimeSeriesHelper(long minUnixTimeSeconds, long maxUnixTimeSeconds, IEnumerable<TimeAndValue> timeAndValues)
         {
             if (minUnixTimeSeconds > maxUnixTimeSeconds)
@@ -19,7 +20,7 @@ namespace Hspi.Utils
             }
 
             this.minUnixTimeSeconds = minUnixTimeSeconds;
-            this.maxUnixTimeSeconds = maxUnixTimeSeconds + 1; // make max inclusive
+            this.maxUnixTimeSeconds = maxUnixTimeSeconds + 1; // make max inclusive as it is < max calculations
             this.timeAndValues = timeAndValues;
         }
 

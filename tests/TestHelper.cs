@@ -302,7 +302,7 @@ namespace HSPI_HistoryTest
                                                   int trackedFeatureRefId)
         {
             Mock<IGlobalTimerAndClock> mockClock = TestHelper.CreateMockSystemGlobalTimerAndClock(plugIn);
-            mockClock.Setup(x => x.LocalNow).Returns(aTime.AddSeconds(-1));
+            mockClock.Setup(x => x.LocalNow).Returns(aTime);
 
             hsControllerMock.SetupDevice(statsDeviceRefId, deviceInterface: PlugInData.PlugInId);
 
