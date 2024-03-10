@@ -161,6 +161,7 @@ namespace HSPI_HistoryTest
 
             var expected = new List<object>
             {
+                nowTime.ToUnixTimeSeconds(),
                 0L,
                 -60L,
                 true,
@@ -196,8 +197,8 @@ namespace HSPI_HistoryTest
 
             var list = plugin.Object.GetDevicePageHeaderStats(refId).ToList();
 
-            Assert.That(list[5], Is.EqualTo(-190D));
-            Assert.That(list[6], Is.EqualTo(1090D));
+            Assert.That(list[6], Is.EqualTo(-190D));
+            Assert.That(list[7], Is.EqualTo(1090D));
         }
 
         [Test]
