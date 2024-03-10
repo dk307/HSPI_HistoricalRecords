@@ -54,6 +54,38 @@ namespace HSPI_HistoryTest
         }
 
         [Test]
+        public void AverageForLOCF2()
+        {
+            List<TimeAndValue> dbValues = new()
+            {
+                new TimeAndValue(100 - 10 * 60, 10),
+                new TimeAndValue(1000 - 9 * 60, 10),
+                new TimeAndValue(1000 - 5 * 60, 50),
+            };
+
+            TimeSeriesHelper timeSeriesHelper = new(1000 - 10 * 60, 1000, dbValues);
+            var result = timeSeriesHelper.Average(FillStrategy.LOCF);
+
+            Assert.That(result, Is.EqualTo(((10D * 5 * 61) + (50D * 5 * 60)) / 601D));
+        }
+
+        [Test]
+        public void AverageForLinear2()
+        {
+            List<TimeAndValue> dbValues = new()
+            {
+                new TimeAndValue(100 - 10 * 60, 10),
+                new TimeAndValue(1000 - 9 * 60, 10),
+                new TimeAndValue(1000 - 5 * 60, 50),
+            };
+
+            TimeSeriesHelper timeSeriesHelper = new(1000 - 10 * 60, 1000, dbValues);
+            var result = timeSeriesHelper.Average(FillStrategy.Linear);
+
+            Assert.That(result, Is.EqualTo(((10D * 1 * 60) + (30D * 4 * 60) + (50D * 301)) / 601D));
+        }
+
+        [Test]
         public void AverageStartsLaterForLOCF()
         {
             List<TimeAndValue> dbValues = new()

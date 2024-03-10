@@ -31,7 +31,6 @@ namespace Hspi
         public double DeviceValue { get; }
         public string? DeviceString { get; }
 
-        [NotLogged]
         public long UnixTimeSeconds { get; }
 
         [NotLogged]

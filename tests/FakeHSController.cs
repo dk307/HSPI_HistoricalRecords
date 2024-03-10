@@ -575,6 +575,7 @@ namespace HSPI_HistoryTest
                         return collection.Values;
                     }
                 }
+
                 return value;
             }
 
