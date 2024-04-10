@@ -77,7 +77,7 @@ function startFetchWithMinMax(chart, min, max, datasetIndex) {
         min: min,
         max: max,
         fill: chart.data.datasets[datasetIndex].stepped ? 0 : 1,
-        points: Math.floor(Math.abs(chart.chartArea.right - chart.chartArea.left) * chart.data.datasets[datasetIndex].points),
+        points:  Math.max(2, Math.floor(Math.abs(chart.chartArea.right - chart.chartArea.left) * chart.data.datasets[datasetIndex].points)),
     };
 
     ajaxPostPlugIn("graphrecords", formObject, function (result) {
