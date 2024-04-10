@@ -77,7 +77,7 @@ function startFetchWithMinMax(chart, min, max, datasetIndex) {
         min: min,
         max: max,
         fill: chart.data.datasets[datasetIndex].stepped ? 0 : 1,
-        points: Math.floor(Math.abs(chart.chartArea.right - chart.chartArea.left)),
+        points: Math.floor(Math.abs(chart.chartArea.right - chart.chartArea.left) * chart.data.datasets[datasetIndex].points),
     };
 
     ajaxPostPlugIn("graphrecords", formObject, function (result) {
@@ -113,6 +113,7 @@ function addDatasetToChart(chart, backgroundColor, fill, borderColor, featureRef
         deviceUnits: deviceUnits,
         yAxisID: yAxisID,
         precision: precision,
+		points:1.0,
     };
 
     // add y axis if not added
@@ -179,24 +180,38 @@ function createLineChart(ctx, min, max) {
     return myChart;
 }
 
+
+function setChartStepTensionPoints(step, tension, points) {
+	for (let i = 0; i < chart.data.datasets.length; i++) {
+		chart.data.datasets[i].stepped = step;
+		chart.data.datasets[i].tension = tension;
+		chart.data.datasets[i].points = points;
+	}
+	chart.update();
+}
+
 function chartFunction(reason) {
     switch (reason) {
         case 0:
             chart.resetZoom();
             break;
-        case 1:
-            for (let i = 0; i < chart.data.datasets.length; i++) {
-                chart.data.datasets[i].stepped = 'before';
-                chart.data.datasets[i].tension = 0;
-            }
-            chart.update();
+        case 1: // step - 100
+			setChartStepTensionPoints('before', 0, 1.0);
             break;
-        case 2:
-            for (let i = 0; i < chart.data.datasets.length; i++) {
-                chart.data.datasets[i].stepped = false;
-                chart.data.datasets[i].tension = defaultTension;
-            }
-            chart.update();
+        case 2: // linear - 100
+            setChartStepTensionPoints(false, defaultTension, 1.0);
+            break;
+        case 3: // step - smooth
+			setChartStepTensionPoints('before', 0, 0.4);
+            break;
+        case 4: // linear - smooth
+            setChartStepTensionPoints(false, defaultTension, 0.4);
+            break;
+        case 5: // step - smoother
+			setChartStepTensionPoints('before', 0, 0.1);
+            break;
+        case 6: // linear - smoother
+            setChartStepTensionPoints(false, defaultTension, 0.1);
             break;
     }
     startFetch({ chart });
