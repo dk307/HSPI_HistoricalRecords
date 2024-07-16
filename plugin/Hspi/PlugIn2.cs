@@ -142,11 +142,11 @@ namespace Hspi
 
             var now = CreateClock().UtcNow;
 
-            return new List<long>() {
+            return [
                 now.ToUnixTimeSeconds(),
                 (long)Math.Round((now - data.Item1).TotalSeconds),
                 (long)Math.Round((now - data.Item2).TotalSeconds)
-                };
+                ];
         }
 
         internal int GetFeaturePrecision(int refId)
