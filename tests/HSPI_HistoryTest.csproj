@@ -30,7 +30,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <WarningLevel>5</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -86,7 +86,7 @@
       <Version>1.4.0</Version>
     </PackageReference>
     <PackageReference Include="HtmlAgilityPack">
-      <Version>1.11.57</Version>
+      <Version>1.11.61</Version>
     </PackageReference>
     <PackageReference Include="Moq">
       <Version>4.20.70</Version>
@@ -101,7 +101,7 @@
       <Version>4.5.0</Version>
     </PackageReference>
     <PackageReference Include="Serilog">
-      <Version>3.1.1</Version>
+      <Version>4.0.0</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

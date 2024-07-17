@@ -9,14 +9,8 @@ using System.Threading;
 
 namespace Hspi
 {
-    internal abstract class HspiBase : AbstractPlugin, IDisposable
+    internal abstract class HspiBase(string id, string name) : AbstractPlugin, IDisposable
     {
-        protected HspiBase(string id, string name)
-        {
-            this.id = id;
-            this.name = name;
-        }
-
         public override string Id => id;
         public override string Name => name;
 
@@ -58,8 +52,6 @@ namespace Hspi
         }
 
         private readonly CancellationTokenSource cancellationTokenSource = new();
-        private readonly string id;
-        private readonly string name;
         private bool disposedValue;
     }
 }
