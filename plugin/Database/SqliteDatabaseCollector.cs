@@ -683,7 +683,7 @@ namespace Hspi.Database
 
         // 1 record before/same the time range for both min & max
         private const string GetDifferenceSql =
-            @"SELECT * FROM (SELECT value FROM history WHERE ref=$ref AND ts<=$min ORDER BY ts DESC LIMIT 1) UNION
+            @"SELECT * FROM (SELECT value FROM history WHERE ref=$ref AND ts<=$min ORDER BY ts DESC LIMIT 1) UNION ALL
               SELECT * FROM (SELECT value FROM history WHERE ref=$ref AND ts<=$max ORDER BY ts DESC LIMIT 1)";
 
         private const string GetMaxValuesSql = @"SELECT MAX(value) FROM history WHERE ref=$ref AND ts>=$min AND ts<=$max";

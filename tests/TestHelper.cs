@@ -313,7 +313,8 @@ namespace HSPI_HistoryTest
             hsControllerMock.SetupDevOrFeatureValue(statsDeviceRefId, EProperty.AssociatedDevices, new HashSet<int> { statsFeatureRefId });
 
             PlugExtraData plugExtraData = new();
-            string json = CreateJsonForDevice(statisticsFunction, trackedFeatureRefId, 600, 60).ToString();
+            const int DurationInterval = 600;
+            string json = CreateJsonForDevice(statisticsFunction, trackedFeatureRefId, DurationInterval, 60).ToString();
             plugExtraData.AddNamed("data", json);
             hsControllerMock.SetupDevOrFeatureValue(statsFeatureRefId, EProperty.PlugExtraData, plugExtraData);
         }
