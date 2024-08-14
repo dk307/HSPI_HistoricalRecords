@@ -275,10 +275,10 @@ namespace Hspi.Device
                           "Updated value {value} for the {name}", data, NameForLog);
             }
 
-            HS.UpdatePropertyByRef(FeatureRefId, EProperty.InvalidValue, false);
-
             if (data.HasValue && HasValue(data.Value))
             {
+                HS.UpdatePropertyByRef(FeatureRefId, EProperty.InvalidValue, false);
+
                 // only this call triggers events
                 if (!HS.UpdateFeatureValueByRef(FeatureRefId, data.Value))
                 {
