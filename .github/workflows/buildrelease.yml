@@ -58,7 +58,7 @@ jobs:
 
       - name: Upload Binaries
         if: github.ref != 'refs/heads/master'
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: Binaries
           path: |
