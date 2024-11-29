@@ -8,7 +8,6 @@ using Hspi;
 using Hspi.Device;
 using Newtonsoft.Json;
 using NUnit.Framework;
-using NUnit.Framework.Legacy;
 
 namespace HSPI_HistoryTest
 {
