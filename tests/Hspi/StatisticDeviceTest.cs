@@ -10,6 +10,7 @@ using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 
 namespace HSPI_HistoryTest
 {
@@ -149,7 +150,7 @@ namespace HSPI_HistoryTest
             string data2 = plugIn.Object.PostBackProc("devicecreate", request.ToString(), string.Empty, 0);
 
             NewFeatureData newFeatureData = hsControllerMock.CreatedFeatures.First().Value;
-            Assert.IsNotNull(newFeatureData);
+            Assert.That(newFeatureData, Is.Not.Null);
 
             var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
             Assert.That(list2.Count, Is.EqualTo(1));

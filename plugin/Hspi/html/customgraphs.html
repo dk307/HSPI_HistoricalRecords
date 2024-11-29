@@ -67,7 +67,7 @@
             if (newestRecordTimeSpan > devicePageStats[1])
                 newestRecordTimeSpan=devicePageStats[1]
             end
-            units[line.value["refId"]]=devicePageStats[4] ?? ""
+            units[line.value["refId"]]=devicePageStats[5] ?? ""
             precision[line.value["refId"]]=devicePageStats[3]
         end
     end

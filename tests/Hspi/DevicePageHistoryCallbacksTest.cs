@@ -7,6 +7,7 @@ using Hspi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
+using NUnit.Framework.Legacy;
 
 namespace HSPI_HistoryTest
 {
