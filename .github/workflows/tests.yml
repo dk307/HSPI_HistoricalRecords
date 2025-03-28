@@ -29,7 +29,7 @@ jobs:
         uses: seanmiddleditch/gha-setup-vsdevenv@v4
     
       - name: Setup NuGet
-        uses: NuGet/setup-nuget@v1.2.0
+        uses: NuGet/setup-nuget@v2
    
       - name: Cache Nuget Packages
         uses: actions/cache@v4
@@ -110,6 +110,9 @@ jobs:
         with:
           path: ./tests/bin/Debug
           name: Test-Files-${{ github.sha }}
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
 
       - name: Install NUnit.ConsoleRunner
         run: nuget install NUnit.ConsoleRunner -Version 3.16.3 -DirectDownload -OutputDirectory .
