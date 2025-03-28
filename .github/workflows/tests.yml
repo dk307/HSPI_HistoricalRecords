@@ -55,7 +55,7 @@ jobs:
 
       - name: Upload binaries
         id: test-binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
          path: .\plugin\bin\Debug
          name: Dll-Files-${{ github.sha }}
