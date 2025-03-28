@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using HomeSeer.PluginSdk;
 
 #nullable enable
@@ -37,7 +38,9 @@ namespace Hspi
             SetValue(MinValueTag, device.MinValue?.ToString("g") ?? string.Empty, id);
             SetValue(MaxValueTag, device.MaxValue?.ToString("g") ?? string.Empty, id);
             SetValue(RetentionPeriodTag, device.RetentionPeriod?.ToString("c", CultureInfo.InvariantCulture) ?? string.Empty, id);
-            SetValue(DeviceSettingsTag, deviceSettings.Keys.Aggregate((x, y) => x + DeviceSettingsIdsSeparator + y));
+
+            var deviceSettingsValue = deviceSettings.Keys.Select(x => x.ToString(CultureInfo.InvariantCulture)).Aggregate((x, y) => x + DeviceSettingsIdsSeparator + y);  
+            SetValue(DeviceSettingsTag, deviceSettingsValue);
         }
 
         public void Remove(long deviceRefId)
