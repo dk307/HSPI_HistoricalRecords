@@ -49,6 +49,7 @@
     <Compile Include="Hspi\CustomGraphManagerTest.cs" />
     <Compile Include="Hspi\CustomGraphTest.cs" />
     <Compile Include="Hspi\FakeGlobalClock.cs" />
+    <Compile Include="Hspi\FileName.cs" />
     <Compile Include="Hspi\StatisticsDeviceTimerTest.cs" />
     <Compile Include="Hspi\PeriodHumanizerTest.cs" />
     <Compile Include="Hspi\PeriodTimeCalculatorTest.cs" />
