@@ -17,7 +17,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
@@ -32,7 +32,7 @@ jobs:
         uses: NuGet/setup-nuget@v1.2.0
    
       - name: Cache Nuget Packages
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         id: nuget
         with:
          path: ~/.nuget/packages
@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload unit tests binaries
         id: unit-test-binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
          path: .\tests\bin\Debug
          name: Test-Files-${{ github.sha }}
@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
@@ -100,13 +100,13 @@ jobs:
 
       - name: Download binaries
         id: test-binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
          path: ./plugin/bin/Debug
          name: Dll-Files-${{ github.sha }}
 
       - name: Download unit tests binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: ./tests/bin/Debug
           name: Test-Files-${{ github.sha }}
