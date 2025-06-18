@@ -13,7 +13,7 @@ namespace HSPI_HistoryTest
     [TestFixture]
     public class DevicePageHistoryCallbacksTest
     {
-        public static IEnumerable<object[]> GetDatatableCallbacksData()
+        private static IEnumerable<object[]> GetDatatableCallbacksData()
         {
             // 1) min=0, max= lonf.max start = 0, length = 10, time sort asc
             yield return new object[] {
@@ -168,7 +168,7 @@ namespace HSPI_HistoryTest
             };
         }
 
-        public static IEnumerable<object[]> GetDatatableCallbackTotalData()
+        private static IEnumerable<object[]> GetDatatableCallbackTotalData()
         {
             // 1) min , max, start = 0, length = 10, time sort ,desc
             yield return new object[] {
@@ -239,18 +239,21 @@ namespace HSPI_HistoryTest
 
             var filterRecords = filter(added.Clone());
 
-            Assert.That(filterRecords.Count, Is.EqualTo(resultRecords.Count));
+            Assert.That(filterRecords, Has.Count.EqualTo(resultRecords.Count));
 
             for (int i = 0; i < resultRecords.Count; i++)
             {
                 var record = resultRecords[i];
                 var expected = filterRecords[i];
 
-                Assert.That(expected.DeviceRefId, Is.EqualTo(record.DeviceRefId));
-                Assert.That(expected.UnixTimeSeconds, Is.EqualTo(record.UnixTimeSeconds));
-                Assert.That(expected.DeviceValue, Is.EqualTo(record.DeviceValue));
-                Assert.That(expected.DeviceString, Is.EqualTo(record.DeviceString));
-                Assert.That(expected.DurationSeconds, Is.EqualTo(record.DurationSeconds));
+                Assert.Multiple(() =>
+                {
+                    Assert.That(expected.DeviceRefId, Is.EqualTo(record.DeviceRefId));
+                    Assert.That(expected.UnixTimeSeconds, Is.EqualTo(record.UnixTimeSeconds));
+                    Assert.That(expected.DeviceValue, Is.EqualTo(record.DeviceValue));
+                    Assert.That(expected.DeviceString, Is.EqualTo(record.DeviceString));
+                    Assert.That(expected.DurationSeconds, Is.EqualTo(record.DurationSeconds));
+                });
             }
         }
 
@@ -273,8 +276,11 @@ namespace HSPI_HistoryTest
             Assert.That(jsonData, Is.Not.Null);
 
             var errorMessage = jsonData["error"].Value<string>();
-            Assert.That(!string.IsNullOrWhiteSpace(errorMessage));
-            StringAssert.Contains(errorMessage, exception);
+            Assert.Multiple(() =>
+            {
+                Assert.That(!string.IsNullOrWhiteSpace(errorMessage));
+                Assert.That(exception, Does.Contain(errorMessage));
+            });
         }
 
         [Test]
@@ -334,9 +340,12 @@ namespace HSPI_HistoryTest
             TestHelper.RaiseHSEventAndWait(plugin, mockHsController, Constants.HSEvent.VALUE_CHANGE, refId, 334, "333", nowTime.AddSeconds(-2000), 3);
 
             var records = plugin.Object.GetEarliestAndNewestRecords(refId);
-            Assert.That(records[0], Is.EqualTo(nowTime.ToUnixTimeSeconds()));
-            Assert.That(records[1], Is.EqualTo(2000));
-            Assert.That(records[2], Is.EqualTo(100));
+            Assert.Multiple(() =>
+            {
+                Assert.That(records[0], Is.EqualTo(nowTime.ToUnixTimeSeconds()));
+                Assert.That(records[1], Is.EqualTo(2000));
+                Assert.That(records[2], Is.EqualTo(100));
+            });
         }
 
         [Test]
@@ -374,15 +383,21 @@ namespace HSPI_HistoryTest
             Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.That(jsonData, Is.Not.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(jsonData, Is.Not.Null);
 
-            Assert.That(!jsonData.ContainsKey("error"));
+                Assert.That(!jsonData.ContainsKey("error"));
 
-            Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
+                Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
+            });
 
             var list = plugin.Object.GetDevicePageHeaderStats(deviceRefId);
-            Assert.That(list[6], Is.EqualTo(10D));
-            Assert.That(list[7], Is.EqualTo(20D));
+            Assert.Multiple(() =>
+            {
+                Assert.That(list[6], Is.EqualTo(10D));
+                Assert.That(list[7], Is.EqualTo(20D));
+            });
 
             // wait till all invalid resultRecords are deleted
             TestHelper.WaitTillTotalRecords(plugin, deviceRefId, 0);
@@ -424,14 +439,20 @@ namespace HSPI_HistoryTest
             Assert.That(data, Is.Not.Null);
 
             var jsonData = (JObject)JsonConvert.DeserializeObject(data);
-            Assert.That(jsonData, Is.Not.Null);
-            Assert.That(!jsonData.ContainsKey("error"));
+            Assert.Multiple(() =>
+            {
+                Assert.That(jsonData, Is.Not.Null);
+                Assert.That(!jsonData.ContainsKey("error"));
 
-            Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
+                Assert.That(!plugin.Object.IsFeatureTracked(deviceRefId));
+            });
 
             var list = plugin.Object.GetDevicePageHeaderStats(deviceRefId);
-            Assert.That(list[6], Is.EqualTo(null));
-            Assert.That(list[7], Is.EqualTo(null));
+            Assert.Multiple(() =>
+            {
+                Assert.That(list[6], Is.Null);
+                Assert.That(list[7], Is.Null);
+            });
         }
 
         private static double GetUniqueRandom(int max = 100000)

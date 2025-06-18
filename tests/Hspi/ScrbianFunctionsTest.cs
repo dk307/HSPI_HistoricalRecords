@@ -42,17 +42,20 @@ namespace HSPI_HistoryTest
 
             var stats = plugin.Object.GetAllDevicesProperties();
             Assert.That(stats, Is.Not.Null);
-            Assert.That(stats.Count, Is.EqualTo(15));
+            Assert.That(stats, Has.Count.EqualTo(15));
 
-            for (int i = 0; i < 15; i++)
+            Assert.Multiple(() =>
             {
-                Assert.That(stats[i]["ref"], Is.EqualTo(1307 + i));
-                Assert.That(stats[i]["records"], Is.EqualTo((long)i));
-                Assert.That(stats[i]["monitorableType"], Is.EqualTo(true));
-                Assert.That(stats[i]["tracked"], Is.EqualTo(true));
-                Assert.That(stats[i]["minValue"], Is.EqualTo(null));
-                Assert.That(stats[i]["maxValue"], Is.EqualTo(null));
-            }
+                for (int i = 0; i < 15; i++)
+                {
+                    Assert.That(stats[i]["ref"], Is.EqualTo(1307 + i));
+                    Assert.That(stats[i]["records"], Is.EqualTo((long)i));
+                    Assert.That(stats[i]["monitorableType"], Is.True);
+                    Assert.That(stats[i]["tracked"], Is.True);
+                    Assert.That(stats[i]["minValue"], Is.Null);
+                    Assert.That(stats[i]["maxValue"], Is.Null);
+                }
+            });
         }
 
         [Test]
@@ -73,14 +76,17 @@ namespace HSPI_HistoryTest
 
             var stats = plugin.Object.GetAllDevicesProperties();
             Assert.That(stats, Is.Not.Null);
-            Assert.That(stats.Count, Is.EqualTo(1));
+            Assert.That(stats, Has.Count.EqualTo(1));
 
-            Assert.That(stats[0]["ref"], Is.EqualTo(refId));
-            Assert.That(stats[0]["records"], Is.EqualTo(0L));
-            Assert.That(stats[0]["monitorableType"], Is.EqualTo(true));
-            Assert.That(stats[0]["tracked"], Is.EqualTo(false));
-            Assert.That(stats[0]["minValue"], Is.EqualTo(10D));
-            Assert.That(stats[0]["maxValue"], Is.EqualTo(100D));
+            Assert.Multiple(() =>
+            {
+                Assert.That(stats[0]["ref"], Is.EqualTo(refId));
+                Assert.That(stats[0]["records"], Is.Zero);
+                Assert.That(stats[0]["monitorableType"], Is.True);
+                Assert.That(stats[0]["tracked"], Is.False);
+                Assert.That(stats[0]["minValue"], Is.EqualTo(10D));
+                Assert.That(stats[0]["maxValue"], Is.EqualTo(100D));
+            });
         }
 
         [Test]
@@ -101,7 +107,7 @@ namespace HSPI_HistoryTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
             var list = plugin.Object.GetAllowedDisplays(refId);
-            CollectionAssert.AreEqual(new List<string>() { "table", "chart", "stats", "histogram" }, list);
+            Assert.That(list, Is.EqualTo(new List<string>() { "table", "chart", "stats", "histogram" }).AsCollection);
         }
 
         [Test]
@@ -119,7 +125,7 @@ namespace HSPI_HistoryTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
             var list = plugin.Object.GetAllowedDisplays(refId);
-            CollectionAssert.AreEqual(new List<string>() { "table", "histogram" }, list);
+            Assert.That(list, Is.EqualTo(new List<string>() { "table", "histogram" }).AsCollection);
         }
 
         [Test]
@@ -131,10 +137,13 @@ namespace HSPI_HistoryTest
 
             var stats = plugin.Object.GetDatabaseStats();
             Assert.That(stats, Is.Not.Null);
-            Assert.That(stats.ContainsKey("path"));
-            Assert.That(stats.ContainsKey("version"));
-            Assert.That(stats.ContainsKey("size"));
-            Assert.That(stats.ContainsKey("retentionPeriod"));
+            Assert.Multiple(() =>
+            {
+                Assert.That(stats.ContainsKey("path"));
+                Assert.That(stats.ContainsKey("version"));
+                Assert.That(stats.ContainsKey("size"));
+                Assert.That(stats.ContainsKey("retentionPeriod"));
+            });
         }
 
         [Test]
@@ -171,7 +180,7 @@ namespace HSPI_HistoryTest
                 null,
             };
 
-            CollectionAssert.AreEqual(expected, list);
+            Assert.That(list, Is.EqualTo(expected).AsCollection);
         }
 
         [Test]
@@ -197,8 +206,11 @@ namespace HSPI_HistoryTest
 
             var list = plugin.Object.GetDevicePageHeaderStats(refId).ToList();
 
-            Assert.That(list[6], Is.EqualTo(-190D));
-            Assert.That(list[7], Is.EqualTo(1090D));
+            Assert.Multiple(() =>
+            {
+                Assert.That(list[6], Is.EqualTo(-190D));
+                Assert.That(list[7], Is.EqualTo(1090D));
+            });
         }
 
         [Test]
@@ -219,7 +231,7 @@ namespace HSPI_HistoryTest
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var list = plugin.Object.GetFeatureRefIdsForDevice(100).ToList();
-            CollectionAssert.AreEqual(value.ToList(), list);
+            Assert.That(list, Is.EqualTo(value.ToList()).AsCollection);
         }
 
         [TestCase(true)]
@@ -245,7 +257,7 @@ namespace HSPI_HistoryTest
 
             // get return function value for feature
             var jsons = plugIn.Object.GetStatisticDeviceDataAsJson(isDevice ? statsDeviceRefId : statsFeatureRefId);
-            Assert.That(jsons.Count, Is.EqualTo(1));
+            Assert.That(jsons, Has.Count.EqualTo(1));
             var statisticsDeviceDatas = JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId]);
             Assert.That(statisticsDeviceDatas, Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(data)));
         }
@@ -280,10 +292,13 @@ namespace HSPI_HistoryTest
 
             // get return function value for feature
             var jsons = plugIn.Object.GetStatisticDeviceDataAsJson(isDevice ? statsDeviceRefId : statsFeatureRefId2);
-            Assert.That(jsons.Count, Is.EqualTo(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(jsons, Has.Count.EqualTo(2));
 
-            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId1]), Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(data1)));
-            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId2]), Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(data2)));
+                Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId1]), Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(data1)));
+                Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId2]), Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(data2)));
+            });
         }
 
         [Test]
@@ -305,7 +320,7 @@ namespace HSPI_HistoryTest
 
             var stats = plugin.Object.GetTrackedDeviceList();
 
-            CollectionAssert.AreEqual(hsFeatures, stats);
+            Assert.That(stats, Is.EqualTo(hsFeatures).AsCollection);
         }
     }
 }

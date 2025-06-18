@@ -34,8 +34,11 @@ namespace HSPI_HistoryTest
             Assert.That(jsonData, Is.Not.Null);
 
             var errorMessage = jsonData["error"].Value<string>();
-            Assert.That(!string.IsNullOrWhiteSpace(errorMessage));
-            Assert.That(errorMessage, Does.Contain(exception));
+            Assert.Multiple(() =>
+            {
+                Assert.That(!string.IsNullOrWhiteSpace(errorMessage));
+                Assert.That(errorMessage, Does.Contain(exception));
+            });
         }
 
         [Test]
@@ -68,14 +71,20 @@ namespace HSPI_HistoryTest
             StatisticsDeviceData data = ValidateNewDevice(hsControllerMock, parentRefId, function,
                                                           trackedRefId, deviceName, createResultJson);
 
-            Assert.That(data.StatisticsFunction, Is.EqualTo(function));
-            Assert.That(data.StatisticsFunctionDuration.PreDefinedPeriod, Is.Null);
-            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.Start, Is.Null);
-            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End, Is.Not.Null);
-            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End.Type, Is.EqualTo(InstantType.Now));
-            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End.Offsets, Is.Null);
-            Assert.That(data.StatisticsFunctionDuration.CustomPeriod.FunctionDurationSeconds, Is.EqualTo(durationInterval));
-            Assert.That(data.RefreshIntervalSeconds, Is.EqualTo(refreshInterval));
+            Assert.Multiple(() =>
+            {
+                Assert.That(data.StatisticsFunction, Is.EqualTo(function));
+                Assert.That(data.StatisticsFunctionDuration.PreDefinedPeriod, Is.Null);
+                Assert.That(data.StatisticsFunctionDuration.CustomPeriod.Start, Is.Null);
+                Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End, Is.Not.Null);
+            });
+            Assert.Multiple(() =>
+            {
+                Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End.Type, Is.EqualTo(InstantType.Now));
+                Assert.That(data.StatisticsFunctionDuration.CustomPeriod.End.Offsets, Is.Null);
+                Assert.That(data.StatisticsFunctionDuration.CustomPeriod.FunctionDurationSeconds, Is.EqualTo(durationInterval));
+                Assert.That(data.RefreshIntervalSeconds, Is.EqualTo(refreshInterval));
+            });
 
             int featureId = hsControllerMock.CreatedFeatures.First().Key;
             ValidateJsonForStatisticalFeature(plugIn, hsControllerMock, featureId,
@@ -111,10 +120,13 @@ namespace HSPI_HistoryTest
 
             StatisticsDeviceData data = ValidateNewDevice(hsControllerMock, parentRefId, function, trackedRefId, deviceName, data2);
 
-            Assert.That(data.StatisticsFunction, Is.EqualTo(function));
-            Assert.That(data.StatisticsFunctionDuration.PreDefinedPeriod, Is.EqualTo(preDefinedPeriod));
-            Assert.That(data.StatisticsFunctionDuration.CustomPeriod, Is.Null);
-            Assert.That(data.RefreshIntervalSeconds, Is.EqualTo(refreshInterval));
+            Assert.Multiple(() =>
+            {
+                Assert.That(data.StatisticsFunction, Is.EqualTo(function));
+                Assert.That(data.StatisticsFunctionDuration.PreDefinedPeriod, Is.EqualTo(preDefinedPeriod));
+                Assert.That(data.StatisticsFunctionDuration.CustomPeriod, Is.Null);
+                Assert.That(data.RefreshIntervalSeconds, Is.EqualTo(refreshInterval));
+            });
 
             int featureId = hsControllerMock.CreatedFeatures.First().Key;
             ValidateJsonForStatisticalFeature(plugIn, hsControllerMock, featureId,
@@ -152,7 +164,7 @@ namespace HSPI_HistoryTest
             Assert.That(newFeatureData, Is.Not.Null);
 
             var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
-            Assert.That(list2.Count, Is.EqualTo(1));
+            Assert.That(list2, Has.Count.EqualTo(1));
             Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(8));
         }
 
@@ -216,12 +228,12 @@ namespace HSPI_HistoryTest
 
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, expectedValue);
 
-            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.False);
         }
 
         [Test]
         public void DifferenceDeviceIsUpdatedIfNoValueChange()
-        {
+        {                                                                                                   
             var plugIn = TestHelper.CreatePlugInMock();
             var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
 
@@ -248,7 +260,37 @@ namespace HSPI_HistoryTest
 
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, expectedValue);
 
-            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.False);
+        }
+
+        [Test]
+        public void ValuesSetForNoData([Values(StatisticsFunction.ValueChangedCount, StatisticsFunction.RecordsCount)] 
+                                         StatisticsFunction statisticsFunction)
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            DateTimeOffset aTime = new(2222, 2, 2, 2, 2, 2, TimeSpan.FromHours(-11));
+
+            int statsDeviceRefId = 100;
+            int statsFeatureRefId = 1000;
+            int trackedDeviceRefId = 10;
+            TestHelper.SetupStatisticsFeature(statisticsFunction, plugIn, hsControllerMock, aTime,
+                                             statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId, 1);
+
+            // dont add any record
+ 
+            Assert.That(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
+
+            double expectedValue = 0;
+            
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, expectedValue);
+
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.False);
         }
 
         [Test]
@@ -281,7 +323,7 @@ namespace HSPI_HistoryTest
 
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, 11.9D);
 
-            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.False);
         }
 
         [Test]
@@ -314,7 +356,7 @@ namespace HSPI_HistoryTest
 
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, 11.9D);
 
-            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.False);
         }
 
         [Test]
@@ -349,8 +391,11 @@ namespace HSPI_HistoryTest
 
             // error is returned
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
-            Assert.That(result2, Is.Not.Null);
-            StringAssert.Contains((string)result2["error"], $"Device or feature {trackedDeviceRefId} not a plugin feature");
+            Assert.Multiple(() =>
+            {
+                Assert.That(result2, Is.Not.Null);
+                Assert.That($"Device or feature {trackedDeviceRefId} not a plugin feature", Does.Contain((string)result2["error"]));
+            });
         }
 
         [Test]
@@ -385,8 +430,11 @@ namespace HSPI_HistoryTest
             // no error is returned
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
 
-            Assert.That(result2, Is.Not.Null);
-            Assert.That((string)result2["error"], Is.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result2, Is.Not.Null);
+                Assert.That((string)result2["error"], Is.Null);
+            });
 
             ValidateJsonForStatisticalFeature(plugIn, hsControllerMock, statsFeatureRefId,
                                              JsonConvert.DeserializeObject<StatisticsDeviceData>(editRequest["data"].ToString()));
@@ -423,8 +471,11 @@ namespace HSPI_HistoryTest
             // no error is returned
             var result2 = JsonConvert.DeserializeObject<JObject>(data2);
 
-            Assert.That(result2, Is.Not.Null);
-            Assert.That((string)result2["error"], Is.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result2, Is.Not.Null);
+                Assert.That((string)result2["error"], Is.Null);
+            });
 
             ValidateJsonForStatisticalFeature(plugIn, hsControllerMock, statsFeatureRefId,
                                              JsonConvert.DeserializeObject<StatisticsDeviceData>(editRequest["data"].ToString()));
@@ -470,8 +521,11 @@ namespace HSPI_HistoryTest
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId1, 10);
             TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId2, 100);
 
-            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId1, EProperty.InvalidValue), Is.EqualTo(false));
-            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId2, EProperty.InvalidValue), Is.EqualTo(false));
+            Assert.Multiple(() =>
+            {
+                Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId1, EProperty.InvalidValue), Is.False);
+                Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId2, EProperty.InvalidValue), Is.False);
+            });
         }
 
         [Test]
@@ -491,18 +545,24 @@ namespace HSPI_HistoryTest
 
             using PlugInLifeCycle plugInLifeCycle = new(plugIn);
 
-            Assert.That(TestHelper.TimedWaitTillTrue(() => plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
+            Assert.Multiple(() =>
+            {
+                Assert.That(TestHelper.TimedWaitTillTrue(() => plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
 
-            Assert.That(hsControllerMock.RemoveFeatureOrDevice(statsDeviceRefId));
-            Assert.That(hsControllerMock.RemoveFeatureOrDevice(statsFeatureRefId));
+                Assert.That(hsControllerMock.RemoveFeatureOrDevice(statsDeviceRefId));
+                Assert.That(hsControllerMock.RemoveFeatureOrDevice(statsFeatureRefId));
+            });
             plugIn.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE,
                                   new object[] { null, null, null, statsDeviceRefId, 2 });
 
-            Assert.That(TestHelper.TimedWaitTillTrue(() => !plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
+            Assert.Multiple(() =>
+            {
+                Assert.That(TestHelper.TimedWaitTillTrue(() => !plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId)));
 
-            // not more tracking after delete
-            Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
-            Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
+                // not more tracking after delete
+                Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsDeviceRefId));
+                Assert.That(!plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
+            });
         }
 
         private static JObject CreateJsonForNewDevice(int? parentRefId, StatisticsFunction function,
@@ -558,9 +618,12 @@ namespace HSPI_HistoryTest
                         Is.EqualTo(expected));
 
             var plugExtraData = (PlugExtraData)hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.PlugExtraData);
-            Assert.That(plugExtraData.NamedKeys.Count, Is.EqualTo(1));
-            Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId]),
-                        Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"])));
+            Assert.Multiple(() =>
+            {
+                Assert.That(plugExtraData.NamedKeys, Has.Count.EqualTo(1));
+                Assert.That(JsonConvert.DeserializeObject<StatisticsDeviceData>(jsons[statsFeatureRefId]),
+                            Is.EqualTo(JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"])));
+            });
         }
 
         private static StatisticsDeviceData ValidateNewDevice(FakeHSController hsControllerMock, int? parentRefId,
@@ -568,55 +631,70 @@ namespace HSPI_HistoryTest
                                                               string deviceName, string createResultJson)
         {
             var result2 = JsonConvert.DeserializeObject<JObject>(createResultJson);
-            Assert.That(result2, Is.Not.Null);
-            Assert.That((string)result2["error"], Is.Null);
+            Assert.Multiple(() =>
+            {
+                Assert.That(result2, Is.Not.Null);
+                Assert.That((string)result2["error"], Is.Null);
+            });
 
             var trackedFeature = hsControllerMock.GetFeature(trackedRefId);
 
-            Assert.That(hsControllerMock.CreatedFeatures.Count, Is.EqualTo(1));
+            Assert.That(hsControllerMock.CreatedFeatures, Has.Count.EqualTo(1));
 
             NewFeatureData newFeatureData = hsControllerMock.CreatedFeatures.First().Value;
             if (parentRefId is null)
             {
-                Assert.That(hsControllerMock.CreatedDevices.Count, Is.EqualTo(1));
+                Assert.That(hsControllerMock.CreatedDevices, Has.Count.EqualTo(1));
                 NewDeviceData newDataForDevice = hsControllerMock.CreatedDevices.First().Value;
 
-                // check proper device & feature was added
-                Assert.That(newDataForDevice, Is.Not.Null);
+                Assert.Multiple(() =>
+                {
+                    // check proper device & feature was added
+                    Assert.That(newDataForDevice, Is.Not.Null);
 
-                Assert.That(deviceName, Is.EqualTo(((string)newDataForDevice.Device[EProperty.Name])));
-                Assert.That(newDataForDevice.Device[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
-                Assert.That(newDataForDevice.Device[EProperty.Location], Is.EqualTo(trackedFeature.Location));
-                Assert.That(newDataForDevice.Device[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
+                    Assert.That(deviceName, Is.EqualTo(((string)newDataForDevice.Device[EProperty.Name])));
+                });
+                Assert.Multiple(() =>
+                {
+                    Assert.That(newDataForDevice.Device[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
+                    Assert.That(newDataForDevice.Device[EProperty.Location], Is.EqualTo(trackedFeature.Location));
+                    Assert.That(newDataForDevice.Device[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
 
-                CollectionAssert.AreEqual((new HashSet<int> { hsControllerMock.CreatedDevices.First().Key }).ToImmutableArray(),
-                                         ((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray());
+                    Assert.That(((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray(),
+                                             Is.EqualTo((new HashSet<int> { hsControllerMock.CreatedDevices.First().Key }).ToImmutableArray()).AsCollection);
+                });
             }
             else
             {
-                Assert.That(hsControllerMock.CreatedDevices.Count, Is.EqualTo(0));
-                CollectionAssert.AreEqual((new HashSet<int> { parentRefId.Value }).ToImmutableArray(),
-                                         ((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray());
+                Assert.Multiple(() =>
+                {
+                    Assert.That(hsControllerMock.CreatedDevices, Is.Empty);
+                    Assert.That(((HashSet<int>)newFeatureData.Feature[EProperty.AssociatedDevices]).ToImmutableArray(),
+                                             Is.EqualTo((new HashSet<int> { parentRefId.Value }).ToImmutableArray()).AsCollection);
+                });
             }
 
             Assert.That(newFeatureData.Feature[EProperty.Interface], Is.EqualTo(PlugInData.PlugInId));
             if (function is StatisticsFunction.LinearRegression)
             {
-                CollectionAssert.AreEqual((List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData], new List<string> { "A per minute" });
+                Assert.That(new List<string> { "A per minute" }, Is.EqualTo((List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]).AsCollection);
             }
             else if (function is not StatisticsFunction.RecordsCount and not StatisticsFunction.ValueChangedCount)
             {
-                CollectionAssert.AreEqual(trackedFeature.AdditionalStatusData, (List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData]);
+                Assert.That((List<string>)newFeatureData.Feature[EProperty.AdditionalStatusData], Is.EqualTo(trackedFeature.AdditionalStatusData).AsCollection);
             }
 
-            Assert.That(newFeatureData.Feature[EProperty.Location], Is.EqualTo(trackedFeature.Location));
-            Assert.That(newFeatureData.Feature[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
-            Assert.That(newFeatureData.Feature[EProperty.Misc],
-                        Is.EqualTo((uint)(EMiscFlag.StatusOnly | EMiscFlag.SetDoesNotChangeLastChange | EMiscFlag.ShowValues)));
+            Assert.Multiple(() =>
+            {
+                Assert.That(newFeatureData.Feature[EProperty.Location], Is.EqualTo(trackedFeature.Location));
+                Assert.That(newFeatureData.Feature[EProperty.Location2], Is.EqualTo(trackedFeature.Location2));
+                Assert.That(newFeatureData.Feature[EProperty.Misc],
+                            Is.EqualTo((uint)(EMiscFlag.StatusOnly | EMiscFlag.SetDoesNotChangeLastChange | EMiscFlag.ShowValues)));
+            });
 
             var plugExtraData = (PlugExtraData)newFeatureData.Feature[EProperty.PlugExtraData];
 
-            Assert.That(plugExtraData.NamedKeys.Count, Is.EqualTo(1));
+            Assert.That(plugExtraData.NamedKeys, Has.Count.EqualTo(1));
 
             var data = JsonConvert.DeserializeObject<StatisticsDeviceData>(plugExtraData["data"]);
 
@@ -625,35 +703,35 @@ namespace HSPI_HistoryTest
             switch (function)
             {
                 case StatisticsFunction.AverageStep:
-                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Step)"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]), Does.StartWith("Average(Step)"));
                     break;
 
                 case StatisticsFunction.AverageLinear:
-                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Average(Linear)"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]), Does.StartWith("Average(Linear)"));
                     break;
 
                 case StatisticsFunction.MinimumValue:
-                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Minimum Value"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]), Does.StartWith("Minimum Value"));
                     break;
 
                 case StatisticsFunction.MaximumValue:
-                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Maximum Value"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]), Does.StartWith("Maximum Value"));
                     break;
 
                 case StatisticsFunction.DistanceBetweenMinAndMax:
-                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Distance Min-Max Value"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]), Does.StartWith("Distance Min-Max Value"));
                     break;
 
                 case StatisticsFunction.RecordsCount:
-                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Count"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]), Does.StartWith("Count"));
                     break;
 
                 case StatisticsFunction.ValueChangedCount:
-                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Value Changed Count"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]), Does.StartWith("Value Changed Count"));
                     break;
 
                 case StatisticsFunction.LinearRegression:
-                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]).StartsWith("Slope"));
+                    Assert.That(((string)newFeatureData.Feature[EProperty.Name]), Does.StartWith("Slope"));
                     break;
             }
 
@@ -663,24 +741,33 @@ namespace HSPI_HistoryTest
                     {
                         var list1 = trackedFeature.StatusGraphics.Values;
                         var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
-                        Assert.That(list1.Count, Is.EqualTo(1));
-                        Assert.That(list2.Count, Is.EqualTo(1));
-                        Assert.That(list2[0].Label, Is.EqualTo(list1[0].Label));
-                        Assert.That(list2[0].IsRange, Is.EqualTo(list1[0].IsRange));
-                        Assert.That(list2[0].ControlUse, Is.EqualTo(list1[0].ControlUse));
-                        Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
-                        Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
+                        Assert.Multiple(() =>
+                        {
+                            Assert.That(list1, Has.Count.EqualTo(1));
+                            Assert.That(list2, Has.Count.EqualTo(1));
+                        });
+                        Assert.Multiple(() =>
+                        {
+                            Assert.That(list2[0].Label, Is.EqualTo(list1[0].Label));
+                            Assert.That(list2[0].IsRange, Is.EqualTo(list1[0].IsRange));
+                            Assert.That(list2[0].ControlUse, Is.EqualTo(list1[0].ControlUse));
+                            Assert.That(list2[0].HasAdditionalData, Is.EqualTo(list1[0].HasAdditionalData));
+                            Assert.That(list2[0].TargetRange, Is.EqualTo(list1[0].TargetRange));
+                        });
                         break;
                     }
                 case StatisticsFunction.LinearRegression:
                     {
                         var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
-                        Assert.That(list2.Count, Is.EqualTo(1));
-                        Assert.That(list2[0].IsRange, Is.True);
-                        Assert.That(list2[0].TargetRange.Min, Is.EqualTo(int.MinValue));
-                        Assert.That(list2[0].TargetRange.Max, Is.EqualTo(int.MaxValue));
-                        Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(5));
-                        Assert.That(list2[0].TargetRange.Suffix, Is.EqualTo(" $%0$"));
+                        Assert.That(list2, Has.Count.EqualTo(1));
+                        Assert.Multiple(() =>
+                        {
+                            Assert.That(list2[0].IsRange, Is.True);
+                            Assert.That(list2[0].TargetRange.Min, Is.EqualTo(int.MinValue));
+                            Assert.That(list2[0].TargetRange.Max, Is.EqualTo(int.MaxValue));
+                            Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(5));
+                            Assert.That(list2[0].TargetRange.Suffix, Is.EqualTo(" $%0$"));
+                        });
                         break;
                     }
 
@@ -688,11 +775,14 @@ namespace HSPI_HistoryTest
                 case StatisticsFunction.ValueChangedCount:
                     {
                         var list2 = ((StatusGraphicCollection)newFeatureData.Feature[EProperty.StatusGraphics]).Values;
-                        Assert.That(list2.Count, Is.EqualTo(1));
-                        Assert.That(list2[0].IsRange, Is.True);
-                        Assert.That(list2[0].TargetRange.Min, Is.EqualTo(int.MinValue));
-                        Assert.That(list2[0].TargetRange.Max, Is.EqualTo(int.MaxValue));
-                        Assert.That(list2[0].TargetRange.DecimalPlaces, Is.EqualTo(0));
+                        Assert.That(list2, Has.Count.EqualTo(1));
+                        Assert.Multiple(() =>
+                        {
+                            Assert.That(list2[0].IsRange, Is.True);
+                            Assert.That(list2[0].TargetRange.Min, Is.EqualTo(int.MinValue));
+                            Assert.That(list2[0].TargetRange.Max, Is.EqualTo(int.MaxValue));
+                            Assert.That(list2[0].TargetRange.DecimalPlaces, Is.Zero);
+                        });
                         break;
                     }
             }

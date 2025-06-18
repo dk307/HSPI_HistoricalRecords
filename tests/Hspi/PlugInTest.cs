@@ -59,14 +59,17 @@ namespace HSPI_HistoryTest
                 SettingsPages.CreateDefault(logEventLevel, logToFile)
             };
 
-            Assert.That(plugIn.SaveJuiSettingsPages(settingsCollection.ToJsonString()));
+            Assert.Multiple(() =>
+            {
+                Assert.That(plugIn.SaveJuiSettingsPages(settingsCollection.ToJsonString()));
 
-            Assert.That(logEventLevel <= LogEventLevel.Fatal, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Fatal)));
-            Assert.That(logEventLevel <= LogEventLevel.Error, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Error)));
-            Assert.That(logEventLevel <= LogEventLevel.Warning, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Warning)));
-            Assert.That(logEventLevel <= LogEventLevel.Information, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Information)));
-            Assert.That(logEventLevel <= LogEventLevel.Debug, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Debug)));
-            Assert.That(logEventLevel <= LogEventLevel.Verbose, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Verbose)));
+                Assert.That(logEventLevel <= LogEventLevel.Fatal, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Fatal)));
+                Assert.That(logEventLevel <= LogEventLevel.Error, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Error)));
+                Assert.That(logEventLevel <= LogEventLevel.Warning, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Warning)));
+                Assert.That(logEventLevel <= LogEventLevel.Information, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Information)));
+                Assert.That(logEventLevel <= LogEventLevel.Debug, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Debug)));
+                Assert.That(logEventLevel <= LogEventLevel.Verbose, Is.EqualTo(Log.Logger.IsEnabled(LogEventLevel.Verbose)));
+            });
             plugInMock.Verify();
         }
 
@@ -101,8 +104,11 @@ namespace HSPI_HistoryTest
 
                 var status = plugInMock.Object.OnStatusCheck();
 
-                Assert.That(status.Status, Is.EqualTo(EPluginStatus.Critical));
-                Assert.That(status.StatusText, Is.EqualTo("unable to open database file"));
+                Assert.Multiple(() =>
+                {
+                    Assert.That(status.Status, Is.EqualTo(EPluginStatus.Critical));
+                    Assert.That(status.StatusText, Is.EqualTo("unable to open database file"));
+                });
 
                 //unlock file
                 lockFile.Dispose();
@@ -137,8 +143,11 @@ namespace HSPI_HistoryTest
 
             var settings = settingPages[SettingsPages.SettingPageId].ToValueMap();
 
-            Assert.That(((int)LogEventLevel.Information).ToString(), Is.EqualTo(settings[SettingsPages.LoggingLevelId]));
-            Assert.That(true.ToString(), Is.EqualTo(settings[SettingsPages.LogToFileId]));
+            Assert.Multiple(() =>
+            {
+                Assert.That(((int)LogEventLevel.Information).ToString(), Is.EqualTo(settings[SettingsPages.LoggingLevelId]));
+                Assert.That(true.ToString(), Is.EqualTo(settings[SettingsPages.LogToFileId]));
+            });
         }
 
         [Test]
@@ -202,8 +211,11 @@ namespace HSPI_HistoryTest
 
             var result = (JObject)JsonConvert.DeserializeObject(pageJson);
 
-            Assert.That(result, Is.Not.Null);
-            Assert.That((string)result["views"][0]["value"], Is.EqualTo(errorMessage));
+            Assert.Multiple(() =>
+            {
+                Assert.That(result, Is.Not.Null);
+                Assert.That((string)result["views"][0]["value"], Is.EqualTo(errorMessage));
+            });
         }
 
         [TestCase(PlugInData.PlugInId, "editdevice")]
@@ -348,8 +360,11 @@ namespace HSPI_HistoryTest
             using PlugInLifeCycle plugInLifeCycle = new(plugin);
 
             var tracked1 = plugin.Object.IsFeatureTracked(refId);
-            Assert.That(tracked1);
-            Assert.That(plugin.Object.HasJuiDeviceConfigPage(refId));
+            Assert.Multiple(() =>
+            {
+                Assert.That(tracked1);
+                Assert.That(plugin.Object.HasJuiDeviceConfigPage(refId));
+            });
 
             var data = new PlugExtraData();
             data.AddNamed("timername", "123");
@@ -360,16 +375,19 @@ namespace HSPI_HistoryTest
             plugin.Object.HsEvent(Constants.HSEvent.CONFIG_CHANGE, new object[] { 0, 0, 0, refId, 0 });
 
             var tracked2 = plugin.Object.IsFeatureTracked(refId);
-            Assert.That(!tracked2);
+            Assert.Multiple(() =>
+            {
+                Assert.That(!tracked2);
 
-            Assert.That(!plugin.Object.HasJuiDeviceConfigPage(refId));
+                Assert.That(!plugin.Object.HasJuiDeviceConfigPage(refId));
+            });
         }
 
         [Test]
         public void PostBackProcforNonHandled()
         {
             var plugin = new PlugIn();
-            Assert.That(string.Empty, Is.EqualTo(plugin.PostBackProc("Random", "data", "user", 0)));
+            Assert.That(plugin.PostBackProc("Random", "data", "user", 0), Is.EqualTo(string.Empty));
         }
 
         [Test]
@@ -392,17 +410,23 @@ namespace HSPI_HistoryTest
         public void VerifyNameAndId()
         {
             var plugin = new PlugIn();
-            Assert.That(plugin.Id, Is.EqualTo(PlugInData.PlugInId));
-            Assert.That(plugin.Name, Is.EqualTo(PlugInData.PlugInName));
+            Assert.Multiple(() =>
+            {
+                Assert.That(plugin.Id, Is.EqualTo(PlugInData.PlugInId));
+                Assert.That(plugin.Name, Is.EqualTo(PlugInData.PlugInName));
+            });
         }
 
         [Test]
         public void VerifySupportsConfigDeviceAll()
         {
             var plugin = new PlugIn();
-            Assert.That(plugin.SupportsConfigDeviceAll);
-            Assert.That(plugin.SupportsConfigFeature);
-            Assert.That(plugin.SupportsConfigDevice);
+            Assert.Multiple(() =>
+            {
+                Assert.That(plugin.SupportsConfigDeviceAll);
+                Assert.That(plugin.SupportsConfigFeature);
+                Assert.That(plugin.SupportsConfigDevice);
+            });
         }
     }
 }
