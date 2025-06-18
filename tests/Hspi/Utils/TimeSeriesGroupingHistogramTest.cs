@@ -27,7 +27,7 @@ namespace HSPI_HistoryTest
                 {200, 20},
             };
 
-            CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
+            Assert.That(result, Is.EqualTo(expected));
         }
 
         [Test]
@@ -50,7 +50,7 @@ namespace HSPI_HistoryTest
                 {300, 10},
             };
 
-            CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
+            Assert.That(result, Is.EqualTo(expected));
         }
 
         [Test]
@@ -71,7 +71,7 @@ namespace HSPI_HistoryTest
                 {300, 10},
             };
 
-            CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
+            Assert.That(result, Is.EqualTo(expected));
         }
 
         [Test]
@@ -90,7 +90,7 @@ namespace HSPI_HistoryTest
                {200, 11},
             };
 
-            CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
+            Assert.That(result, Is.EqualTo(expected));
         }
 
         [Test]
@@ -115,7 +115,7 @@ namespace HSPI_HistoryTest
                {600, 20},
             };
 
-            CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
+            Assert.That(result, Is.EqualTo(expected));
         }
 
         [Test]
@@ -127,7 +127,7 @@ namespace HSPI_HistoryTest
             var result = timeSeriesHelper.CreateHistogram();
 
             Dictionary<double, long> expected = new();
-            CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
+            Assert.That(result, Is.EqualTo(expected));
         }
 
         [Test]
@@ -146,7 +146,7 @@ namespace HSPI_HistoryTest
                {10, 100},
             };
 
-            CollectionAssert.AreEqual(expected.ToArray(), result.ToArray());
+            Assert.That(result, Is.EqualTo(expected));
         }
     }
 }

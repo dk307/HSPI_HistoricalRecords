@@ -28,7 +28,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(21, 200),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -54,7 +54,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(41, (550 + 600)/2),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -75,7 +75,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(21, 300),
             };
 
-            CollectionAssert.AreEqual(expected, result);
+            Assert.That(result, Is.EqualTo(expected).AsCollection);
         }
 
         [Test]
@@ -95,7 +95,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(121, 200),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -122,7 +122,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(151, 930),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -147,7 +147,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(45, 441.25),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -170,7 +170,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(26, 300),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -194,7 +194,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(21, 350),
             };
 
-            CollectionAssert.AreEqual(expected, result);
+            Assert.That(result, Is.EqualTo(expected).AsCollection);
         }
     }
 }

@@ -13,7 +13,7 @@ namespace HSPI_HistoryTest
         {
             string path = GetInstallFilePath();
             var dllFilesPaths = Directory.GetFiles(path, "*.dll");
-            Assert.That(dllFilesPaths.Length, Is.Not.EqualTo(0));
+            Assert.That(dllFilesPaths, Is.Not.Empty);
 
             var dllFiles = dllFilesPaths.Select(x => Path.GetFileName(x)).ToList();
 
@@ -25,7 +25,7 @@ namespace HSPI_HistoryTest
             // Parse shipped dlls
             var installDlls = File.ReadLines(Path.Combine(path, "DllsToShip.txt")).ToList();
 
-            CollectionAssert.AreEquivalent(installDlls, dllFiles, "Dlls in output is not same as shipped dlls");
+            Assert.That(dllFiles, Is.EquivalentTo(installDlls), "Dlls in output is not same as shipped dlls");
         }
 
         private static string GetInstallFilePath()

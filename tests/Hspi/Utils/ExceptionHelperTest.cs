@@ -12,8 +12,11 @@ namespace HSPI_HistoryTest
         [Test]
         public void SimpleExceptionMessage()
         {
-            Assert.That("message", Is.EqualTo(ExceptionHelper.GetFullMessage(new Exception("message"))));
-            Assert.That("message", Is.EqualTo(ExceptionHelper.GetFullMessage(new ArgumentException("message"))));
+            Assert.Multiple(() =>
+            {
+                Assert.That(ExceptionHelper.GetFullMessage(new Exception("message")), Is.EqualTo("message"));
+                Assert.That(ExceptionHelper.GetFullMessage(new ArgumentException("message")), Is.EqualTo("message"));
+            });
         }
 
         [Test]
@@ -39,7 +42,7 @@ namespace HSPI_HistoryTest
         public void MessageWithEOL()
         {
             var ex = new Exception("message", new Exception("inner exception"));
-            Assert.That("message<BR>inner exception", Is.EqualTo(ExceptionHelper.GetFullMessage(ex, "<BR>")));
+            Assert.That(ExceptionHelper.GetFullMessage(ex, "<BR>"), Is.EqualTo("message<BR>inner exception"));
         }
 
         [Test]
@@ -47,16 +50,19 @@ namespace HSPI_HistoryTest
         {
             var exceptions = new List<Exception>() { new("message1"), new("message2") };
             var ex = new AggregateException("message8", exceptions);
-            Assert.That("message1<BR>message2", Is.EqualTo(ExceptionHelper.GetFullMessage(ex, "<BR>")));
+            Assert.That(ExceptionHelper.GetFullMessage(ex, "<BR>"), Is.EqualTo("message1<BR>message2"));
         }
 
         [Test]
         public void IsCancelException()
         {
-            Assert.That(ExceptionHelper.IsCancelException(new TaskCanceledException()));
-            Assert.That(ExceptionHelper.IsCancelException(new OperationCanceledException()));
-            Assert.That(ExceptionHelper.IsCancelException(new ObjectDisposedException("name")));
-            Assert.That(!ExceptionHelper.IsCancelException(new Exception()));
+            Assert.Multiple(() =>
+            {
+                Assert.That(ExceptionHelper.IsCancelException(new TaskCanceledException()));
+                Assert.That(ExceptionHelper.IsCancelException(new OperationCanceledException()));
+                Assert.That(ExceptionHelper.IsCancelException(new ObjectDisposedException("name")));
+                Assert.That(!ExceptionHelper.IsCancelException(new Exception()));
+            });
         }
     }
 }

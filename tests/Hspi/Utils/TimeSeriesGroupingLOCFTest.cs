@@ -22,7 +22,7 @@ namespace HSPI_HistoryTest
             TimeSeriesHelper timeSeriesHelper = new(1, 30, dbValues);
             var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
-            CollectionAssert.AreEqual(dbValues, result);
+            Assert.That(result, Is.EqualTo(dbValues).AsCollection);
         }
 
         [Test]
@@ -44,7 +44,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(21, 200),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -70,7 +70,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(41, 550),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -85,7 +85,7 @@ namespace HSPI_HistoryTest
             TimeSeriesHelper timeSeriesHelper = new(1, 30, dbValues);
             var result = timeSeriesHelper.ReduceSeriesWithAverage(10, FillStrategy.LOCF).ToArray();
 
-            CollectionAssert.AreEqual(dbValues, result);
+            Assert.That(result, Is.EqualTo(dbValues).AsCollection);
         }
 
         [Test]
@@ -105,7 +105,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(121, 200),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -132,7 +132,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(151, 900),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -157,7 +157,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(51, 300),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -182,7 +182,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(45, 400),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -205,7 +205,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(26, 300),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -230,7 +230,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(41, 500),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
 
         [Test]
@@ -266,7 +266,7 @@ namespace HSPI_HistoryTest
                 new TimeAndValue(15, 400),
             };
 
-            CollectionAssert.AreEqual(result, expected);
+            Assert.That(expected, Is.EqualTo(result).AsCollection);
         }
     }
 }
