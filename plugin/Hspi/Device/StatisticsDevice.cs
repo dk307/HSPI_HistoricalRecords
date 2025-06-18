@@ -317,7 +317,7 @@ namespace Hspi.Device
                         StatisticsFunction.MaximumValue => collector.GetMaxValue(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
                         StatisticsFunction.DistanceBetweenMinAndMax => collector.GetDistanceMinMaxValue(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
                         StatisticsFunction.RecordsCount => collector.GetRecordsCount(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
-                        StatisticsFunction.ValueChangedCount => collector.GetChangedValuesCount(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
+                        StatisticsFunction.ValueChangedCount => collector.GetChangedValuesCount(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum) ?? 0,
                         StatisticsFunction.LinearRegression => 60 * TimeAndValueQueryHelper.LinearRegression(collector, featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
                         StatisticsFunction.Difference => collector.GetDifferenceFromValuesAt(featureData.TrackedRef, minMaxTime.Minimum, minMaxTime.Maximum),
                         _ => throw new NotImplementedException(),

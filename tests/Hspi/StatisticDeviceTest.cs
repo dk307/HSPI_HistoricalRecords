@@ -251,6 +251,38 @@ namespace HSPI_HistoryTest
             Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
         }
 
+
+        [Test]
+        public void ValuesSetForNoData([Values(StatisticsFunction.ValueChangedCount, StatisticsFunction.RecordsCount)] 
+                                         StatisticsFunction statisticsFunction)
+        {
+            var plugIn = TestHelper.CreatePlugInMock();
+            var hsControllerMock = TestHelper.SetupHsControllerAndSettings2(plugIn);
+
+            DateTimeOffset aTime = new(2222, 2, 2, 2, 2, 2, TimeSpan.FromHours(-11));
+
+            int statsDeviceRefId = 100;
+            int statsFeatureRefId = 1000;
+            int trackedDeviceRefId = 10;
+            TestHelper.SetupStatisticsFeature(statisticsFunction, plugIn, hsControllerMock, aTime,
+                                             statsDeviceRefId, statsFeatureRefId, trackedDeviceRefId);
+
+            using PlugInLifeCycle plugInLifeCycle = new(plugIn);
+
+            TestHelper.WaitForRecordCountAndDeleteAll(plugIn, trackedDeviceRefId, 1);
+
+            // dont add any record
+ 
+            Assert.That(plugIn.Object.UpdateStatisticsFeature(statsFeatureRefId));
+
+            double expectedValue = 0;
+            
+            TestHelper.WaitTillExpectedValue(hsControllerMock, statsFeatureRefId, expectedValue);
+
+            Assert.That(hsControllerMock.GetFeatureValue(statsFeatureRefId, EProperty.InvalidValue), Is.EqualTo(false));
+        }
+
+
         [Test]
         public void DeviceIsUpdatedRounded()
         {
