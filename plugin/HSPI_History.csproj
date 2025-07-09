@@ -215,7 +215,7 @@
       <Version>2.1.11</Version>
     </PackageReference>
     <PackageReference Include="System.Collections.Immutable">
-      <Version>9.0.6</Version>
+      <Version>9.0.7</Version>
     </PackageReference>
     <PackageReference Include="System.Runtime">
       <Version>4.3.1</Version>
