@@ -206,13 +206,13 @@
       <Version>2.1.11</Version>
     </PackageReference>
     <PackageReference Include="SQLitePCLRaw.core">
-      <Version>2.1.11</Version>
+      <Version>3.0.1</Version>
     </PackageReference>
     <PackageReference Include="SQLitePCLRaw.provider.sqlite3">
       <Version>2.1.11</Version>
     </PackageReference>
     <PackageReference Include="SQLitePCLRaw.ugly">
-      <Version>2.1.11</Version>
+      <Version>3.0.1</Version>
     </PackageReference>
     <PackageReference Include="System.Collections.Immutable">
       <Version>9.0.6</Version>
